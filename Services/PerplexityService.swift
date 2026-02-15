@@ -322,3 +322,67 @@ class PerplexityService {
             return try JSONDecoder().decode([[String: String]].self, from: data)
         } catch {
             print("JSON Parse Error: \(error)\n\(json.prefix(300))")
+        return []
+    }
+}
+
+    private func cleanJSON(_ content: String) -> String {
+        var json = content
+        if let start = json.range(of: "```json")?.upperBound {
+            json = String(json[start...])
+        }
+        if let end = json.range(of: "```")?.lowerBound {
+            json = String(json[..<end])
+        }
+        return json.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+// MARK: - Error Types
+enum PplxError: LocalizedError {
+    case invalidResponse
+    case apiError(code: Int, message: String)
+    case noContent
+    case parseError
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse:
+            return "Invalid response from Perplexity API"
+        case .apiError(let code, let message):
+            return "API Error (\(code)): \(message)"
+        case .noContent:
+            return "No content in API response"
+        case .parseError:
+            return "Failed to parse JSON response"
+        }
+    }
+}
+
+// MARK: - Request/Response Models
+struct PerplexityRequest: Codable {
+    let model: String
+    let messages: [Message]
+    let max_tokens: Int?
+    let web_search_options: WebSearchOptions?
+    
+    struct Message: Codable {
+        let role: String
+        let content: String
+    }
+    
+    struct WebSearchOptions: Codable {
+        let search_context_size: String
+    }
+}
+
+struct PerplexityResponse: Codable {
+    let choices: [Choice]?
+    
+    struct Choice: Codable {
+        let message: Message?
+        
+        struct Message: Codable {
+            let content: String?
+        }
+    }
