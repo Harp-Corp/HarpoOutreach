@@ -328,7 +328,7 @@ class AppViewModel: ObservableObject {
 
         do {
             let followUp = try await pplxService.draftFollowUp(
-                lead: leads[idx], originalEmail: originalEmail,
+                lead: leads[idx], originalEmail: originalEmail.body,
                 senderName: settings.senderName,
                 apiKey: settings.perplexityAPIKey)
             leads[idx].followUpEmail = followUp
