@@ -36,7 +36,7 @@ struct ManualEntryView: View {
                     Text("Manueller Eintrag")
                         .font(.largeTitle)
                         .bold()
-                    Text("Unternehmen und Ansprechpartner direkt hinzufügen")
+                    Text("Unternehmen und Ansprechpartner direkt hinzufuegen")
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -55,6 +55,7 @@ struct ManualEntryView: View {
                             
                             TextField("Firmenname*", text: $companyName)
                                 .textFieldStyle(.roundedBorder)
+                                .multilineTextAlignment(.leading)
                             
                             HStack(spacing: 12) {
                                 VStack(alignment: .leading) {
@@ -63,7 +64,7 @@ struct ManualEntryView: View {
                                         .foregroundStyle(.secondary)
                                     Picker("Branche", selection: $industry) {
                                         ForEach(Industry.allCases, id: \.self) { ind in
-                                            Text(ind.displayName).tag(ind)
+                                            Text(ind.rawValue).tag(ind)
                                         }
                                     }
                                     .pickerStyle(.menu)
@@ -86,10 +87,12 @@ struct ManualEntryView: View {
                             
                             TextField("Website", text: $website)
                                 .textFieldStyle(.roundedBorder)
+                                .multilineTextAlignment(.leading)
                             
                             TextField("Beschreibung", text: $companyDescription, axis: .vertical)
                                 .textFieldStyle(.roundedBorder)
                                 .lineLimit(3...6)
+                                .multilineTextAlignment(.leading)
                         }
                         .padding(12)
                     }
@@ -102,38 +105,41 @@ struct ManualEntryView: View {
                             
                             TextField("Name*", text: $contactName)
                                 .textFieldStyle(.roundedBorder)
+                                .multilineTextAlignment(.leading)
                             
                             TextField("Position", text: $contactTitle)
                                 .textFieldStyle(.roundedBorder)
+                                .multilineTextAlignment(.leading)
                             
                             TextField("E-Mail*", text: $contactEmail)
                                 .textFieldStyle(.roundedBorder)
                                 .textContentType(.emailAddress)
                                 .keyboardType(.emailAddress)
-                                .autocapitalization(.none)
+                                .multilineTextAlignment(.leading)
                             
                             TextField("LinkedIn URL", text: $linkedInURL)
                                 .textFieldStyle(.roundedBorder)
                                 .textContentType(.URL)
-                                .autocapitalization(.none)
+                                .multilineTextAlignment(.leading)
                             
                             TextField("Verantwortungsbereich", text: $responsibility, axis: .vertical)
                                 .textFieldStyle(.roundedBorder)
                                 .lineLimit(2...4)
+                                .multilineTextAlignment(.leading)
                         }
                         .padding(12)
                     }
                     
                     // Action Buttons
                     HStack(spacing: 12) {
-                        Button("Zurücksetzen", role: .cancel) {
+                        Button("Zuruecksetzen", role: .cancel) {
                             resetForm()
                         }
                         .buttonStyle(.bordered)
                         
                         Spacer()
                         
-                        Button("Speichern und Hinzufügen") {
+                        Button("Speichern und Hinzufuegen") {
                             Task {
                                 await saveLead()
                             }
@@ -151,7 +157,7 @@ struct ManualEntryView: View {
                 resetForm()
             }
         } message: {
-            Text("Der Kontakt wurde erfolgreich hinzugefügt und ins Google Sheet geschrieben.")
+            Text("Der Kontakt wurde erfolgreich hinzugefuegt und ins Google Sheet geschrieben.")
         }
         .alert("Fehler", isPresented: $showingError) {
             Button("OK") { }
@@ -187,50 +193,43 @@ struct ManualEntryView: View {
             description: companyDescription
         )
         
-        // Create lead
+        // Create lead with isManuallyCreated = true
         var lead = Lead(
             name: contactName,
             title: contactTitle,
-            company: company,
+            company: companyName,
             email: contactEmail,
-            emailVerified: false,
+            emailVerified: true,  // Manuelle Kontakte sind automatisch verifiziert
             linkedInURL: linkedInURL,
             responsibility: responsibility,
             status: .identified,
-            source: "Manual Entry"
+            source: "Manual Entry",
+            isManuallyCreated: true  // NEU: Flag fuer manuelle Erstellung
         )
         
         // Add to ViewModel
         await MainActor.run {
+            vm.companies.append(company)
             vm.leads.append(lead)
             vm.saveLeads()
+            vm.saveCompanies()
         }
         
         // Save to Google Sheets if configured
         if !vm.settings.spreadsheetID.isEmpty {
             do {
-                try await vm.sheetsService.logLead(
-                    spreadsheetID: vm.settings.spreadsheetID,
-                    lead: lead
-                )
-                await MainActor.run {
-                    showingSuccess = true
-                }
+                try await vm.writeLeadToSheet(lead)
+                showingSuccess = true
             } catch {
-                await MainActor.run {
-                    errorMessage = "Google Sheets Fehler: \(error.localizedDescription)"
-                    showingError = true
-                }
+                errorMessage = "Gespeichert, aber Fehler beim Schreiben ins Sheet: \(error.localizedDescription)"
+                showingError = true
             }
         } else {
-            await MainActor.run {
-                showingSuccess = true
-            }
+            showingSuccess = true
         }
     }
 }
 
-// MARK: - Preview
 #Preview {
     ManualEntryView(vm: AppViewModel())
 }
