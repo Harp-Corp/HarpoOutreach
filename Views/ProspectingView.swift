@@ -216,7 +216,7 @@ struct LeadRowProspecting: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(lead.name).font(.headline)
                 Text(lead.title).font(.subheadline).foregroundStyle(.secondary)
-                Text(lead.company.name).font(.caption)
+                Text(lead.company).font(.caption)
                 
                 if !lead.email.isEmpty {
                     HStack(spacing: 6) {
