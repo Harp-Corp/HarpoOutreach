@@ -2,9 +2,13 @@ import SwiftUI
 
 struct ProspectingView: View {
     @ObservedObject var vm: AppViewModel
-
+    @State private var showManualCompanySheet = false
+    @State private var showManualContactSheet = false
+    @State private var selectedCompanyForContact: Company?
+    
     var body: some View {
         VStack(spacing: 0) {
+            // Header
             HStack {
                 VStack(alignment: .leading) {
                     Text("Prospecting")
@@ -19,52 +23,86 @@ struct ProspectingView: View {
                 }
             }
             .padding(24)
-
+            
             Divider()
-
+            
             HStack(spacing: 0) {
+                // Left: Companies
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Text("Unternehmen").font(.headline)
                         Spacer()
-                        Button("Unternehmen suchen") {
-                            Task { await vm.findCompanies() }
+                        Menu {
+                            Button(action: { Task { await vm.findCompanies() } }) {
+                                Label("Automatische Suche", systemImage: "magnifyingglass")
+                            }
+                            Button(action: { showManualCompanySheet = true }) {
+                                Label("Unternehmen manuell hinzufügen", systemImage: "plus.circle")
+                            }
+                        } label: {
+                            Label("Unternehmen", systemImage: "plus")
                         }
                         .buttonStyle(.borderedProminent)
                         .disabled(vm.isLoading)
                     }
-                        
-                        // Cancel button during loading
-                        if vm.isLoading {
-                            Button("Abbrechen", role: .cancel) {
-                                vm.cancelOperation()
-                            }
-                            .buttonStyle(.bordered)
+                    
+                    // Cancel button during loading
+                    if vm.isLoading {
+                        Button("Abbrechen", role: .cancel) {
+                            vm.cancelOperation()
                         }
-
+                        .buttonStyle(.bordered)
+                    }
+                    
+                    // Error message
+                    if !vm.errorMessage.isEmpty {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.red)
+                            Text(vm.errorMessage)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                        .padding(8)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                    
                     if vm.companies.isEmpty {
                         VStack {
                             Spacer()
-                            Text("Noch keine Unternehmen gesucht.")
+                            Image(systemName: "building.2")
+                                .font(.system(size: 48))
                                 .foregroundStyle(.secondary)
+                            Text("Noch keine Unternehmen")
+                                .font(.headline)
+                                .foregroundStyle(.secondary)
+                            Text("Starte eine automatische Suche oder füge manuell hinzu")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
                             Spacer()
                         }
                         .frame(maxWidth: .infinity)
                     } else {
                         List {
                             ForEach(vm.companies) { company in
-                                CompanyRow(company: company) {
+                                CompanyRow(company: company, onFindContacts: {
                                     Task { await vm.findContacts(for: company) }
-                                }
+                                }, onAddManual: {
+                                    selectedCompanyForContact = company
+                                    showManualContactSheet = true
+                                })
                             }
                         }
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(16)
-
+                
                 Divider()
-
+                
+                // Right: Contacts
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Text("Gefundene Kontakte").font(.headline)
@@ -72,13 +110,13 @@ struct ProspectingView: View {
                         Text("\(vm.leads.count) Kontakte")
                             .foregroundStyle(.secondary)
                     }
-
+                    
                     HStack(spacing: 8) {
                         Button("Alle Kontakte suchen") {
                             Task { await vm.findContactsForAll() }
                         }
                         .disabled(vm.companies.isEmpty || vm.isLoading)
-
+                        
                         Button("Alle Emails verifizieren") {
                             Task { await vm.verifyAllEmails() }
                         }
@@ -86,11 +124,18 @@ struct ProspectingView: View {
                         .buttonStyle(.borderedProminent)
                         .tint(.orange)
                     }
-
+                    
                     if vm.leads.isEmpty {
                         VStack {
                             Spacer()
-                            Text("Wähle ein Unternehmen und suche Kontakte.")
+                            Image(systemName: "person.2")
+                                .font(.system(size: 48))
+                                .foregroundStyle(.secondary)
+                            Text("Keine Kontakte")
+                                .font(.headline)
+                                .foregroundStyle(.secondary)
+                            Text("Wähle ein Unternehmen und suche Kontakte")
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
                             Spacer()
                         }
@@ -109,13 +154,22 @@ struct ProspectingView: View {
                 .padding(16)
             }
         }
+        .sheet(isPresented: $showManualCompanySheet) {
+            ManualCompanyEntryView(vm: vm)
+        }
+        .sheet(isPresented: $showManualContactSheet) {
+            if let company = selectedCompanyForContact {
+                ManualContactEntryView(vm: vm, company: company)
+            }
+        }
     }
 }
 
 struct CompanyRow: View {
     let company: Company
     let onFindContacts: () -> Void
-
+    let onAddManual: () -> Void
+    
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
@@ -133,8 +187,18 @@ struct CompanyRow: View {
                 }
             }
             Spacer()
-            Button("Kontakte suchen") { onFindContacts() }
-                .controlSize(.small)
+            Menu {
+                Button(action: onFindContacts) {
+                    Label("Kontakte automatisch suchen", systemImage: "magnifyingglass")
+                }
+                Button(action: onAddManual) {
+                    Label("Kontakt manuell hinzufügen", systemImage: "plus")
+                }
+            } label: {
+                Text("Aktionen")
+                    .font(.caption)
+            }
+            .controlSize(.small)
         }
         .padding(.vertical, 4)
     }
@@ -143,7 +207,7 @@ struct CompanyRow: View {
 struct LeadRowProspecting: View {
     let lead: Lead
     let onVerify: () -> Void
-
+    
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
@@ -203,3 +267,117 @@ struct LeadRowProspecting: View {
     }
 }
 
+// MARK: - Manual Company Entry
+struct ManualCompanyEntryView: View {
+    @ObservedObject var vm: AppViewModel
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var companyName = ""
+    @State private var industry = Industry.healthcare
+    @State private var region = Region.dach
+    @State private var website = ""
+    @State private var description = ""
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Unternehmensdetails") {
+                    TextField("Firmenname", text: $companyName)
+                    Picker("Branche", selection: $industry) {
+                        ForEach(Industry.allCases) { ind in
+                            Text(ind.rawValue).tag(ind)
+                        }
+                    }
+                    Picker("Region", selection: $region) {
+                        ForEach(Region.allCases) { reg in
+                            Text(reg.rawValue).tag(reg)
+                        }
+                    }
+                    TextField("Website (optional)", text: $website)
+                    TextField("Beschreibung (optional)", text: $description, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+            }
+            .navigationTitle("Unternehmen hinzufügen")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Abbrechen") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Hinzufügen") {
+                        let company = Company(
+                            name: companyName,
+                            industry: industry.rawValue,
+                            region: region.rawValue,
+                            website: website,
+                            description: description,
+                            source: "manual"
+                        )
+                        vm.addCompanyManually(company)
+                        dismiss()
+                    }
+                    .disabled(companyName.isEmpty)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Manual Contact Entry
+struct ManualContactEntryView: View {
+    @ObservedObject var vm: AppViewModel
+    let company: Company
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var contactName = ""
+    @State private var title = ""
+    @State private var email = ""
+    @State private var linkedIn = ""
+    @State private var responsibility = ""
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Unternehmen") {
+                    Text(company.name)
+                        .font(.headline)
+                }
+                
+                Section("Kontaktdetails") {
+                    TextField("Name", text: $contactName)
+                    TextField("Position/Titel", text: $title)
+                    TextField("Email", text: $email)
+                        .textContentType(.emailAddress)
+                        .autocapitalization(.none)
+                    TextField("LinkedIn URL (optional)", text: $linkedIn)
+                        .textContentType(.URL)
+                        .autocapitalization(.none)
+                    TextField("Verantwortungsbereich (optional)", text: $responsibility)
+                }
+            }
+            .navigationTitle("Kontakt hinzufügen")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Abbrechen") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Hinzufügen") {
+                        let lead = Lead(
+                            name: contactName,
+                            title: title,
+                            company: company,
+                            email: email,
+                            linkedInURL: linkedIn,
+                            responsibility: responsibility,
+                            status: .identified,
+                            source: "manual"
+                        )
+                        vm.addLeadManually(lead)
+                        dismiss()
+                    }
+                    .disabled(contactName.isEmpty || title.isEmpty)
+                }
+            }
+        }
+    }
+}
