@@ -428,6 +428,41 @@ class AppViewModel: ObservableObject {
         }
     }
 
+    
+    // MARK: - Test Mode
+    func addTestCompany() {
+        let testCompany = Company(
+            name: "Harpocrates Corp",
+            industry: "Financial Services",
+            region: "DACH",
+            website: "https://harpocrates-corp.com",
+            description: "RegTech Startup für Compliance Management",
+            source: "test"
+        )
+        
+        if !companies.contains(where: { $0.name == "Harpocrates Corp" }) {
+            companies.append(testCompany)
+            statusMessage = "Testfirma Harpocrates hinzugefügt"
+        }
+        
+        let testLead = Lead(
+            name: "Martin Förster",
+            title: "CEO & Founder",
+            company: testCompany,
+            email: "mf@harpocrates-corp.com",
+            emailVerified: true,
+            linkedInURL: "https://linkedin.com/in/martinfoerster",
+            status: .emailVerified,
+            source: "test"
+        )
+        
+        if !leads.contains(where: { $0.email == "mf@harpocrates-corp.com" }) {
+            leads.append(testLead)
+            saveLeads()
+            statusMessage = "Testkontakt Martin Förster hinzugefügt"
+        }
+    }
+
 
 }
 
