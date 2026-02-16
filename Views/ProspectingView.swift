@@ -33,6 +33,14 @@ struct ProspectingView: View {
                         .buttonStyle(.borderedProminent)
                         .disabled(vm.isLoading)
                     }
+                        
+                        // Cancel button during loading
+                        if vm.isLoading {
+                            Button("Abbrechen", role: .cancel) {
+                                vm.cancelOperation()
+                            }
+                            .buttonStyle(.bordered)
+                        }
 
                     if vm.companies.isEmpty {
                         VStack {
