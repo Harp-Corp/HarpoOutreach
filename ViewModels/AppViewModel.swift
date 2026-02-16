@@ -402,6 +402,32 @@ class AppViewModel: ObservableObject {
         currentStep = ""
         statusMessage = "Operation cancelled"
     }
+    
+    // MARK: - Manual Entry
+    func addCompanyManually(_ company: Company) {
+        // Check for duplicates
+        if !companies.contains(where: { $0.name.lowercased() == company.name.lowercased() }) {
+            companies.append(company)
+            statusMessage = "Unternehmen \(company.name) manuell hinzugefügt"
+        } else {
+            errorMessage = "Unternehmen \(company.name) existiert bereits"
+        }
+    }
+    
+    func addLeadManually(_ lead: Lead) {
+        // Check for duplicates
+        if !leads.contains(where: { 
+            $0.name.lowercased() == lead.name.lowercased() &&
+            $0.company.name.lowercased() == lead.company.name.lowercased()
+        }) {
+            leads.append(lead)
+            saveLeads()
+            statusMessage = "Kontakt \(lead.name) manuell hinzugefügt"
+        } else {
+            errorMessage = "Kontakt \(lead.name) bei \(lead.company.name) existiert bereits"
+        }
+    }
+
 
 }
 
