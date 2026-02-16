@@ -300,6 +300,7 @@ struct ManualCompanyEntryView: View {
                     TextField("Beschreibung (optional)", text: $description, axis: .vertical)
                         .lineLimit(3...6)
                 }
+                            .formStyle(.grouped)
             }
             .navigationTitle("Unternehmen hinzufügen")
             .toolbar {
@@ -354,6 +355,7 @@ struct ManualContactEntryView: View {
                     TextField("Verantwortungsbereich (optional)", text: $responsibility)
                 }
             }
+                        .formStyle(.grouped)
             .navigationTitle("Kontakt hinzufügen")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
