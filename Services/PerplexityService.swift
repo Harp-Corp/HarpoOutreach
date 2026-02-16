@@ -5,7 +5,7 @@ class PerplexityService {
     private let model = "sonar"  // FIXED: Changed from "sonar-pro" to "sonar"
     
     // MARK: - Generic API Call
-    private func callAPI(systemPrompt: String, userPrompt: String, apiKey: String, maxTokens: Int = 800) async throws -> String {  // FIXED: Increased from 300 to 800
+    private func callAPI(systemPrompt: String, userPrompt: String, apiKey: String, maxTokens: Int = 4000) async throws -> String {
         let requestBody = PerplexityRequest(
             model: model,
             messages: [
@@ -46,9 +46,9 @@ class PerplexityService {
     
     // MARK: - 1) Unternehmen finden
     func findCompanies(industry: Industry, region: Region, apiKey: String) async throws -> [Company] {
-        let system = "You find real companies. Return ONLY a JSON array of objects with fields: name, industry, region, website, description. No text outside the JSON. Only real, verifiable companies."
+        let system = "You find real companies. Return ONLY a JSON array of objects with fields: name, industry, region, website, linkedInURL, description, size, country. No markdown, no explanation."
         
-        let user = "Find 8-10 real \(industry.rawValue) companies in \(region.countries) that are likely to need compliance solutions. Focus on mid-size to large companies in \(industry.searchTerms). Include company website. Return ONLY valid JSON array."
+        let user = "Find 8-10 real \(industry.rawValue) companies in \(region.countries) meeting: revenue >50M EUR, 200+ employees. Include website and LinkedIn."
         
         let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey)
         
@@ -62,6 +62,7 @@ class PerplexityService {
                 industry: d["industry"] ?? industry.rawValue,
                 region: d["region"] ?? region.rawValue,
                 website: d["website"] ?? "",
+                linkedInURL: d["linkedInURL"] ?? "",
                 description: d["description"] ?? ""
             )
         }
@@ -72,9 +73,9 @@ class PerplexityService {
     
     // MARK: - 2) Compliance-Ansprechpartner finden
     func findContacts(company: Company, apiKey: String) async throws -> [Lead] {
-        let system = "You find real compliance professionals at specific companies. Return ONLY a JSON array of objects with fields: name, title, linkedInURL, email, responsibility, source. Only real, verifiable people. If email unknown use \"\". No fake data. No text outside the JSON."
+        let system = "You find real compliance professionals at specific companies. Return ONLY a JSON array with: name, title, email, linkedInURL, responsibility. No markdown."
         
-        let user = "Find compliance officers, Chief Compliance Officers, heads of compliance, legal/compliance directors, or managing directors responsible for compliance at \(company.name) (\(company.industry), \(company.region)). Website: \(company.website). Search LinkedIn, company website, press releases, regulatory filings. Include their LinkedIn URL if available. Return ONLY valid JSON array."
+        let user = "Find compliance officers, Chief Compliance Officers, heads of compliance, regulatory affairs managers at \(company.name). Include their business email and LinkedIn profile."
         
         let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey)
         
@@ -82,7 +83,7 @@ class PerplexityService {
             Lead(
                 name: d["name"] ?? "Unknown",
                 title: d["title"] ?? "",
-                company: company,
+                company: company.name,
                 email: d["email"] ?? "",
                 emailVerified: false,
                 linkedInURL: d["linkedInURL"] ?? "",
@@ -93,11 +94,28 @@ class PerplexityService {
         }
     }
     
-    // MARK: - 3) Email verifizieren
+    // MARK: - 3) Email verifizieren - ERWEITERT mit LinkedIn und allen Quellen
     func verifyEmail(lead: Lead, apiKey: String) async throws -> (email: String, verified: Bool, notes: String) {
-        let system = "You verify business email addresses. Return ONLY a JSON object with fields: email, verified (true/false), notes. Only confirm emails you can verify from public sources. Common patterns: firstname.lastname@domain, f.lastname@domain, firstname@domain. Check company website, LinkedIn, press releases, conference speakers lists, regulatory filings, XING, published articles."
+        let system = """You are an email verification expert. Use ALL available sources including:
+- Company websites and contact pages
+- LinkedIn profiles  
+- Business directories (Bloomberg, Reuters, Crunchbase)
+- Press releases and news articles
+- Industry publications
+- Professional networks
+
+Return ONLY a JSON object with: email, verified (boolean), notes.
+If you find a different/better email, include it. If the email format is standard for the company domain, that increases confidence."""
         
-        let user = "Find and verify the business email address for:\nName: \(lead.name)\nTitle: \(lead.title)\nCompany: \(lead.company.name)\nCompany website: \(lead.company.website)\nKnown email so far: \(lead.email)\nLinkedIn: \(lead.linkedInURL)\n\nSearch all available sources. If you cannot verify 100%, state that clearly. Return ONLY valid JSON object."
+        let user = """Verify the business email address for:
+Name: \(lead.name)
+Title: \(lead.title)
+Company: \(lead.company)
+Provided email: \(lead.email)
+LinkedIn: \(lead.linkedInURL)
+
+Search for this person across LinkedIn, company website, news, and professional directories.
+Verify if \(lead.email) is likely correct or find the actual email."""
         
         let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey)
         let json = cleanJSON(content)
@@ -116,71 +134,79 @@ class PerplexityService {
     
     // MARK: - 4) Branchen-Challenges recherchieren
     func researchChallenges(company: Company, apiKey: String) async throws -> String {
-        let system = "You are a compliance industry research expert. Write in German. Research real, current compliance challenges for the given company and industry. Return a structured text (not JSON) with:\n1. Branchenspezifische Compliance-Herausforderungen (3-4 Punkte)\n2. Unternehmensspezifische Themen (2-3 Punkte)\n3. Aktuelle regulatorische Entwicklungen\n\nBe specific, use real regulations (DORA, NIS2, CSRD, MDR, EU AI Act etc.)"
+        let system = "You research specific regulatory and compliance challenges. Return a concise summary of key challenges."
         
-        let user = "Research compliance challenges for:\nCompany: \(company.name)\nIndustry: \(company.industry)\nRegion: \(company.region)\nWebsite: \(company.website)\nDescription: \(company.description)"
+        let user = "What are the top 3-5 regulatory compliance challenges for \(company.name) in \(company.industry)? Focus on current regulations, upcoming changes, and pain points."
         
         return try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey)
     }
     
-    // MARK: - 5) Personalisierte Email drafting
+    // MARK: - 5) Personalisierte Email erstellen
     func draftEmail(lead: Lead, challenges: String, senderName: String, apiKey: String) async throws -> OutboundEmail {
-        let system = "You write personalized B2B outreach emails in German for Harpocrates, a RegTech company that offers COMPLY, an AI-powered compliance management platform. COMPLY reduces compliance effort by 50% in 3 months. It monitors regulations (EU-Lex, internal), provides 360° compliance control, works across all industries, and is scalable from startups to enterprises. Website: www.harpocrates-corp.com\n\nWrite professional, warm, not pushy emails. Reference specific challenges of the recipient's industry and company. Keep it concise (max 200 words body). Return ONLY a JSON object with fields: subject, body."
+        let system = "You write professional B2B outreach emails. Write a personalized, non-salesy email that provides value."
         
-        let user = "Draft a personalized outreach email for:\nRecipient: \(lead.name), \(lead.title)\nCompany: \(lead.company.name) (\(lead.company.industry))\nRegion: \(lead.company.region)\nChallenges:\n\(challenges)\n\nSender: \(senderName), Harpocrates Solutions GmbH\nSender email: mf@harpocrates-corp.com\n\nThe email should be in German, professional, and reference specific compliance challenges of their industry. Return ONLY JSON with subject and body."
+        let user = """
+        Write a cold outreach email from \(senderName) at Harpocrates Corp (RegTech company) to:
+        Name: \(lead.name)
+        Title: \(lead.title)
+        Company: \(lead.company)
+        
+        Their challenges: \(challenges)
+        
+        Our solution: Automated compliance monitoring, regulatory change tracking, risk assessment.
+        
+        Keep it under 150 words, personal, value-focused. No hard sell.
+        Return JSON with: subject, body
+        """
         
         let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey)
         let json = cleanJSON(content)
         
         guard let data = json.data(using: .utf8),
-              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String] else {
-            throw PplxError.parseError
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return OutboundEmail(subject: "Compliance Solutions", body: content)
         }
         
         return OutboundEmail(
-            subject: dict["subject"] ?? "Compliance Automation mit Harpocrates",
-            body: dict["body"] ?? ""
+            subject: dict["subject"] as? String ?? "Compliance Solutions for \(lead.company)",
+            body: dict["body"] as? String ?? content
         )
     }
-
-        // MARK: - 6) Follow-Up Email drafting
+    
+    // MARK: - 6) Follow-up Email erstellen
     func draftFollowUp(lead: Lead, originalEmail: String, senderName: String, apiKey: String) async throws -> OutboundEmail {
-        let system = "You write personalized follow-up emails in German for Harpocrates. The follow-up should reference the original email, be brief, and maintain a professional but friendly tone. Return ONLY a JSON object with fields: subject, body."
+        let system = "You write professional follow-up emails. Keep it brief and add new value."
         
-        let user = "Draft a follow-up email for:\nRecipient: \(lead.name), \(lead.title)\nCompany: \(lead.company.name)\nOriginal email sent:\n\(originalEmail)\n\nSender: \(senderName), Harpocrates Solutions GmbH\nSender email: mf@harpocrates-corp.com\n\nThe follow-up should be in German, brief (max 150 words), and friendly. Return ONLY JSON with subject and body."
+        let user = """
+        Write a follow-up email from \(senderName) at Harpocrates Corp to:
+        Name: \(lead.name)
+        Company: \(lead.company)
+        
+        Original email was about compliance solutions.
+        
+        Keep it under 100 words. Add a new insight or offer.
+        Return JSON with: subject, body
+        """
         
         let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey)
         let json = cleanJSON(content)
         
         guard let data = json.data(using: .utf8),
-              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String] else {
-            throw PplxError.parseError
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return OutboundEmail(subject: "Following up", body: content)
         }
         
         return OutboundEmail(
-            subject: dict["subject"] ?? "Follow-Up: Compliance Automation",
-            body: dict["body"] ?? ""
+            subject: dict["subject"] as? String ?? "Following up - \(lead.company)",
+            body: dict["body"] as? String ?? content
         )
     }
     
-    // MARK: - JSON Helpers
-    private func parseJSON(_ content: String) -> [[String: String]] {
-        let json = cleanJSON(content)
-        guard let data = json.data(using: .utf8) else { return [] }
-        do {
-            return try JSONDecoder().decode([[String: String]].self, from: data)
-        } catch {
-            print("JSON Parse Error: \(error)")
-            print("JSON (first 300 chars): \(String(json.prefix(300)))")
-            return []
-        }
-    }
-    
-    // FIXED: Improved cleanJSON function
+    // MARK: - Hilfsfunktionen
     private func cleanJSON(_ content: String) -> String {
         var s = content.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // Remove Markdown code blocks
+        // Entferne Markdown Code-Blocks
         if s.hasPrefix("```json") {
             s = String(s.dropFirst(7))
         } else if s.hasPrefix("```") {
@@ -192,12 +218,12 @@ class PerplexityService {
         
         s = s.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // IMPORTANT: Return directly if it starts with [ or {
+        // WICHTIG: Direkt zurueckgeben, wenn es mit [ oder { beginnt
         if s.hasPrefix("[") || s.hasPrefix("{") {
             return s
         }
         
-        // Fallback: Search for array or object boundaries
+        // Fallback: Suche nach Array oder Object
         if let aStart = s.firstIndex(of: "["), let aEnd = s.lastIndex(of: "]") {
             return String(s[aStart...aEnd])
         }
@@ -207,35 +233,39 @@ class PerplexityService {
         
         return s
     }
-}
-
-// MARK: - Errors
-enum PplxError: LocalizedError {
-    case invalidResponse
-    case apiError(code: Int, message: String)
-    case noContent
-    case parseError
     
-    var errorDescription: String? {
-        switch self {
-        case .invalidResponse:
-            return "Ungueltige Server-Antwort"
-        case .apiError(let c, let m):
-            return "API Fehler \(c): \(m)"
-        case .noContent:
-            return "Keine Inhalte in der Antwort"
-        case .parseError:
-            return "JSON konnte nicht geparst werden"
+    private func parseJSON(_ content: String) -> [[String: String]] {
+        let cleaned = cleanJSON(content)
+        
+        guard let data = cleaned.data(using: .utf8) else {
+            print("[DEBUG] Failed to convert to data")
+            return []
         }
+        
+        do {
+            if let array = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                return array.map { dict in
+                    var result: [String: String] = [:]
+                    for (key, value) in dict {
+                        result[key] = "\(value)"
+                    }
+                    return result
+                }
+            }
+        } catch {
+            print("[DEBUG] JSON parse error: \(error)")
+        }
+        
+        return []
     }
 }
 
-// MARK: - Request/Response Structures
+// MARK: - Perplexity API Strukturen
 struct PerplexityRequest: Codable {
     let model: String
     let messages: [Message]
     let max_tokens: Int
-    let web_search_options: WebSearchOptions?
+    let web_search_options: WebSearchOptions
     
     struct Message: Codable {
         let role: String
@@ -252,9 +282,23 @@ struct PerplexityResponse: Codable {
     
     struct Choice: Codable {
         let message: Message?
-        
-        struct Message: Codable {
-            let content: String?
+    }
+    
+    struct Message: Codable {
+        let content: String?
+    }
+}
+
+enum PplxError: LocalizedError {
+    case invalidResponse
+    case apiError(code: Int, message: String)
+    case noContent
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse: return "Invalid response from server"
+        case .apiError(let code, let msg): return "API Error \(code): \(msg)"
+        case .noContent: return "No content in response"
         }
     }
 }
