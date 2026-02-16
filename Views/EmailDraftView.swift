@@ -1,22 +1,40 @@
+//
+//  EmailDraftView.swift
+//  HarpoOutreach
+//
+//  View for managing email drafts - edit, delete, send
+//
+
 import SwiftUI
 
 struct EmailDraftView: View {
     @ObservedObject var vm: AppViewModel
-
+    
+    // Leads ohne Draft
     var draftsNeeded: [Lead] {
-        vm.leads.filter { $0.emailVerified && $0.draftedEmail == nil }
+        vm.leads.filter { ($0.emailVerified || $0.isManuallyCreated) && $0.draftedEmail == nil }
     }
-
+    
+    // Leads mit Draft, noch nicht gesendet
     var draftsReady: [Lead] {
         vm.leads.filter { $0.draftedEmail != nil && $0.dateEmailSent == nil }
     }
-
+    
+    @State private var selectedLead: Lead?
+    @State private var showingEditSheet = false
+    @State private var showingSendConfirmation = false
+    @State private var showingDeleteConfirmation = false
+    @State private var editSubject = ""
+    @State private var editBody = ""
+    
     var body: some View {
         VStack(spacing: 0) {
+            // Header
             HStack {
                 VStack(alignment: .leading) {
-                    Text("Email Drafts").font(.largeTitle).bold()
-                    Text("Personalisierte Emails erstellen und freigeben")
+                    Text("Email Drafts")
+                        .font(.largeTitle).bold()
+                    Text("Emails bearbeiten, loeschen oder versenden")
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -27,7 +45,7 @@ struct EmailDraftView: View {
                 .disabled(draftsNeeded.isEmpty || vm.isLoading)
             }
             .padding(24)
-
+            
             if vm.isLoading {
                 HStack {
                     ProgressView()
@@ -35,10 +53,11 @@ struct EmailDraftView: View {
                 }
                 .padding(.horizontal, 24)
             }
-
+            
             Divider()
-
+            
             if draftsReady.isEmpty && draftsNeeded.isEmpty {
+                // Empty state
                 VStack(spacing: 12) {
                     Spacer()
                     Image(systemName: "envelope.badge")
@@ -51,120 +70,202 @@ struct EmailDraftView: View {
                 }
             } else {
                 List {
+                    // SECTION 1: Drafts noch zu erstellen
                     if !draftsNeeded.isEmpty {
                         Section("Email noch zu erstellen (\(draftsNeeded.count))") {
                             ForEach(draftsNeeded) { lead in
                                 HStack {
                                     VStack(alignment: .leading) {
                                         Text(lead.name).bold()
-                                        Text(lead.company.name).font(.caption)
-                                            .foregroundStyle(.secondary)
+                                        Text(lead.company).font(.caption)
                                     }
                                     Spacer()
-                                    Button("Email erstellen") {
-                                        Task { await vm.draftEmail(for: lead.id) }
+                                    Button("Draft erstellen") {
+                                        Task { await vm.draftEmailForLead(lead) }
                                     }
-                                    .controlSize(.small)
+                                    .buttonStyle(.bordered)
                                     .disabled(vm.isLoading)
                                 }
                             }
                         }
                     }
-
+                    
+                    // SECTION 2: Fertige Drafts - bearbeitbar, loeschbar, versendbar
                     if !draftsReady.isEmpty {
-                        Section("Erstellte Drafts (\(draftsReady.count))") {
+                        Section("Fertige Drafts (\(draftsReady.count))") {
                             ForEach(draftsReady) { lead in
-                                DraftCard(lead: lead, vm: vm)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    // Header
+                                    HStack {
+                                        VStack(alignment: .leading) {
+                                            Text(lead.name).bold()
+                                            Text(lead.company).font(.caption).foregroundStyle(.secondary)
+                                            Text(lead.email).font(.caption).foregroundStyle(.blue)
+                                        }
+                                        Spacer()
+                                        
+                                        // Status Badge
+                                        if lead.isManuallyCreated {
+                                            Text("Manuell")
+                                                .font(.caption2)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 2)
+                                                .background(.green.opacity(0.2))
+                                                .foregroundColor(.green)
+                                                .clipShape(Capsule())
+                                        }
+                                    }
+                                    
+                                    // Draft Preview
+                                    if let draft = lead.draftedEmail {
+                                        GroupBox {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text("Betreff: \(draft.subject)")
+                                                    .font(.subheadline).bold()
+                                                Text(draft.body)
+                                                    .font(.caption)
+                                                    .lineLimit(3)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Action Buttons
+                                    HStack(spacing: 12) {
+                                        Button {
+                                            selectedLead = lead
+                                            if let draft = lead.draftedEmail {
+                                                editSubject = draft.subject
+                                                editBody = draft.body
+                                            }
+                                            showingEditSheet = true
+                                        } label: {
+                                            Label("Bearbeiten", systemImage: "pencil")
+                                        }
+                                        .buttonStyle(.bordered)
+                                        
+                                        Button {
+                                            selectedLead = lead
+                                            showingSendConfirmation = true
+                                        } label: {
+                                            Label("Senden", systemImage: "paperplane")
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        
+                                        Spacer()
+                                        
+                                        Button(role: .destructive) {
+                                            selectedLead = lead
+                                            showingDeleteConfirmation = true
+                                        } label: {
+                                            Label("Loeschen", systemImage: "trash")
+                                        }
+                                        .buttonStyle(.bordered)
+                                    }
+                                }
+                                .padding(.vertical, 8)
                             }
                         }
                     }
                 }
             }
         }
+        // Edit Sheet
+        .sheet(isPresented: $showingEditSheet) {
+            if let lead = selectedLead {
+                EditDraftSheet(
+                    lead: lead,
+                    subject: $editSubject,
+                    body: $editBody,
+                    onSave: { newSubject, newBody in
+                        vm.updateDraft(for: lead, subject: newSubject, body: newBody)
+                        showingEditSheet = false
+                    },
+                    onCancel: {
+                        showingEditSheet = false
+                    }
+                )
+                .frame(minWidth: 600, minHeight: 500)
+            }
+        }
+        // Send Confirmation
+        .alert("Email senden?", isPresented: $showingSendConfirmation) {
+            Button("Abbrechen", role: .cancel) { }
+            Button("Senden") {
+                if let lead = selectedLead {
+                    Task {
+                        await vm.sendEmail(to: lead)
+                    }
+                }
+            }
+        } message: {
+            if let lead = selectedLead {
+                Text("Soll die Email an \(lead.name) (\(lead.email)) gesendet werden?")
+            }
+        }
+        // Delete Confirmation
+        .alert("Draft loeschen?", isPresented: $showingDeleteConfirmation) {
+            Button("Abbrechen", role: .cancel) { }
+            Button("Loeschen", role: .destructive) {
+                if let lead = selectedLead {
+                    vm.deleteDraft(for: lead)
+                }
+            }
+        } message: {
+            if let lead = selectedLead {
+                Text("Soll der Email-Draft fuer \(lead.name) geloescht werden?")
+            }
+        }
     }
 }
 
-struct DraftCard: View {
+// MARK: - Edit Draft Sheet
+struct EditDraftSheet: View {
     let lead: Lead
-    @ObservedObject var vm: AppViewModel
-    @State private var editSubject: String = ""
-    @State private var editBody: String = ""
-    @State private var isEditing = false
-
+    @Binding var subject: String
+    @Binding var body: String
+    let onSave: (String, String) -> Void
+    let onCancel: () -> Void
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(spacing: 0) {
+            // Header
             HStack {
                 VStack(alignment: .leading) {
-                    Text(lead.name).font(.headline)
-                    Text("\(lead.title) - \(lead.company.name)")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                    Text("An: \(lead.email)").font(.caption)
+                    Text("Email bearbeiten")
+                        .font(.headline)
+                    Text("An: \(lead.name) <\(lead.email)>")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 Spacer()
-                if lead.draftedEmail?.isApproved == true {
-                    Label("Freigegeben", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green).font(.caption)
-                }
+                Button("Abbrechen") { onCancel() }
+                    .buttonStyle(.bordered)
+                Button("Speichern") { onSave(subject, body) }
+                    .buttonStyle(.borderedProminent)
             }
-
+            .padding()
+            
             Divider()
-
-            if isEditing {
-                TextField("Betreff", text: $editSubject)
-                    .textFieldStyle(.roundedBorder)
-                TextEditor(text: $editBody)
-                    .frame(minHeight: 150)
-                    .border(Color.gray.opacity(0.3))
-                HStack {
-                    Button("Speichern") {
-                        var updated = lead
-                        updated.draftedEmail?.subject = editSubject
-                        updated.draftedEmail?.body = editBody
-                        vm.updateLead(updated)
-                        isEditing = false
-                    }
-                    Button("Abbrechen", role: .cancel) {
-                        isEditing = false
-                    }
+            
+            // Form
+            Form {
+                Section("Betreff") {
+                    TextField("Betreff", text: $subject)
+                        .textFieldStyle(.roundedBorder)
                 }
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Betreff:").font(.caption).foregroundStyle(.secondary)
-                    Text(lead.draftedEmail?.subject ?? "")
-                        .font(.headline)
-                    Text("Email:").font(.caption).foregroundStyle(.secondary)
-                    ScrollView {
-                        Text(lead.draftedEmail?.body ?? "")
-                            .font(.body)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .frame(maxHeight: 200)
-                    .padding(8)
-                    .background(Color.gray.opacity(0.05))
-                    .cornerRadius(8)
-                }
-
-                HStack(spacing: 8) {
-                    Button("Bearbeiten") {
-                        editSubject = lead.draftedEmail?.subject ?? ""
-                        editBody = lead.draftedEmail?.body ?? ""
-                        isEditing = true
-                    }
-                    .controlSize(.small)
-
-                    if lead.draftedEmail?.isApproved != true {
-                        Button("Freigeben") {
-                            vm.approveEmail(for: lead.id)
-                        }
-                        .controlSize(.small)
-                        .buttonStyle(.borderedProminent)
-                    }
+                
+                Section("Nachricht") {
+                    TextEditor(text: $body)
+                        .frame(minHeight: 250)
+                        .font(.body)
                 }
             }
+            .formStyle(.grouped)
         }
-        .padding(12)
-        .background(Color.gray.opacity(0.05))
-        .cornerRadius(8)
     }
+}
+
+#Preview {
+    EmailDraftView(vm: AppViewModel())
 }
