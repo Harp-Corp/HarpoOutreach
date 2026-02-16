@@ -347,11 +347,7 @@ struct ManualContactEntryView: View {
                     TextField("Name", text: $contactName)
                     TextField("Position/Titel", text: $title)
                     TextField("Email", text: $email)
-                        .textContentType(.emailAddress)
-                        .autocapitalization(.none)
                     TextField("LinkedIn URL (optional)", text: $linkedIn)
-                        .textContentType(.URL)
-                        .autocapitalization(.none)
                     TextField("Verantwortungsbereich (optional)", text: $responsibility)
                 }
             }
