@@ -133,13 +133,13 @@ class PerplexityService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let body: [String: Any] = [
-            "model": "llama-3.1-sonar-large-128k-online",
+            "model": "sonar",
             "messages": [
                 ["role": "system", "content": "You are a helpful assistant that provides structured data. Always respond in the requested format."],
                 ["role": "user", "content": prompt]
             ],
             "temperature": 0.2,
-            "max_tokens": 2000
+            "max_tokens": 800
         ]
         
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -149,7 +149,7 @@ class PerplexityService {
         let decoder = JSONDecoder()
         let response = try decoder.decode(PerplexityResponse.self, from: data)
         
-        guard let content = response.choices?.first?.message?.content else {
+        guard let content = response.choices?[0].message?.content else {
             throw NSError(domain: "No content in response", code: -2)
         }
         
