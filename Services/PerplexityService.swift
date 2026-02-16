@@ -142,6 +142,26 @@ class PerplexityService {
             body: dict["body"] ?? ""
         )
     }
+
+        // MARK: - 6) Follow-Up Email drafting
+    func draftFollowUp(lead: Lead, originalEmail: String, senderName: String, apiKey: String) async throws -> OutboundEmail {
+        let system = "You write personalized follow-up emails in German for Harpocrates. The follow-up should reference the original email, be brief, and maintain a professional but friendly tone. Return ONLY a JSON object with fields: subject, body."
+        
+        let user = "Draft a follow-up email for:\nRecipient: \(lead.name), \(lead.title)\nCompany: \(lead.company.name)\nOriginal email sent:\n\(originalEmail)\n\nSender: \(senderName), Harpocrates Solutions GmbH\nSender email: mf@harpocrates-corp.com\n\nThe follow-up should be in German, brief (max 150 words), and friendly. Return ONLY JSON with subject and body."
+        
+        let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey)
+        let json = cleanJSON(content)
+        
+        guard let data = json.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String] else {
+            throw PplxError.parseError
+        }
+        
+        return OutboundEmail(
+            subject: dict["subject"] ?? "Follow-Up: Compliance Automation",
+            body: dict["body"] ?? ""
+        )
+    }
     
     // MARK: - JSON Helpers
     private func parseJSON(_ content: String) -> [[String: String]] {
