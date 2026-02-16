@@ -286,6 +286,8 @@ struct ManualCompanyEntryView: View {
             Form {
                 Section("Unternehmensdetails") {
                     TextField("Firmenname", text: $companyName)
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(height: 36)
                     Picker("Branche", selection: $industry) {
                         ForEach(Industry.allCases) { ind in
                             Text(ind.rawValue).tag(ind)
@@ -297,6 +299,8 @@ struct ManualCompanyEntryView: View {
                         }
                     }
                     TextField("Website (optional)", text: $website)
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(height: 36)
                     TextField("Beschreibung (optional)", text: $description, axis: .vertical)
                         .lineLimit(3...6)
                 }
@@ -349,10 +353,20 @@ struct ManualContactEntryView: View {
                 
                 Section("Kontaktdetails") {
                     TextField("Name", text: $contactName)
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(height: 36)
                     TextField("Position/Titel", text: $title)
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(height: 36)
                     TextField("Email", text: $email)
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(height: 36)
                     TextField("LinkedIn URL (optional)", text: $linkedIn)
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(height: 36)
                     TextField("Verantwortungsbereich (optional)", text: $responsibility)
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(height: 36)
                 }
             }
                         .formStyle(.grouped)
