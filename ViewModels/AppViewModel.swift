@@ -395,5 +395,13 @@ class AppViewModel: ObservableObject {
         }
         isLoading = false
     }
+    
+    // MARK: - Cancel Operations
+    func cancelOperation() {
+        isLoading = false
+        currentStep = ""
+        statusMessage = "Operation cancelled"
+    }
+
 }
 
