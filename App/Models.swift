@@ -86,6 +86,13 @@ enum LeadStatus: String, Codable, CaseIterable {
     case qualified = "Qualified"
     case converted = "Converted"
     case notInterested = "Not Interested"
+        case emailApproved = "Email Approved"
+        case emailDrafted = "Email Drafted"
+        case emailSent = "Email Sent"
+        case followUpDrafted = "Follow-Up Drafted"
+        case followUpSent = "Follow-Up Sent"
+        case replied = "Replied"
+        case closed = "Closed"
 }
 
 // MARK: - Lead
