@@ -2,7 +2,7 @@ import Foundation
 
 class PerplexityService {
     private let apiURL = "https://api.perplexity.ai/chat/completions"
-    private let model = "sonar"  // FIXED: Changed from "sonar-pro" to "sonar"
+    private let model = "sonar"
     
     // MARK: - Generic API Call
     private func callAPI(systemPrompt: String, userPrompt: String, apiKey: String, maxTokens: Int = 4000) async throws -> String {
@@ -36,7 +36,6 @@ class PerplexityService {
         
         let apiResp = try JSONDecoder().decode(PerplexityResponse.self, from: data)
         
-        // FIXED: Changed from .first?.message to [0].message
         guard let content = apiResp.choices?[0].message?.content else {
             throw PplxError.noContent
         }
@@ -52,7 +51,6 @@ class PerplexityService {
         
         let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey)
         
-        // DEBUG LOGGING
         print("[DEBUG] Raw response length: \(content.count)")
         print("[DEBUG] Response preview: \(String(content.prefix(200)))")
         
@@ -96,18 +94,21 @@ class PerplexityService {
     
     // MARK: - 3) Email verifizieren - ERWEITERT mit LinkedIn und allen Quellen
     func verifyEmail(lead: Lead, apiKey: String) async throws -> (email: String, verified: Bool, notes: String) {
-        let system = """You are an email verification expert. Use ALL available sources including:
+        let system = """
+You are an email verification expert. Use ALL available sources including:
 - Company websites and contact pages
-- LinkedIn profiles  
+- LinkedIn profiles
 - Business directories (Bloomberg, Reuters, Crunchbase)
 - Press releases and news articles
 - Industry publications
 - Professional networks
 
 Return ONLY a JSON object with: email, verified (boolean), notes.
-If you find a different/better email, include it. If the email format is standard for the company domain, that increases confidence."""
+If you find a different/better email, include it. If the email format is standard for the company domain, that increases confidence.
+"""
         
-        let user = """Verify the business email address for:
+        let user = """
+Verify the business email address for:
 Name: \(lead.name)
 Title: \(lead.title)
 Company: \(lead.company)
@@ -115,7 +116,8 @@ Provided email: \(lead.email)
 LinkedIn: \(lead.linkedInURL)
 
 Search for this person across LinkedIn, company website, news, and professional directories.
-Verify if \(lead.email) is likely correct or find the actual email."""
+Verify if \(lead.email) is likely correct or find the actual email.
+"""
         
         let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey)
         let json = cleanJSON(content)
@@ -146,18 +148,18 @@ Verify if \(lead.email) is likely correct or find the actual email."""
         let system = "You write professional B2B outreach emails. Write a personalized, non-salesy email that provides value."
         
         let user = """
-        Write a cold outreach email from \(senderName) at Harpocrates Corp (RegTech company) to:
-        Name: \(lead.name)
-        Title: \(lead.title)
-        Company: \(lead.company)
-        
-        Their challenges: \(challenges)
-        
-        Our solution: Automated compliance monitoring, regulatory change tracking, risk assessment.
-        
-        Keep it under 150 words, personal, value-focused. No hard sell.
-        Return JSON with: subject, body
-        """
+Write a cold outreach email from \(senderName) at Harpocrates Corp (RegTech company) to:
+Name: \(lead.name)
+Title: \(lead.title)
+Company: \(lead.company)
+
+Their challenges: \(challenges)
+
+Our solution: Automated compliance monitoring, regulatory change tracking, risk assessment.
+
+Keep it under 150 words, personal, value-focused. No hard sell.
+Return JSON with: subject, body
+"""
         
         let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey)
         let json = cleanJSON(content)
@@ -178,15 +180,15 @@ Verify if \(lead.email) is likely correct or find the actual email."""
         let system = "You write professional follow-up emails. Keep it brief and add new value."
         
         let user = """
-        Write a follow-up email from \(senderName) at Harpocrates Corp to:
-        Name: \(lead.name)
-        Company: \(lead.company)
-        
-        Original email was about compliance solutions.
-        
-        Keep it under 100 words. Add a new insight or offer.
-        Return JSON with: subject, body
-        """
+Write a follow-up email from \(senderName) at Harpocrates Corp to:
+Name: \(lead.name)
+Company: \(lead.company)
+
+Original email was about compliance solutions.
+
+Keep it under 100 words. Add a new insight or offer.
+Return JSON with: subject, body
+"""
         
         let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey)
         let json = cleanJSON(content)
@@ -206,7 +208,6 @@ Verify if \(lead.email) is likely correct or find the actual email."""
     private func cleanJSON(_ content: String) -> String {
         var s = content.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // Entferne Markdown Code-Blocks
         if s.hasPrefix("```json") {
             s = String(s.dropFirst(7))
         } else if s.hasPrefix("```") {
@@ -218,12 +219,10 @@ Verify if \(lead.email) is likely correct or find the actual email."""
         
         s = s.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // WICHTIG: Direkt zurueckgeben, wenn es mit [ oder { beginnt
         if s.hasPrefix("[") || s.hasPrefix("{") {
             return s
         }
         
-        // Fallback: Suche nach Array oder Object
         if let aStart = s.firstIndex(of: "["), let aEnd = s.lastIndex(of: "]") {
             return String(s[aStart...aEnd])
         }
