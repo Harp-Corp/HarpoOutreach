@@ -132,7 +132,7 @@ struct FollowUpCard: View {
             HStack {
                 VStack(alignment: .leading) {
                     Text(lead.name).font(.headline)
-                    Text(lead.company.name).font(.subheadline).foregroundStyle(.secondary)
+                    Text(lead.company).font(.subheadline).foregroundStyle(.secondary)
                     Text("\(daysSinceEmail) Tage seit erster Email").font(.caption)
                 }
                 Spacer()
