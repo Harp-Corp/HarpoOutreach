@@ -223,7 +223,7 @@ struct EmailDraftView: View {
 struct EditDraftSheet: View {
     let lead: Lead
     @Binding var subject: String
-    @Binding var body: String
+    @Binding var emailBody: String
     let onSave: (String, String) -> Void
     let onCancel: () -> Void
     
@@ -241,7 +241,7 @@ struct EditDraftSheet: View {
                 Spacer()
                 Button("Abbrechen") { onCancel() }
                     .buttonStyle(.bordered)
-                Button("Speichern") { onSave(subject, body) }
+                Button("Speichern") { onSave(subject, emailBody) }
                     .buttonStyle(.borderedProminent)
             }
             .padding()
@@ -256,7 +256,7 @@ struct EditDraftSheet: View {
                 }
                 
                 Section("Nachricht") {
-                    TextEditor(text: $body)
+                    TextEditor(text: $emailBody)
                         .frame(minHeight: 250)
                         .font(.body)
                 }
