@@ -318,8 +318,7 @@ struct ManualCompanyEntryView: View {
                             industry: industry.rawValue,
                             region: region.rawValue,
                             website: website,
-                            description: description,
-                            source: "manual"
+                            description: description
                         )
                         vm.addCompanyManually(company)
                         dismiss()
@@ -380,12 +379,10 @@ struct ManualContactEntryView: View {
                         let lead = Lead(
                             name: contactName,
                             title: title,
-                            company: company,
-                            email: email,
+                                company: company.name,                            email: email,
                             linkedInURL: linkedIn,
                             responsibility: responsibility,
-                            status: .identified,
-                            source: "manual"
+                            status: .identified
                         )
                         vm.addLeadManually(lead)
                         dismiss()
