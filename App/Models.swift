@@ -58,54 +58,42 @@ struct Company: Identifiable, Codable, Hashable {
     var industry: String
     var region: String
     var website: String
+    var linkedInURL: String
     var description: String
-    var challenges: String
-    var source: String
+    var size: String
+    var country: String
     
     init(id: UUID = UUID(), name: String, industry: String, region: String,
-         website: String = "", description: String = "",
-         challenges: String = "", source: String = "") {
+         website: String = "", linkedInURL: String = "", description: String = "",
+         size: String = "", country: String = "") {
         self.id = id
         self.name = name
         self.industry = industry
         self.region = region
         self.website = website
+        self.linkedInURL = linkedInURL
         self.description = description
-        self.challenges = challenges
-        self.source = source
+        self.size = size
+        self.country = country
     }
 }
 
-// MARK: - Lead / Ansprechpartner
+// MARK: - Lead Status
 enum LeadStatus: String, Codable, CaseIterable {
-    case identified = "Identifiziert"
-    case contactVerified = "Kontakt verifiziert"
-    case emailVerified = "Email verifiziert"
-    case emailDrafted = "Email erstellt"
-    case emailApproved = "Email freigegeben"
-    case emailSent = "Email gesendet"
-    case replied = "Antwort erhalten"
-    case followUpDrafted = "Follow-Up erstellt"
-    case followUpSent = "Follow-Up gesendet"
-    case closed = "Abgeschlossen"
-    
-    var color: String {
-        switch self {
-        case .identified: return "gray"
-        case .contactVerified, .emailVerified: return "orange"
-        case .emailDrafted, .emailApproved: return "blue"
-        case .emailSent, .followUpDrafted, .followUpSent: return "purple"
-        case .replied: return "green"
-        case .closed: return "red"
-        }
-    }
+    case identified = "Identified"
+    case contacted = "Contacted"
+    case followedUp = "Followed Up"
+    case qualified = "Qualified"
+    case converted = "Converted"
+    case notInterested = "Not Interested"
 }
 
+// MARK: - Lead
 struct Lead: Identifiable, Codable, Hashable {
     let id: UUID
     var name: String
     var title: String
-    var company: Company
+    var company: String
     var email: String
     var emailVerified: Bool
     var linkedInURL: String
@@ -120,15 +108,16 @@ struct Lead: Identifiable, Codable, Hashable {
     var dateEmailSent: Date?
     var dateFollowUpSent: Date?
     var replyReceived: String
+    var isManuallyCreated: Bool  // NEU: Flag für manuelle Erstellung
     
-    init(id: UUID = UUID(), name: String, title: String, company: Company,
-         email: String = "", emailVerified: Bool = false,
-         linkedInURL: String = "", phone: String = "",
-         responsibility: String = "", status: LeadStatus = .identified,
+    init(id: UUID = UUID(), name: String, title: String, company: String,
+         email: String, emailVerified: Bool = false, linkedInURL: String = "",
+         phone: String = "", responsibility: String = "", status: LeadStatus = .identified,
          source: String = "", verificationNotes: String = "",
          draftedEmail: OutboundEmail? = nil, followUpEmail: OutboundEmail? = nil,
          dateIdentified: Date = Date(), dateEmailSent: Date? = nil,
-         dateFollowUpSent: Date? = nil, replyReceived: String = "") {
+         dateFollowUpSent: Date? = nil, replyReceived: String = "",
+         isManuallyCreated: Bool = false) {
         self.id = id
         self.name = name
         self.title = title
@@ -147,6 +136,7 @@ struct Lead: Identifiable, Codable, Hashable {
         self.dateEmailSent = dateEmailSent
         self.dateFollowUpSent = dateFollowUpSent
         self.replyReceived = replyReceived
+        self.isManuallyCreated = isManuallyCreated
     }
 }
 
@@ -165,6 +155,36 @@ struct OutboundEmail: Identifiable, Codable, Hashable {
         self.body = body
         self.isApproved = isApproved
         self.sentDate = sentDate
+    }
+}
+
+// MARK: - Email Draft (NEU für Draft-Management)
+struct EmailDraft: Identifiable, Codable, Hashable {
+    let id: UUID
+    var leadId: UUID
+    var leadName: String
+    var leadEmail: String
+    var companyName: String
+    var subject: String
+    var body: String
+    var createdDate: Date
+    var lastModifiedDate: Date
+    var isFollowUp: Bool  // true = follow-up, false = initial email
+    
+    init(id: UUID = UUID(), leadId: UUID, leadName: String, leadEmail: String,
+         companyName: String, subject: String, body: String,
+         createdDate: Date = Date(), lastModifiedDate: Date = Date(),
+         isFollowUp: Bool = false) {
+        self.id = id
+        self.leadId = leadId
+        self.leadName = leadName
+        self.leadEmail = leadEmail
+        self.companyName = companyName
+        self.subject = subject
+        self.body = body
+        self.createdDate = createdDate
+        self.lastModifiedDate = lastModifiedDate
+        self.isFollowUp = isFollowUp
     }
 }
 
