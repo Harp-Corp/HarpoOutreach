@@ -6,9 +6,9 @@ enum Industry: String, CaseIterable, Identifiable, Codable {
     case financialServices = "Financial Services"
     case energy = "Energy"
     case manufacturing = "Manufacturing"
-
+    
     var id: String { rawValue }
-
+    
     var icon: String {
         switch self {
         case .healthcare: return "cross.case.fill"
@@ -17,7 +17,7 @@ enum Industry: String, CaseIterable, Identifiable, Codable {
         case .manufacturing: return "gearshape.2.fill"
         }
     }
-
+    
     var searchTerms: String {
         switch self {
         case .healthcare:
@@ -38,9 +38,9 @@ enum Region: String, CaseIterable, Identifiable, Codable {
     case uk = "UK"
     case baltics = "Baltics"
     case nordics = "Nordics"
-
+    
     var id: String { rawValue }
-
+    
     var countries: String {
         switch self {
         case .dach: return "Germany, Austria, Switzerland"
@@ -61,7 +61,7 @@ struct Company: Identifiable, Codable, Hashable {
     var description: String
     var challenges: String
     var source: String
-
+    
     init(id: UUID = UUID(), name: String, industry: String, region: String,
          website: String = "", description: String = "",
          challenges: String = "", source: String = "") {
@@ -88,7 +88,7 @@ enum LeadStatus: String, Codable, CaseIterable {
     case followUpDrafted = "Follow-Up erstellt"
     case followUpSent = "Follow-Up gesendet"
     case closed = "Abgeschlossen"
-
+    
     var color: String {
         switch self {
         case .identified: return "gray"
@@ -120,7 +120,7 @@ struct Lead: Identifiable, Codable, Hashable {
     var dateEmailSent: Date?
     var dateFollowUpSent: Date?
     var replyReceived: String
-
+    
     init(id: UUID = UUID(), name: String, title: String, company: Company,
          email: String = "", emailVerified: Bool = false,
          linkedInURL: String = "", phone: String = "",
@@ -157,7 +157,7 @@ struct OutboundEmail: Identifiable, Codable, Hashable {
     var body: String
     var isApproved: Bool
     var sentDate: Date?
-
+    
     init(id: UUID = UUID(), subject: String, body: String,
          isApproved: Bool = false, sentDate: Date? = nil) {
         self.id = id
@@ -165,37 +165,6 @@ struct OutboundEmail: Identifiable, Codable, Hashable {
         self.body = body
         self.isApproved = isApproved
         self.sentDate = sentDate
-    }
-}
-
-// MARK: - Perplexity API Structs
-struct PerplexityRequest: Codable {
-    let model: String
-    let messages: [ChatMessage]
-    let max_tokens: Int?
-    let web_search_options: WebSearchOptions?
-
-    struct ChatMessage: Codable {
-        let role: String
-        let content: String
-    }
-
-    struct WebSearchOptions: Codable {
-        let search_context_size: String?
-    }
-}
-
-struct PerplexityResponse: Codable {
-    let id: String?
-    let choices: [Choice]?
-    let citations: [String]?
-
-    struct Choice: Codable {
-        let message: Message?
-    }
-
-    struct Message: Codable {
-        let content: String?
     }
 }
 
@@ -209,7 +178,7 @@ struct AppSettings: Codable {
     var senderName: String
     var selectedIndustries: [String]
     var selectedRegions: [String]
-
+    
     init() {
         perplexityAPIKey = ""
         googleClientID = ""
@@ -221,4 +190,3 @@ struct AppSettings: Codable {
         selectedRegions = Region.allCases.map { $0.rawValue }
     }
 }
-
