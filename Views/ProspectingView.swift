@@ -381,4 +381,6 @@ struct ManualContactEntryView: View {
             }
         }
     }
+        }
+}
 }
