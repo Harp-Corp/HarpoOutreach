@@ -156,13 +156,14 @@ struct ProspectingView: View {
         }
         .sheet(isPresented: $showManualCompanySheet) {
             ManualCompanyEntryView(vm: vm)
+                            .frame(minWidth: 600, minHeight: 500)
         }
-                .frame(minWidth: 600, minHeight: 500)
+                
         .sheet(isPresented: $showManualContactSheet) {
             if let company = selectedCompanyForContact {
                 ManualContactEntryView(vm: vm, company: company)
-            }
-                    .frame(minWidth: 600, minHeight: 500)
+                                .frame(minWidth: 600, minHeight: 500)
+                    
         }
     }
 }
