@@ -463,6 +463,64 @@ class AppViewModel: ObservableObject {
         }
     }
 
+            // MARK: - Draft Management
+    
+    func updateDraft(for lead: Lead, subject: String, body: String) {
+        if let index = leads.firstIndex(where: { $0.id == lead.id }) {
+            leads[index].draftedEmail = OutboundEmail(
+                id: lead.draftedEmail?.id ?? UUID(),
+                subject: subject,
+                body: body,
+                isApproved: true
+            )
+            saveLeads()
+            statusMessage = "Draft fuer \(lead.name) aktualisiert"
+        }
+    }
+    
+    func deleteDraft(for lead: Lead) {
+        if let index = leads.firstIndex(where: { $0.id == lead.id }) {
+            leads[index].draftedEmail = nil
+            saveLeads()
+            statusMessage = "Draft fuer \(lead.name) geloescht"
+        }
+    }
+    
+    func sendEmail(to lead: Lead) async {
+        guard let draft = lead.draftedEmail else {
+            errorMessage = "Kein Draft vorhanden fuer \(lead.name)"
+            return
+        }
+        
+        isLoading = true
+        currentStep = "Sende Email an \(lead.name)..."
+        
+        do {
+            try await gmailService.sendEmail(
+                to: lead.email,
+                subject: draft.subject,
+                body: draft.body
+            )
+            
+            // Update lead status
+            if let index = leads.firstIndex(where: { $0.id == lead.id }) {
+                leads[index].status = .contacted
+                leads[index].dateEmailSent = Date()
+                // Draft nach Versand entfernen
+                leads[index].draftedEmail = nil
+                saveLeads()
+            }
+            
+            statusMessage = "Email an \(lead.name) erfolgreich gesendet"
+        } catch {
+            errorMessage = "Fehler beim Senden: \(error.localizedDescription)"
+        }
+        
+        isLoading = false
+        currentStep = ""
+    }
+
+
 
 }
 
