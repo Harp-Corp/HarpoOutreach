@@ -79,7 +79,7 @@ struct EmailDraftView: View {
                                     VStack(alignment: .leading) {
                                         Text(lead.name).bold()
                                                                             Text(lead.company).font(.caption)
-                                            176
+                
                                         
                                     }
                                     Spacer()
