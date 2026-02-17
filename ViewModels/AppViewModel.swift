@@ -167,7 +167,7 @@ class AppViewModel: ObservableObject {
         do {
             // Schritt 4: Challenges recherchieren
             // let challenges = try await pplxService.researchChallenges(
-                company: leads[idx].company, apiKey: settings.perplexityAPIKey)
+//                                    company: leads[idx].company, apiKey: settings.perplexityAPIKey)
             
 
             // Schritt 5: Email drafting
