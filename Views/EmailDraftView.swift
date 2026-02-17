@@ -73,7 +73,7 @@ struct EmailDraftView: View {
                     // SECTION 1: Drafts noch zu erstellen
                     if !draftsNeeded.isEmpty {
                         Section("Email noch zu erstellen (\(draftsNeeded.count))") {
-                            ForEach(draftsNeeded) { lead in
+                            ForEach(draftsNeeded, id: \.id) { lead in
                                 HStack {
                                         Text(lead.name).bold()
                                                                             Text(lead.company).font(.caption)
@@ -251,12 +251,12 @@ struct EditDraftSheet: View {
             // Form
             Form {
                 Section("Betreff") {
-                    TextField("Betreff", text: $subject)
+                    TextField("Betreff", text: subject)
                         .textFieldStyle(.roundedBorder)
                 }
                 
                 Section("Nachricht") {
-                    TextEditor(text: $emailBody)
+                    TextEditor(text: emailBody)
                         .frame(minHeight: 250)
                         .font(.body)
                 }
