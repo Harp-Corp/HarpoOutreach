@@ -11,7 +11,7 @@ struct ContactListView: View {
         if !searchText.isEmpty {
             result = result.filter {
                 $0.name.localizedCaseInsensitiveContains(searchText) ||
-                $0.company.name.localizedCaseInsensitiveContains(searchText) ||
+                $0.companyName.localizedCaseInsensitiveContains(searchText) ||
                 $0.title.localizedCaseInsensitiveContains(searchText)
             }
         }
@@ -105,7 +105,7 @@ struct ContactRow: View {
                     }
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Unternehmen").font(.caption).foregroundStyle(.secondary)
-                        Text(lead.company.name).font(.callout)
+                        Text(lead.companyName).font(.callout)
                     }
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Industrie").font(.caption).foregroundStyle(.secondary)
@@ -232,7 +232,7 @@ struct ContactRow: View {
                 Text(lead.name).bold()
                 
                 // Company
-                Text("- \(lead.company.name)")
+                Text("- \(lead.companyName)")
                     .foregroundStyle(.secondary)
                 
                 Spacer()
