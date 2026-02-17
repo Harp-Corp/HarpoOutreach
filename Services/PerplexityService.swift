@@ -44,128 +44,116 @@ class PerplexityService {
         }
     }
     
-    // MARK: - 2) Compliance-Ansprechpartner mit Multi-Source Cross-Referenzierung
+    // MARK: - 2) Ansprechpartner finden - Breite Suche ueber ALLE Quellen
     func findContacts(company: Company, apiKey: String) async throws -> [Lead] {
-        // Schritt 1: LinkedIn-fokussierte Suche
-        let systemLinkedIn = """
-        You are a research assistant searching LinkedIn for compliance professionals.
-        ABSOLUTE RULES:
-        - ONLY return people with REAL LinkedIn profiles you found in search results
-        - Each person MUST have a linkedin.com/in/ URL that you actually found
-        - If you find NO verifiable LinkedIn profiles, return an EMPTY JSON array []
-        - NEVER invent names, titles, or LinkedIn URLs
-        - Do NOT guess or construct LinkedIn URLs from name patterns
-        Return ONLY a JSON array with fields: name, title, linkedInURL, source
-        The source field must say "LinkedIn search" and describe what you found.
+        // Schritt 1: Breite Suche ueber alle verfuegbaren Quellen
+        let system1 = """
+        You are a B2B research assistant. Search ALL available sources to find compliance and regulatory professionals at a specific company.
+        
+        Search these sources:
+        - LinkedIn profiles and company pages
+        - Company website (team, about, leadership, impressum pages)
+        - Business directories (Bloomberg, Reuters, Crunchbase, ZoomInfo, Apollo)
+        - Press releases and news articles
+        - Regulatory filings and registrations
+        - Conference speaker lists and industry events
+        - Professional associations and memberships
+        - XING profiles (for DACH region)
+        - Annual reports and corporate governance documents
+        
+        Return a JSON array of objects. Each object must have these fields:
+        - name: Full name of the person
+        - title: Their job title
+        - email: Email if found, empty string if not
+        - linkedInURL: LinkedIn profile URL if found, empty string if not
+        - source: Where you found this person (e.g. "LinkedIn", "Company website /team", "Press release")
+        
+        IMPORTANT: Return ALL people you find, even if you only found them in one source.
+        Include anyone in compliance, legal, regulatory, data protection, or risk management roles.
+        If you find someone but are unsure of their exact title, still include them with your best guess.
         """
-        let userLinkedIn = "Search LinkedIn for compliance officers at \(company.name). Look for: Chief Compliance Officer, Head of Compliance, VP Regulatory, DPO, General Counsel. ONLY return people with real LinkedIn profile URLs you found. Empty array [] if none found."
+        let user1 = """
+        Find compliance and regulatory professionals at \(company.name) (Industry: \(company.industry), Region: \(company.region)).
+        Company website: \(company.website)
         
-        let content1 = try await callAPI(systemPrompt: systemLinkedIn, userPrompt: userLinkedIn, apiKey: apiKey)
-        let linkedInResults = parseJSON(content1)
+        Search for people with roles like:
+        - Chief Compliance Officer (CCO)
+        - Head of Compliance
+        - Compliance Manager/Director
+        - VP/SVP Regulatory Affairs
+        - Data Protection Officer (DPO/DSB)
+        - General Counsel / Chief Legal Officer
+        - Head of Risk Management
+        - Head of Legal
+        - Geldwaeschebeauftragter (for financial services)
+        - Datenschutzbeauftragter
         
-        // Schritt 2: Unternehmenswebsite-fokussierte Suche
-        let systemWebsite = """
-        You are a research assistant searching company websites for compliance team members.
-        ABSOLUTE RULES:
-        - ONLY return people you found on the company website (team page, about page, impressum, press releases)
-        - Each person MUST have a sourceURL pointing to the actual page where you found them
-        - If you find NO verifiable people on the website, return an EMPTY JSON array []
-        - NEVER invent names or titles
-        Return ONLY a JSON array with fields: name, title, sourceURL, source
-        The source field must describe the exact page where you found this person.
+        Search LinkedIn, \(company.website), business directories, press releases, XING, annual reports.
+        Return ALL people you find as JSON array.
         """
-        let userWebsite = "Search \(company.website) for compliance team members. Check /about, /team, /leadership, /impressum, /management, /kontakt pages. Look for compliance officers, regulatory affairs, data protection officers. ONLY return people actually listed on the website. Empty array [] if none found."
         
-        let content2 = try await callAPI(systemPrompt: systemWebsite, userPrompt: userWebsite, apiKey: apiKey)
-        let websiteResults = parseJSON(content2)
+        let content1 = try await callAPI(systemPrompt: system1, userPrompt: user1, apiKey: apiKey, maxTokens: 4000)
+        var allCandidates = parseJSON(content1)
         
-        // Schritt 3: Presse und Regulierungsdatenbank-Suche
-        let systemPress = """
-        You search press releases, news articles, regulatory filings, and conference speaker lists.
-        ABSOLUTE RULES:
-        - ONLY return people mentioned in actual press releases, news, or regulatory documents
-        - Each person MUST have a sourceURL pointing to the article/document where they are mentioned
-        - If you find NO verifiable mentions, return an EMPTY JSON array []
-        - NEVER invent names, titles, or article URLs
-        Return ONLY a JSON array with fields: name, title, sourceURL, source
-        The source field must describe the article or document where you found this person.
-        """
-        let userPress = "Search for press releases, news articles, and regulatory filings mentioning compliance officers at \(company.name) in \(company.industry). Look for people with titles like CCO, Head of Compliance, DPO. ONLY return people with verifiable source URLs. Empty array [] if none found."
-        
-        let content3 = try await callAPI(systemPrompt: systemPress, userPrompt: userPress, apiKey: apiKey)
-        let pressResults = parseJSON(content3)
-        
-        // Schritt 4: Cross-Referenzierung - Kandidaten die in 2+ Quellen erscheinen
-        var candidateScores: [String: (name: String, title: String, linkedInURL: String, sources: [String], score: Int)] = [:]
-        
-        // LinkedIn-Ergebnisse indizieren
-        for r in linkedInResults {
-            let name = r["name"] ?? ""
-            if name.isEmpty || name == "Unknown" { continue }
-            let key = normalizeName(name)
-            if var existing = candidateScores[key] {
-                existing.sources.append(r["source"] ?? "LinkedIn")
-                existing.score += 1
-                if existing.linkedInURL.isEmpty { existing.linkedInURL = r["linkedInURL"] ?? "" }
-                candidateScores[key] = existing
-            } else {
-                candidateScores[key] = (name: name, title: r["title"] ?? "", linkedInURL: r["linkedInURL"] ?? "", sources: [r["source"] ?? "LinkedIn"], score: 1)
+        // Schritt 2: Falls wenig Ergebnisse, zweite Suche mit anderen Suchtermen
+        if allCandidates.count < 3 {
+            let system2 = """
+            You are a research assistant. Search the web for executives and senior managers at a specific company.
+            Return a JSON array with fields: name, title, email, linkedInURL, source.
+            Search LinkedIn, company websites, news, business directories, XING, and any other public source.
+            Return ALL people you find. Include email if available, empty string if not.
+            """
+            let user2 = """
+            Find senior managers and executives at \(company.name) who work in compliance, legal, regulatory, risk, or data protection.
+            Also search for: Vorstand, Geschaeftsfuehrung, C-Level executives at \(company.name).
+            Website: \(company.website)
+            Search broadly across LinkedIn, XING, \(company.website), Google, business registers.
+            Return JSON array with: name, title, email, linkedInURL, source.
+            """
+            
+            do {
+                let content2 = try await callAPI(systemPrompt: system2, userPrompt: user2, apiKey: apiKey, maxTokens: 4000)
+                let moreResults = parseJSON(content2)
+                // Merge ohne Duplikate
+                for candidate in moreResults {
+                    let name = candidate["name"] ?? ""
+                    if !name.isEmpty && !allCandidates.contains(where: { normalizeName($0["name"] ?? "") == normalizeName(name) }) {
+                        allCandidates.append(candidate)
+                    }
+                }
+            } catch {
+                // Zweite Suche fehlgeschlagen - kein Problem, wir haben die erste
             }
         }
         
-        // Website-Ergebnisse cross-referenzieren
-        for r in websiteResults {
-            let name = r["name"] ?? ""
-            if name.isEmpty || name == "Unknown" { continue }
-            let key = normalizeName(name)
-            if var existing = candidateScores[key] {
-                existing.sources.append(r["source"] ?? "Company website")
-                existing.score += 1
-                if existing.title.isEmpty { existing.title = r["title"] ?? "" }
-                candidateScores[key] = existing
-            } else {
-                candidateScores[key] = (name: name, title: r["title"] ?? "", linkedInURL: "", sources: [r["source"] ?? "Company website"], score: 1)
-            }
-        }
-        
-        // Presse-Ergebnisse cross-referenzieren
-        for r in pressResults {
-            let name = r["name"] ?? ""
-            if name.isEmpty || name == "Unknown" { continue }
-            let key = normalizeName(name)
-            if var existing = candidateScores[key] {
-                existing.sources.append(r["source"] ?? "Press/News")
-                existing.score += 1
-                if existing.title.isEmpty { existing.title = r["title"] ?? "" }
-                candidateScores[key] = existing
-            } else {
-                candidateScores[key] = (name: name, title: r["title"] ?? "", linkedInURL: "", sources: [r["source"] ?? "Press/News"], score: 1)
-            }
-        }
-        
-        // Schritt 5: Nur Kandidaten mit Score >= 2 (in mindestens 2 Quellen gefunden) behalten
-        // Falls niemand Score >= 2 hat, einzelne mit starken LinkedIn-Profilen akzeptieren
-        var verified: [Lead] = []
-        let highConfidence = candidateScores.values.filter { $0.score >= 2 }
-        let candidatesToUse = highConfidence.isEmpty ? 
-            Array(candidateScores.values.filter { !$0.linkedInURL.isEmpty && $0.linkedInURL.contains("linkedin.com/in/") }.prefix(3)) :
-            Array(highConfidence)
-        
-        for candidate in candidatesToUse {
-            verified.append(Lead(
-                name: candidate.name,
-                title: candidate.title,
+        // Schritt 3: Alle gefundenen Kandidaten als Leads zurueckgeben
+        var leads: [Lead] = []
+        for candidate in allCandidates {
+            let name = candidate["name"] ?? ""
+            if name.isEmpty || name == "Unknown" || name.count < 3 { continue }
+            
+            let email = candidate["email"] ?? ""
+            let linkedIn = candidate["linkedInURL"] ?? ""
+            let source = candidate["source"] ?? "Perplexity Search"
+            let title = candidate["title"] ?? ""
+            
+            // Duplikat-Check
+            if leads.contains(where: { normalizeName($0.name) == normalizeName(name) }) { continue }
+            
+            leads.append(Lead(
+                name: name,
+                title: title,
                 company: company.name,
-                email: "",
+                email: cleanEmail(email),
                 emailVerified: false,
-                linkedInURL: candidate.linkedInURL,
-                responsibility: candidate.title,
+                linkedInURL: linkedIn,
+                responsibility: title,
                 status: .identified,
-                source: "Cross-referenziert (\(candidate.score) Quellen): \(candidate.sources.joined(separator: "; "))"
+                source: source
             ))
         }
         
-        return verified
+        return leads
     }
     
     // Hilfsfunktion: Name normalisieren fuer Vergleich
@@ -179,6 +167,15 @@ class PerplexityService {
             .components(separatedBy: .whitespaces)
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+    }
+    
+    // Hilfsfunktion: Email bereinigen
+    private func cleanEmail(_ email: String) -> String {
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.contains("@") && trimmed.contains(".") {
+            return trimmed.lowercased()
+        }
+        return ""
     }
     
     // MARK: - 3) Email verifizieren
