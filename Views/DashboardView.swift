@@ -7,6 +7,7 @@ struct DashboardView: View {
         ScrollView {
             VStack(spacing: 24) {
                 // Header
+                                Group {
                 HStack {
                     VStack(alignment: .leading) {
                         Text("HarpoOutreach Dashboard")
@@ -52,6 +53,7 @@ struct DashboardView: View {
                 }
 
                 // KPIs
+                                                    }
                 LazyVGrid(columns: [
                     GridItem(.flexible()),
                     GridItem(.flexible()),
