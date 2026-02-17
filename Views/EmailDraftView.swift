@@ -222,7 +222,7 @@ struct EmailDraftView: View {
 // MARK: - Edit Draft Sheet
 struct EditDraftSheet: View {
     let lead: Lead
-    @Binding var subject: String
+    $editSubject: String
     @Binding var emailBody: String
     let onSave: (String, String) -> Void
     let onCancel: () -> Void
