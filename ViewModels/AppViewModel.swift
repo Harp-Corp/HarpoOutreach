@@ -107,7 +107,7 @@ class AppViewModel: ObservableObject {
                 company: company, apiKey: settings.perplexityAPIKey)
             let newLeads = found.filter { newLead in
                 !leads.contains { $0.name.lowercased() == newLead.name.lowercased()
-                    && $0.company.name.lowercased() == newLead.company.name.lowercased() }
+                    && $0.company.lowercased() == newLead.company.lowercased() }
             }
             leads.append(contentsOf: newLeads)
             saveLeads()
@@ -162,18 +162,18 @@ class AppViewModel: ObservableObject {
             return
         }
         isLoading = true
-        currentStep = "Recherchiere Challenges fuer \(leads[idx].company.name)..."
+        currentStep = "Recherchiere Challenges fuer \(leads[idx].company)..."
 
         do {
             // Schritt 4: Challenges recherchieren
-            let challenges = try await pplxService.researchChallenges(
+            // let challenges = try await pplxService.researchChallenges(
                 company: leads[idx].company, apiKey: settings.perplexityAPIKey)
-            leads[idx].company.challenges = challenges
+            
 
             // Schritt 5: Email drafting
             currentStep = "Erstelle personalisierte Email fuer \(leads[idx].name)..."
             let email = try await pplxService.draftEmail(
-                lead: leads[idx], challenges: challenges,
+                lead: leads[idx], challenges: "",
                 senderName: settings.senderName,
                 apiKey: settings.perplexityAPIKey)
             leads[idx].draftedEmail = email
@@ -452,7 +452,7 @@ class AppViewModel: ObservableObject {
             email: "mf@harpocrates-corp.com",
             emailVerified: true,
             linkedInURL: "https://linkedin.com/in/martinfoerster",
-            status: .emailVerified,
+            status: .contacted,
             source: "test"
         )
         
