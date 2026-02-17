@@ -251,12 +251,12 @@ struct EditDraftSheet: View {
             // Form
             Form {
                 Section("Betreff") {
-                    TextField("Betreff", text: subject)
+                    TextField("Betreff", text: $subject)
                         .textFieldStyle(.roundedBorder)
                 }
                 
                 Section("Nachricht") {
-                    TextEditor(text: emailBody)
+                    TextEditor(text: $emailBody)
                         .frame(minHeight: 250)
                         .font(.body)
                 }
