@@ -266,7 +266,7 @@ struct ContactRow: View {
         case .contacted: return .orange
                     case .followedUp, .qualified: return .yellow
                     case .converted: return .green
-                    case .notInterested: return .
+                    case .notInterested: return .gray
                     case .emailDrafted, .emailApproved: return .blue
         case .emailSent, .followUpDrafted, .followUpSent: return .purple
         case .replied: return .green
