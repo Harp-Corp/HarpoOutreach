@@ -263,8 +263,10 @@ struct ContactRow: View {
     func statusColor(_ status: LeadStatus) -> Color {
         switch status {
         case .identified: return .gray
-        case .contactVerified, .emailVerified: return .orange
-        case .emailDrafted, .emailApproved: return .blue
+        case .contacted: return .orange
+                    case .followedUp, .qualified: return .yellow
+                    case .converted: return .green
+                    case .notInterested: return .graycase .emailDrafted, .emailApproved: return .blue
         case .emailSent, .followUpDrafted, .followUpSent: return .purple
         case .replied: return .green
         case .closed: return .red
