@@ -53,4 +53,23 @@ git log -1 --oneline
 
 echo ""
 echo "🎯 Projekt ist jetzt 100% synchron mit GitHub"
-echo "💡 Tipp: Öffne jetzt Xcode und führe einen Clean Build aus (Cmd+Shift+K)"
+
+echo ""
+# 6. Xcode Projekt öffnen und bauen
+echo "📂 Öffne Xcode Projekt..."
+open "$PROJECT_DIR/HarpoOutreach.xcodeproj"
+
+# Kurz warten bis Xcode gestartet ist
+sleep 3
+
+# Clean Build durchführen
+echo "🔨 Starte Clean Build..."
+xcodebuild -project "$PROJECT_DIR/HarpoOutreach.xcodeproj" \
+  -scheme HarpoOutreach \
+  -configuration Debug \
+  clean build \
+  | xcpretty || true
+
+echo ""
+echo "✅ Synchronisierung und Build abgeschlossen!"
+echo "💡 Xcode ist jetzt geöffnet mit dem aktuellen Projekt"
