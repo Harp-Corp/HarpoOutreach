@@ -27,7 +27,7 @@ struct DashboardView: View {
                     HStack {
                         Image(systemName: "info.circle.fill")
                             .foregroundStyle(.blue)
-                        Text(vm.currentStep)
+                        Text("\(vm.currentStep)")
                             .font(.callout)
                         Spacer()
                     }
