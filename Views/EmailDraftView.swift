@@ -73,10 +73,8 @@ struct EmailDraftView: View {
                     // SECTION 1: Drafts noch zu erstellen
                     if !draftsNeeded.isEmpty {
                         Section("Email noch zu erstellen (\(draftsNeeded.count))") {
-                            ForEach(draftsNeeded, id: \.id)
-                                   ) { lead in
+                            ForEach(draftsNeeded, id: \.id) { lead in                                   ) { lead in
                                 HStack {
-                                    VStack(alignment: .leading) {
                                         Text(lead.name).bold()
                                                                             Text(lead.company).font(.caption)
                 
