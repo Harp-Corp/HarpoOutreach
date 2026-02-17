@@ -447,8 +447,7 @@ class AppViewModel: ObservableObject {
         let testLead = Lead(
             name: "Martin Förster",
             title: "CEO & Founder",
-            company: testCompany,
-            email: "mf@harpocrates-corp.com",
+            company: testCompany.name,            email: "mf@harpocrates-corp.com",
             emailVerified: true,
             linkedInURL: "https://linkedin.com/in/martinfoerster",
             status: .contacted,
