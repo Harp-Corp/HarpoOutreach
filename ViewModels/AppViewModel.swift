@@ -418,13 +418,13 @@ class AppViewModel: ObservableObject {
         // Check for duplicates
         if !leads.contains(where: { 
             $0.name.lowercased() == lead.name.lowercased() &&
-            $0.company.name.lowercased() == lead.company.name.lowercased()
+            $0.company.lowercased() == lead.company.lowercased()
         }) {
             leads.append(lead)
             saveLeads()
             statusMessage = "Kontakt \(lead.name) manuell hinzugefügt"
         } else {
-            errorMessage = "Kontakt \(lead.name) bei \(lead.company.name) existiert bereits"
+            errorMessage = "Kontakt \(lead.name) bei \(lead.company) existiert bereits"
         }
     }
 
@@ -437,7 +437,6 @@ class AppViewModel: ObservableObject {
             region: "DACH",
             website: "https://harpocrates-corp.com",
             description: "RegTech Startup für Compliance Management",
-            source: "test"
         )
         
         if !companies.contains(where: { $0.name == "Harpocrates Corp" }) {
@@ -498,6 +497,7 @@ class AppViewModel: ObservableObject {
         do {
             try await gmailService.sendEmail(
                 to: lead.email,
+                            from: settings.senderEmail,
                 subject: draft.subject,
                 body: draft.body
             )
