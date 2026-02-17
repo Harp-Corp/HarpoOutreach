@@ -25,7 +25,7 @@ struct EmailDraftView: View {
     @State private var showingSendConfirmation = false
     @State private var showingDeleteConfirmation = false
     @State private var editSubject = ""
-    @State private var editBody = ""
+    @State private var emailBody = ""
     
     var body: some View {
         VStack(spacing: 0) {
@@ -136,7 +136,7 @@ struct EmailDraftView: View {
                                             selectedLead = lead
                                             if let draft = lead.draftedEmail {
                                                 editSubject = draft.subject
-                                                editBody = draft.body
+                                                emailBody = draft.body
                                             }
                                             showingEditSheet = true
                                         } label: {
@@ -176,7 +176,7 @@ struct EmailDraftView: View {
                 EditDraftSheet(
                     lead: lead,
                     subject: $editSubject,
-                    body: $editBody,
+                    body: $emailBody,
                     onSave: { newSubject, newBody in
                         vm.updateDraft(for: lead, subject: newSubject, body: newBody)
                         showingEditSheet = false
