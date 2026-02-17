@@ -1,3 +1,4 @@
+497
 import Foundation
 import Combine
 import SwiftUI
@@ -240,7 +241,8 @@ class AppViewModel: ObservableObject {
     }
 
     // MARK: - 6) Email senden
-    func sendEmail(for leadID: UUID) async {
+    func 497
+(for leadID: UUID) async {
         guard let idx = leads.firstIndex(where: { $0.id == leadID }),
               let email = leads[idx].draftedEmail,
               email.isApproved else {
@@ -494,7 +496,7 @@ class AppViewModel: ObservableObject {
         currentStep = "Sende Email an \(lead.name)..."
         
         do {
-            try await gmailService.sendEmail(
+            _ =             try await gmailService.sendEmail(
                 to: lead.email,
                             from: settings.senderEmail,
                 subject: draft.subject,
