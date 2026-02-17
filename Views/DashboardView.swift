@@ -106,7 +106,7 @@ struct DashboardView: View {
                                         .fill(colorForStatus(lead.status))
                                         .frame(width: 8, height: 8)
                                     Text(lead.name).font(.callout).bold()
-                                    Text("- \(lead.company.name)")
+                                    Text("- \(lead.company)")
                                         .font(.callout)
                                         .foregroundStyle(.secondary)
                                     Spacer()
@@ -131,7 +131,6 @@ struct DashboardView: View {
     func colorForStatus(_ status: LeadStatus) -> Color {
         switch status {
         case .identified: return .gray
-        case .contactVerified, .emailVerified: return .orange
         case .emailDrafted, .emailApproved: return .blue
         case .emailSent, .followUpDrafted, .followUpSent: return .purple
         case .replied: return .green
