@@ -136,7 +136,7 @@ class AppViewModel: ObservableObject {
             leads[idx].email = result.email
             leads[idx].emailVerified = result.verified
             leads[idx].verificationNotes = result.notes
-            leads[idx].status = result.verified ? .emailVerified : .contactVerified
+            leads[idx].status = result.verified ? .contacted : .identified
             saveLeads()
             currentStep = result.verified
                 ? "Email verifiziert: \(result.email)"
