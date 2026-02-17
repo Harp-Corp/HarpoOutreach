@@ -49,7 +49,7 @@ struct EmailDraftView: View {
             if vm.isLoading {
                 HStack {
                     ProgressView()
-                    Text(vm.currentStep).font(.caption).foregroundStyle(.secondary)
+                    Text("\(vm.currentStep)").font(.caption).foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 24)
             }
