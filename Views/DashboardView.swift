@@ -134,6 +134,7 @@ struct DashboardView: View {
         case .emailDrafted, .emailApproved: return .blue
         case .emailSent, .followUpDrafted, .followUpSent: return .purple
         case .replied: return .green
+                    case .contacted, .followedUp, .qualified, .converted, .notInterested: return .gray
         case .closed: return .red
         }
     }
