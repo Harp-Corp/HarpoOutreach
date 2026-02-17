@@ -109,7 +109,7 @@ struct ContactRow: View {
                     }
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Industrie").font(.caption).foregroundStyle(.secondary)
-                        Text(lead.company.industry).font(.callout)
+                        Text(lead.responsibility).font(.callout)
                     }
                 }
 
