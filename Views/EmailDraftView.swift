@@ -170,7 +170,6 @@ struct EmailDraftView: View {
                     }
                 }
             }
-        }
         // Edit Sheet
         .sheet(isPresented: $showingEditSheet) {
             if let lead = selectedLead {
