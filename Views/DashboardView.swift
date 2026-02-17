@@ -4,7 +4,7 @@ struct DashboardView: View {
     @ObservedObject var vm: AppViewModel
 
     var body: AnyView
-            AnyView(
+            return AnyView(
         ScrollView {
             VStack(spacing: 24) {
                 // Header
