@@ -63,7 +63,7 @@ struct OutboxCard: View {
             HStack {
                 VStack(alignment: .leading) {
                     Text(lead.name).font(.headline)
-                    Text(lead.company.name).font(.subheadline).foregroundStyle(.secondary)
+                    Text(lead.company).font(.subheadline).foregroundStyle(.secondary)
                     Text("An: \(lead.email)").font(.caption)
                 }
                 Spacer()
