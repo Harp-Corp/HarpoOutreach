@@ -3,11 +3,11 @@ import SwiftUI
 struct DashboardView: View {
     @ObservedObject var vm: AppViewModel
 
-    var body: some View {
+    var body: AnyView
+            AnyView(
         ScrollView {
             VStack(spacing: 24) {
                 // Header
-                                Group {
                 HStack {
                     VStack(alignment: .leading) {
                         Text("HarpoOutreach Dashboard")
@@ -53,7 +53,7 @@ struct DashboardView: View {
                 }
 
                 // KPIs
-                                                    }
+
                 LazyVGrid(columns: [
                     GridItem(.flexible()),
                     GridItem(.flexible()),
@@ -128,6 +128,7 @@ struct DashboardView: View {
             }
             .padding(24)
         }
+                        )
     }
 
     func colorForStatus(_ status: LeadStatus) -> Color {
