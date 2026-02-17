@@ -73,11 +73,14 @@ struct EmailDraftView: View {
                     // SECTION 1: Drafts noch zu erstellen
                     if !draftsNeeded.isEmpty {
                         Section("Email noch zu erstellen (\(draftsNeeded.count))") {
-                            ForEach(draftsNeeded) { lead in
+                            ForEach(draftsNeeded, id: \.id79
+                                   ) { lead in
                                 HStack {
                                     VStack(alignment: .leading) {
                                         Text(lead.name).bold()
-                                        Text(lead.company).font(.caption)
+                                                                            Text(lead.company).font(.caption)
+                                            176
+                                        
                                     }
                                     Spacer()
                                     Button("Draft erstellen") {
@@ -176,7 +179,7 @@ struct EmailDraftView: View {
                 EditDraftSheet(
                     lead: lead,
                     subject: $editSubject,
-                    body: $emailBody,
+                    emailBody: $emailBody,
                     onSave: { newSubject, newBody in
                         vm.updateDraft(for: lead, subject: newSubject, body: newBody)
                         showingEditSheet = false
