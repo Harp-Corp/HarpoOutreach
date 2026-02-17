@@ -5,7 +5,7 @@ struct ProspectingView: View {
     @State private var showManualCompanySheet = false
     @State private var showManualContactSheet = false
     @State private var selectedCompanyForContact: Company?
-
+    
     var body: some View {
         VStack(spacing: 0) {
             ProspectingHeaderView(vm: vm)
@@ -18,12 +18,10 @@ struct ProspectingView: View {
         }
         .sheet(isPresented: $showManualCompanySheet) {
             ManualCompanyEntryView(vm: vm)
-                .frame(minWidth: 700, minHeight: 600)
         }
         .sheet(isPresented: $showManualContactSheet) {
             if let company = selectedCompanyForContact {
                 ManualContactEntryView(vm: vm, company: company)
-                    .frame(minWidth: 700, minHeight: 650)
             }
         }
     }
@@ -54,7 +52,7 @@ struct ProspectingCompanyList: View {
     @Binding var showManualCompanySheet: Bool
     @Binding var showManualContactSheet: Bool
     @Binding var selectedCompanyForContact: Company?
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -74,8 +72,7 @@ struct ProspectingCompanyList: View {
                 .disabled(vm.isLoading)
             }
             if vm.isLoading {
-                Button("Abbrechen", role: .cancel) { vm.cancelOperation() }
-                    .buttonStyle(.bordered)
+                Button("Abbrechen", role: .cancel) { vm.cancelOperation() }.buttonStyle(.bordered)
             }
             if !vm.errorMessage.isEmpty {
                 HStack {
@@ -84,21 +81,11 @@ struct ProspectingCompanyList: View {
                 }.padding(8).background(Color.red.opacity(0.1)).cornerRadius(8)
             }
             if vm.companies.isEmpty {
-                VStack {
-                    Spacer()
-                    Image(systemName: "building.2").font(.system(size: 48)).foregroundStyle(.secondary)
-                    Text("Noch keine Unternehmen").font(.headline).foregroundStyle(.secondary)
-                    Spacer()
-                }.frame(maxWidth: .infinity)
+                VStack { Spacer(); Image(systemName: "building.2").font(.system(size: 48)).foregroundStyle(.secondary); Text("Noch keine Unternehmen").font(.headline).foregroundStyle(.secondary); Spacer() }.frame(maxWidth: .infinity)
             } else {
                 List {
                     ForEach(vm.companies) { company in
-                        CompanyRow(company: company, onFindContacts: {
-                            Task { await vm.findContacts(for: company) }
-                        }, onAddManual: {
-                            selectedCompanyForContact = company
-                            showManualContactSheet = true
-                        })
+                        CompanyRow(company: company, onFindContacts: { Task { await vm.findContacts(for: company) } }, onAddManual: { selectedCompanyForContact = company; showManualContactSheet = true })
                     }
                 }
             }
@@ -119,27 +106,15 @@ struct ProspectingContactList: View {
                 Text("\(vm.leads.count) Kontakte").foregroundStyle(.secondary)
             }
             HStack(spacing: 8) {
-                Button("Alle Kontakte suchen") {
-                    Task { await vm.findContactsForAll() }
-                }.disabled(vm.companies.isEmpty || vm.isLoading)
-                Button("Alle Emails verifizieren") {
-                    Task { await vm.verifyAllEmails() }
-                }.disabled(vm.leads.isEmpty || vm.isLoading)
-                .buttonStyle(.borderedProminent).tint(.orange)
+                Button("Alle Kontakte suchen") { Task { await vm.findContactsForAll() } }.disabled(vm.companies.isEmpty || vm.isLoading)
+                Button("Alle Emails verifizieren") { Task { await vm.verifyAllEmails() } }.disabled(vm.leads.isEmpty || vm.isLoading).buttonStyle(.borderedProminent).tint(.orange)
             }
             if vm.leads.isEmpty {
-                VStack {
-                    Spacer()
-                    Image(systemName: "person.2").font(.system(size: 48)).foregroundStyle(.secondary)
-                    Text("Keine Kontakte").font(.headline).foregroundStyle(.secondary)
-                    Spacer()
-                }.frame(maxWidth: .infinity)
+                VStack { Spacer(); Image(systemName: "person.2").font(.system(size: 48)).foregroundStyle(.secondary); Text("Keine Kontakte").font(.headline).foregroundStyle(.secondary); Spacer() }.frame(maxWidth: .infinity)
             } else {
                 List {
                     ForEach(vm.leads) { lead in
-                        LeadRowProspecting(lead: lead, onVerify: {
-                            Task { await vm.verifyEmail(for: lead.id) }
-                        })
+                        LeadRowProspecting(lead: lead, onVerify: { Task { await vm.verifyEmail(for: lead.id) } })
                     }
                 }
             }
@@ -162,9 +137,7 @@ struct CompanyRow: View {
                     Text(company.industry).font(.caption).padding(.horizontal, 6).padding(.vertical, 2).background(.blue.opacity(0.1)).cornerRadius(4)
                     Text(company.region).font(.caption).padding(.horizontal, 6).padding(.vertical, 2).background(.green.opacity(0.1)).cornerRadius(4)
                 }
-                if !company.website.isEmpty {
-                    Text(company.website).font(.caption2).foregroundStyle(.secondary)
-                }
+                if !company.website.isEmpty { Text(company.website).font(.caption2).foregroundStyle(.secondary) }
             }
             Spacer()
             Menu {
@@ -207,8 +180,7 @@ struct LeadRowProspecting: View {
             }
             Spacer()
             if !lead.emailVerified && !lead.isManuallyCreated && !lead.email.isEmpty {
-                Button("Verifizieren") { onVerify() }
-                    .controlSize(.small).buttonStyle(.borderedProminent).tint(.orange)
+                Button("Verifizieren") { onVerify() }.controlSize(.small).buttonStyle(.borderedProminent).tint(.orange)
             } else if lead.emailVerified || lead.isManuallyCreated {
                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.title3)
             }
@@ -216,7 +188,7 @@ struct LeadRowProspecting: View {
     }
 }
 
-// MARK: - Manual Company Entry (VERGROESSERT)
+// MARK: - Manual Company Entry (FESTE GROESSE)
 struct ManualCompanyEntryView: View {
     @ObservedObject var vm: AppViewModel
     @Environment(\.dismiss) var dismiss
@@ -225,13 +197,14 @@ struct ManualCompanyEntryView: View {
     @State private var region = Region.dach
     @State private var website = ""
     @State private var companyDescription = ""
-
+    
     var body: some View {
         VStack(spacing: 0) {
+            // Header mit Buttons
             HStack {
                 Text("Unternehmen hinzufuegen").font(.title2).bold()
                 Spacer()
-                Button("Abbrechen") { dismiss() }.buttonStyle(.bordered)
+                Button("Abbrechen") { dismiss() }.keyboardShortcut(.escape).buttonStyle(.bordered)
                 Button("Hinzufuegen") {
                     let company = Company(name: companyName, industry: industry.rawValue, region: region.rawValue, website: website, description: companyDescription)
                     vm.addCompanyManually(company)
@@ -239,52 +212,60 @@ struct ManualCompanyEntryView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(companyName.isEmpty)
+                .keyboardShortcut(.return)
             }
             .padding(24)
+            
             Divider()
+            
+            // Formular
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("Firmenname *").font(.headline)
                         TextField("z.B. Siemens AG", text: $companyName)
                             .textFieldStyle(.roundedBorder)
-                            .font(.title3)
+                            .font(.body)
                     }
-                    HStack(spacing: 20) {
-                        VStack(alignment: .leading, spacing: 8) {
+                    
+                    HStack(spacing: 24) {
+                        VStack(alignment: .leading, spacing: 6) {
                             Text("Branche *").font(.headline)
                             Picker("Branche", selection: $industry) {
                                 ForEach(Industry.allCases) { ind in Text(ind.rawValue).tag(ind) }
                             }.pickerStyle(.menu).frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 6) {
                             Text("Region *").font(.headline)
                             Picker("Region", selection: $region) {
                                 ForEach(Region.allCases) { reg in Text(reg.rawValue).tag(reg) }
                             }.pickerStyle(.menu).frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
-                    VStack(alignment: .leading, spacing: 8) {
+                    
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("Website").font(.headline)
                         TextField("https://www.example.com", text: $website)
                             .textFieldStyle(.roundedBorder)
-                            .font(.title3)
+                            .font(.body)
                     }
-                    VStack(alignment: .leading, spacing: 8) {
+                    
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("Beschreibung").font(.headline)
                         TextEditor(text: $companyDescription)
-                            .frame(minHeight: 100)
+                            .frame(minHeight: 80)
                             .font(.body)
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3)))
+                            .border(Color.gray.opacity(0.3))
                     }
                 }
                 .padding(24)
             }
         }
+        .frame(width: 700, height: 550)
     }
 }
 
-// MARK: - Manual Contact Entry (VERGROESSERT + emailVerified + isManuallyCreated)
+// MARK: - Manual Contact Entry (FESTE GROESSE + emailVerified + isManuallyCreated)
 struct ManualContactEntryView: View {
     @ObservedObject var vm: AppViewModel
     let company: Company
@@ -294,16 +275,17 @@ struct ManualContactEntryView: View {
     @State private var email = ""
     @State private var linkedIn = ""
     @State private var responsibility = ""
-
+    
     var body: some View {
         VStack(spacing: 0) {
+            // Header
             HStack {
-                VStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Kontakt hinzufuegen").font(.title2).bold()
                     Text("Unternehmen: \(company.name)").font(.subheadline).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Abbrechen") { dismiss() }.buttonStyle(.bordered)
+                Button("Abbrechen") { dismiss() }.keyboardShortcut(.escape).buttonStyle(.bordered)
                 Button("Hinzufuegen") {
                     let lead = Lead(
                         name: contactName,
@@ -322,57 +304,66 @@ struct ManualContactEntryView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(contactName.isEmpty)
+                .keyboardShortcut(.return)
             }
             .padding(24)
+            
             Divider()
+            
+            // Formular - keine GroupBox, direkte VStacks
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    GroupBox("Pflichtfelder") {
-                        VStack(alignment: .leading, spacing: 16) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Name *").font(.headline)
-                                TextField("Vor- und Nachname", text: $contactName)
-                                    .textFieldStyle(.roundedBorder)
-                                    .font(.title3)
-                            }
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Position / Titel").font(.headline)
-                                TextField("z.B. Chief Compliance Officer", text: $title)
-                                    .textFieldStyle(.roundedBorder)
-                                    .font(.title3)
-                            }
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("E-Mail").font(.headline)
-                                TextField("name@unternehmen.de", text: $email)
-                                    .textFieldStyle(.roundedBorder)
-                                    .font(.title3)
-                                Text("Manuelle Kontakte werden automatisch als verifiziert markiert")
-                                    .font(.caption).foregroundStyle(.green)
-                            }
-                        }
-                        .padding(8)
+                VStack(alignment: .leading, spacing: 24) {
+                    // Name
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Name *").font(.headline)
+                        TextField("Vor- und Nachname", text: $contactName)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.body)
                     }
-                    GroupBox("Optionale Felder") {
-                        VStack(alignment: .leading, spacing: 16) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("LinkedIn URL").font(.headline)
-                                TextField("https://linkedin.com/in/...", text: $linkedIn)
-                                    .textFieldStyle(.roundedBorder)
-                                    .font(.title3)
-                            }
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Verantwortungsbereich").font(.headline)
-                                TextEditor(text: $responsibility)
-                                    .frame(minHeight: 80)
-                                    .font(.body)
-                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3)))
-                            }
+                    
+                    // Position
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Position / Titel").font(.headline)
+                        TextField("z.B. Chief Compliance Officer", text: $title)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.body)
+                    }
+                    
+                    // Email
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("E-Mail").font(.headline)
+                        TextField("name@unternehmen.de", text: $email)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.body)
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.caption)
+                            Text("Manuelle Kontakte brauchen keine Email-Verifikation")
+                                .font(.caption).foregroundStyle(.green)
                         }
-                        .padding(8)
+                    }
+                    
+                    Divider()
+                    
+                    // LinkedIn
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("LinkedIn URL (optional)").font(.headline)
+                        TextField("https://linkedin.com/in/...", text: $linkedIn)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.body)
+                    }
+                    
+                    // Verantwortungsbereich
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Verantwortungsbereich (optional)").font(.headline)
+                        TextEditor(text: $responsibility)
+                            .frame(minHeight: 60)
+                            .font(.body)
+                            .border(Color.gray.opacity(0.3))
                     }
                 }
                 .padding(24)
             }
         }
+        .frame(width: 700, height: 650)
     }
 }
