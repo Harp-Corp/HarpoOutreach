@@ -1,4 +1,4 @@
-impprt Foundation
+import Foundation
 import Combine
 import SwiftUI
 
@@ -240,7 +240,7 @@ class AppViewModel: ObservableObject {
     }
 
     // MARK: - 6) Email senden
-    func 497
+    func sendEmail
 (for leadID: UUID) async {
         guard let idx = leads.firstIndex(where: { $0.id == leadID }),
               let email = leads[idx].draftedEmail,
