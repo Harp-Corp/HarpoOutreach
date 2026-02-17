@@ -72,4 +72,4 @@ xcodebuild -project "$PROJECT_DIR/HarpoOutreach.xcodeproj" \
 
 echo ""
 echo "✅ Synchronisierung und Build abgeschlossen!"
-echo "💡 Xcode ist jetzt geöffnet mit dem aktuellen Projekt"
+echo "💡 Xcode ist jetzt geöffnet mit dem aktuellen Projekt" 
