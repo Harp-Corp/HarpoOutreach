@@ -65,6 +65,10 @@ struct ProspectingCompanyList: View {
                     Button(action: { showManualCompanySheet = true }) {
                         Label("Unternehmen manuell hinzufuegen", systemImage: "plus.circle")
                     }
+                                        Divider()
+                    Button(action: { vm.addTestCompany() }) {
+                        Label("Testfirma (Harpocrates) hinzufuegen", systemImage: "flask")
+                    }
                 } label: {
                     Label("Unternehmen", systemImage: "plus")
                 }
