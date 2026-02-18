@@ -6,6 +6,7 @@ import SwiftUI
 class AppViewModel: ObservableObject {
     // MARK: - Services
     let authService = GoogleAuthService()
+    private var authCancellable: AnyCancellable?
     private let pplxService = PerplexityService()
     private lazy var gmailService = GmailService(authService: authService)
     private lazy var sheetsService = GoogleSheetsService(authService: authService)
@@ -38,6 +39,10 @@ class AppViewModel: ObservableObject {
         loadLeads()
         loadCompanies()
         configureAuth()
+                // FIX: AuthService-Aenderungen an SwiftUI weiterleiten
+        authCancellable = authService.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }
     }
 
     private func configureAuth() {
