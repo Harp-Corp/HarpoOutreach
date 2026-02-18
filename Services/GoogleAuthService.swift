@@ -2,7 +2,6 @@ import Foundation
 import Combine
 import AppKit
 
-
 class GoogleAuthService: ObservableObject {
     @Published var isAuthenticated = false
     @Published var userEmail = ""
@@ -34,15 +33,30 @@ class GoogleAuthService: ObservableObject {
         loadTokens()
     }
 
-    // MARK: - Get valid access token
+    // MARK: - Get valid access token (FIX: synchrones Token-Handling)
     func getAccessToken() async throws -> String {
+        // 1. Pruefe ob Token noch gueltig
         if let token = accessToken, let expiry = tokenExpiry, expiry > Date() {
             return token
         }
+
+        // 2. Versuche Token zu refreshen
         if let refresh = refreshToken {
-            try await refreshAccessToken(refreshToken: refresh)
-            if let token = accessToken { return token }
+            do {
+                let newToken = try await refreshAccessTokenAndReturn(refreshToken: refresh)
+                return newToken
+            } catch {
+                print("[GoogleAuth] Token refresh fehlgeschlagen: \(error.localizedDescription)")
+                // Refresh Token ungueltig - Logout erzwingen
+                await MainActor.run {
+                    self.accessToken = nil
+                    self.tokenExpiry = nil
+                    self.isAuthenticated = false
+                }
+                throw AuthError.tokenExpired
+            }
         }
+
         throw AuthError.notAuthenticated
     }
 
@@ -88,15 +102,10 @@ class GoogleAuthService: ObservableObject {
             var buffer = [UInt8](repeating: 0, count: 4096)
             let bytesRead = read(client, &buffer, buffer.count)
             guard bytesRead > 0 else { return }
-
             let request = String(bytes: buffer[0..<bytesRead], encoding: .utf8) ?? ""
+
             if let code = self.extractCode(from: request) {
-                let response = """
-                HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n\
-                <html><body><h2>Authentifizierung erfolgreich!</h2>\
-                <p>Du kannst dieses Fenster schliessen und zu HarpoOutreach zurueckkehren.</p>\
-                </body></html>
-                """
+                let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html><body><h2>Authentifizierung erfolgreich!</h2><p>Du kannst dieses Fenster schliessen und zu HarpoOutreach zurueckkehren.</p></body></html>"
                 _ = response.withCString { write(client, $0, strlen($0)) }
 
                 Task {
@@ -148,12 +157,12 @@ class GoogleAuthService: ObservableObject {
         ]
 
         let tokenData = try await postForm(url: tokenURL, params: params)
-        try processTokenResponse(tokenData)
+        try await processTokenResponse(tokenData)
         await fetchUserEmail()
     }
 
-    // MARK: - Refresh Token
-    private func refreshAccessToken(refreshToken: String) async throws {
+    // MARK: - Refresh Token (FIX: gibt neuen Token direkt zurueck)
+    private func refreshAccessTokenAndReturn(refreshToken: String) async throws -> String {
         let params = [
             "refresh_token": refreshToken,
             "client_id": clientID,
@@ -162,39 +171,80 @@ class GoogleAuthService: ObservableObject {
         ]
 
         let tokenData = try await postForm(url: tokenURL, params: params)
-        try processTokenResponse(tokenData)
+
+        guard let json = try? JSONSerialization.jsonObject(with: tokenData) as? [String: Any] else {
+            throw AuthError.tokenParseFailed
+        }
+
+        if let error = json["error"] as? String {
+            let desc = json["error_description"] as? String ?? error
+            print("[GoogleAuth] Token error: \(desc)")
+            throw AuthError.tokenError(desc)
+        }
+
+        guard let newAccess = json["access_token"] as? String, !newAccess.isEmpty else {
+            throw AuthError.tokenParseFailed
+        }
+
+        let expiresIn = json["expires_in"] as? Int ?? 3600
+        let newRefresh = json["refresh_token"] as? String
+
+        // FIX: Synchron auf MainActor setzen und warten
+        await MainActor.run {
+            self.accessToken = newAccess
+            self.tokenExpiry = Date().addingTimeInterval(TimeInterval(expiresIn - 60))
+            if let r = newRefresh {
+                self.refreshToken = r
+            }
+            self.isAuthenticated = true
+            self.saveTokens()
+        }
+
+        print("[GoogleAuth] Token erfolgreich refreshed, expires in \(expiresIn)s")
+        return newAccess
     }
 
-    private func processTokenResponse(_ data: Data) throws {
+    // MARK: - Process Token Response (FIX: @MainActor statt DispatchQueue)
+    private func processTokenResponse(_ data: Data) async throws {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw AuthError.tokenParseFailed
         }
 
         if let error = json["error"] as? String {
-            throw AuthError.tokenError(error)
+            let desc = json["error_description"] as? String ?? error
+            throw AuthError.tokenError(desc)
         }
 
         let newAccess = json["access_token"] as? String ?? ""
         let expiresIn = json["expires_in"] as? Int ?? 3600
         let newRefresh = json["refresh_token"] as? String
 
-        DispatchQueue.main.async {
+        // FIX: await MainActor.run statt DispatchQueue.main.async
+        await MainActor.run {
             self.accessToken = newAccess
             self.tokenExpiry = Date().addingTimeInterval(TimeInterval(expiresIn - 60))
-            if let r = newRefresh { self.refreshToken = r }
+            if let r = newRefresh {
+                self.refreshToken = r
+            }
             self.isAuthenticated = true
             self.saveTokens()
         }
+
+        print("[GoogleAuth] Tokens gespeichert, authenticated=true")
     }
 
     private func fetchUserEmail() async {
         guard let token = accessToken else { return }
         var req = URLRequest(url: URL(string: "https://www.googleapis.com/oauth2/v2/userinfo")!)
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
         if let (data, _) = try? await URLSession.shared.data(for: req),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let email = json["email"] as? String {
-            DispatchQueue.main.async { self.userEmail = email }
+            await MainActor.run {
+                self.userEmail = email
+            }
+            print("[GoogleAuth] User email: \(email)")
         }
     }
 
@@ -203,9 +253,11 @@ class GoogleAuthService: ObservableObject {
         var request = URLRequest(url: URL(string: url)!)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+
         let body = params.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? $0.value)" }
             .joined(separator: "&")
         request.httpBody = body.data(using: .utf8)
+
         let (data, _) = try await URLSession.shared.data(for: request)
         return data
     }
@@ -235,6 +287,7 @@ class GoogleAuthService: ObservableObject {
         if refreshToken != nil && !(refreshToken?.isEmpty ?? true) {
             isAuthenticated = true
         }
+        print("[GoogleAuth] Tokens geladen, hasRefresh=\(refreshToken != nil), hasAccess=\(accessToken != nil)")
     }
 
     func logout() {
@@ -244,18 +297,25 @@ class GoogleAuthService: ObservableObject {
         isAuthenticated = false
         userEmail = ""
         UserDefaults.standard.removeObject(forKey: "google_tokens")
+        print("[GoogleAuth] Logout")
     }
 
     enum AuthError: LocalizedError {
         case notAuthenticated
+        case tokenExpired
         case tokenParseFailed
         case tokenError(String)
 
         var errorDescription: String? {
             switch self {
-            case .notAuthenticated: return "Nicht authentifiziert. Bitte Google Login durchfuehren."
-            case .tokenParseFailed: return "Token-Antwort konnte nicht gelesen werden."
-            case .tokenError(let e): return "Google Auth Fehler: \(e)"
+            case .notAuthenticated:
+                return "Nicht authentifiziert. Bitte Google Login durchfuehren."
+            case .tokenExpired:
+                return "Token abgelaufen. Bitte erneut mit Google anmelden."
+            case .tokenParseFailed:
+                return "Token-Antwort konnte nicht gelesen werden."
+            case .tokenError(let e):
+                return "Google Auth Fehler: \(e)"
             }
         }
     }
