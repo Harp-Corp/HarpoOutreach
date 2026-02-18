@@ -1,6 +1,6 @@
 #!/bin/bash
 # harpo-sync: Robuster GitHub-Sync (GitHub ist IMMER fuehrend)
-# Version 3.2 - macOS-kompatibel, kein GNU timeout noetig
+# Version 3.3 - Anti-Hang: Timeouts auf ALLEN Netzwerk-Operationen
 
 # Farben fuer Output
 RED='\033[0;31m'
@@ -11,10 +11,13 @@ NC='\033[0m' # No Color
 
 PROJECT_DIR="$HOME/SpecialProjects/HarpoOutreach"
 REPO_URL="https://github.com/Harp-Corp/HarpoOutreach.git"
-GIT_TIMEOUT=180
+
+# ANTI-HANG: Verhindert dass git auf Passwort-Eingabe wartet
+export GIT_TERMINAL_PROMPT=0
+export GIT_SSH_COMMAND="ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
 # Self-Update: Aktualisiert /usr/local/bin/harpo-sync aus GitHub
-SCRIPT_VERSION="3.2"
+SCRIPT_VERSION="3.3"
 RAW_URL="https://raw.githubusercontent.com/Harp-Corp/HarpoOutreach/main/.github/scripts/harpo-sync.sh"
 INSTALLED_SCRIPT="/usr/local/bin/harpo-sync"
 
@@ -22,7 +25,7 @@ self_update() {
   if [ -w "$INSTALLED_SCRIPT" ] || [ -w "$(dirname "$INSTALLED_SCRIPT")" ]; then
     local tmp_script
     tmp_script=$(mktemp)
-    if curl -fsSL "$RAW_URL" -o "$tmp_script" 2>/dev/null; then
+    if curl --connect-timeout 5 --max-time 15 -fsSL "$RAW_URL" -o "$tmp_script" 2>/dev/null; then
       local remote_ver
       remote_ver=$(grep '^SCRIPT_VERSION=' "$tmp_script" | head -1 | cut -d'"' -f2)
       if [ -n "$remote_ver" ] && [ "$remote_ver" != "$SCRIPT_VERSION" ]; then
@@ -32,8 +35,8 @@ self_update() {
         rm -f "$tmp_script"
         exec "$INSTALLED_SCRIPT" "$@"
       fi
-      rm -f "$tmp_script"
     fi
+    rm -f "$tmp_script"
   fi
 }
 self_update "$@"
@@ -44,21 +47,6 @@ step() { echo -e "\n${BLUE}[$1/$TOTAL_STEPS]${NC} $2"; }
 ok()   { echo -e "  ${GREEN}OK${NC} $1"; }
 warn() { echo -e "  ${YELLOW}WARN${NC} $1"; }
 fail() { echo -e "  ${RED}FEHLER${NC} $1"; }
-
-# macOS-kompatibler Timeout (kein GNU coreutils noetig)
-run_with_timeout() {
-  local timeout_sec=$1
-  shift
-  "$@" &
-  local pid=$!
-  ( sleep "$timeout_sec" && kill "$pid" 2>/dev/null ) &
-  local watchdog=$!
-  wait "$pid" 2>/dev/null
-  local exit_code=$?
-  kill "$watchdog" 2>/dev/null
-  wait "$watchdog" 2>/dev/null
-  return $exit_code
-}
 
 echo -e "${BLUE}harpo-sync v$SCRIPT_VERSION${NC} - GitHub ist fuehrend"
 echo "=========================================="
@@ -78,7 +66,7 @@ step 2 "Projektverzeichnis pruefen"
 if [ ! -d "$PROJECT_DIR" ]; then
   fail "Verzeichnis nicht gefunden: $PROJECT_DIR"
   echo "  Klone Repository neu..."
-  git clone "$REPO_URL" "$PROJECT_DIR" || { fail "Klonen fehlgeschlagen"; exit 1; }
+  git clone --depth=1 "$REPO_URL" "$PROJECT_DIR" || { fail "Klonen fehlgeschlagen"; exit 1; }
 fi
 cd "$PROJECT_DIR" || { fail "cd fehlgeschlagen"; exit 1; }
 ok "$PROJECT_DIR"
@@ -87,7 +75,7 @@ ok "$PROJECT_DIR"
 step 3 "Xcode DerivedData loeschen"
 DERIVED="$HOME/Library/Developer/Xcode/DerivedData"
 if [ -d "$DERIVED" ]; then
-  find "$DERIVED" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null
+  find "$DERIVED" -mindepth 1 -maxdepth 1 -name "HarpoOutreach-*" -exec rm -rf {} + 2>/dev/null
   ok "DerivedData bereinigt"
 else
   ok "Kein DerivedData vorhanden"
@@ -96,26 +84,26 @@ fi
 # --- Schritt 4: Git Synchronisierung ---
 step 4 "Git Synchronisierung (GitHub -> Lokal)"
 
+# ANTI-HANG: Git Timeouts konfigurieren
+git config --local http.lowSpeedLimit 1000
+git config --local http.lowSpeedTime 30
+git config --local http.postBuffer 524288000
+
 # 4a: Lokale Aenderungen verwerfen
 echo "  Verwerfe lokale Aenderungen..."
 git reset --hard HEAD 2>/dev/null
 git clean -fd 2>/dev/null
 ok "Lokale Aenderungen verworfen"
 
-# 4b: Remote aktualisieren (mit Timeout)
+# 4b: Remote aktualisieren
 echo "  Hole Aenderungen von GitHub..."
-if git fetch origin --prune 2>&1; then
+if git fetch origin main --depth=1 --no-tags 2>&1; then
   ok "Fetch erfolgreich"
 else
   FETCH_EXIT=$?
-  warn "Fetch fehlgeschlagen (Exit: $FETCH_EXIT) - versuche shallow fetch..."
-  if git fetch origin main --depth=1 2>&1; then
-    ok "Shallow Fetch erfolgreich"
-  else
-    fail "Auch Shallow Fetch fehlgeschlagen"
-    echo "  Pruefe deine Internetverbindung und versuche es erneut."
-    exit 1
-  fi
+  warn "Fetch fehlgeschlagen (Exit: $FETCH_EXIT)"
+  echo "  Pruefe deine Internetverbindung und versuche es erneut."
+  exit 1
 fi
 
 # 4c: Auf main Branch wechseln und auf Remote zuruecksetzen
@@ -139,22 +127,28 @@ else
   exit 1
 fi
 
-# --- Schritt 6: Build ---
-step 6 "Clean Build starten"
-sleep 3
-echo "  Starte xcodebuild..."
-if xcodebuild -project "$PROJECT_DIR/HarpoOutreach.xcodeproj" \
-  -scheme HarpoOutreach \
-  -configuration Debug \
-  -destination 'platform=macOS' \
-  clean build 2>&1 | tail -20; then
-  echo ""
-  ok "Build erfolgreich!"
-else
-  echo ""
-  warn "Build fehlgeschlagen - Xcode ist trotzdem geoeffnet"
-  warn "Pruefe die Fehler in Xcode direkt"
-fi
+# --- Schritt 6: Build (im Hintergrund, blockiert NICHT) ---
+step 6 "Build starten"
+sleep 2
+echo "  Starte xcodebuild im Hintergrund..."
+BUILD_LOG="/tmp/harpo-build-$(date +%Y%m%d-%H%M%S).log"
+
+(
+  xcodebuild -project "$PROJECT_DIR/HarpoOutreach.xcodeproj" \
+    -scheme HarpoOutreach \
+    -configuration Debug \
+    -destination 'platform=macOS' \
+    clean build 2>&1 > "$BUILD_LOG"
+  BUILD_EXIT=$?
+  if [ $BUILD_EXIT -eq 0 ]; then
+    osascript -e 'display notification "Build erfolgreich!" with title "HarpoOutreach"' 2>/dev/null
+  else
+    osascript -e 'display notification "Build fehlgeschlagen - siehe Xcode" with title "HarpoOutreach"' 2>/dev/null
+  fi
+) &
+
+ok "Build laeuft im Hintergrund (Log: $BUILD_LOG)"
+ok "Pruefe Build-Status in Xcode oder: tail -f $BUILD_LOG"
 
 echo ""
 echo -e "${GREEN}==========================================${NC}"
