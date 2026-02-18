@@ -276,7 +276,7 @@ class AppViewModel: ObservableObject {
         do {
             _ = try await gmailService.sendEmail(
                 to: leads[idx].email,
-                from: settings.senderEmail,
+                from: authService.userEmail.isEmpty ? settings.senderEmail : authService.userEmail,
                 subject: email.subject,
                 body: email.body)
             leads[idx].dateEmailSent = Date()
@@ -383,7 +383,7 @@ class AppViewModel: ObservableObject {
         do {
             _ = try await gmailService.sendEmail(
                 to: leads[idx].email,
-                from: settings.senderEmail,
+                from: authService.userEmail.isEmpty ? settings.senderEmail : authService.userEmail,
                 subject: followUp.subject,
                 body: followUp.body)
             leads[idx].dateFollowUpSent = Date()
