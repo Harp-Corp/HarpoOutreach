@@ -19,10 +19,8 @@ struct ProspectingView: View {
         .sheet(isPresented: $showManualCompanySheet) {
             ManualCompanyEntryView(vm: vm)
         }
-        .sheet(isPresented: $showManualContactSheet) {
-            if let company = selectedCompanyForContact {
-                ManualContactEntryView(vm: vm, company: company)
-            }
+        .sheet(item: $selectedCompanyForContact) { company in
+            ManualContactEntryView(vm: vm, company: company)
         }
     }
 }
