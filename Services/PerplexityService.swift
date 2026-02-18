@@ -37,7 +37,7 @@ class PerplexityService {
     // MARK: - 1) Unternehmen finden
     func findCompanies(industry: Industry, region: Region, apiKey: String) async throws -> [Company] {
         let system = "You find real companies. Return ONLY a JSON array of objects with fields: name, industry, region, website, linkedInURL, description, size, country. No markdown, no explanation."
-        let user = "Find 8-10 real \(industry.rawValue) companies in \(region.countries) meeting: revenue >50M EUR, 200+ employees. Include website and LinkedIn."
+        let user = "Find 20-25 real \(industry.rawValue) companies in \(region.countries) meeting: revenue >50M EUR, 200+ employees. Include website and LinkedIn."
         let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey)
         return parseJSON(content).map { d in
             Company(name: d["name"] ?? "Unknown", industry: d["industry"] ?? industry.rawValue, region: d["region"] ?? region.rawValue, website: d["website"] ?? "", linkedInURL: d["linkedInURL"] ?? "", description: d["description"] ?? "")
@@ -223,7 +223,8 @@ class PerplexityService {
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return OutboundEmail(subject: "Compliance Solutions", body: content)
         }
-        return OutboundEmail(subject: dict["subject"] as? String ?? "Compliance Solutions for \(lead.company)", body: dict["body"] as? String ?? content)
+        let rawBody = dict["body"] as? String ?? content
+        return OutboundEmail(subject: dict["subject"] as? String ?? "Compliance Solutions for \(lead.company)", body: stripCitations(rawBody))
     }
     
     // MARK: - 6) Follow-up Email erstellen
@@ -236,10 +237,22 @@ class PerplexityService {
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return OutboundEmail(subject: "Following up", body: content)
         }
-        return OutboundEmail(subject: dict["subject"] as? String ?? "Following up - \(lead.company)", body: dict["body"] as? String ?? content)
+        let rawBody2 = dict["body"] as? String ?? content
+        return OutboundEmail(subject: dict["subject"] as? String ?? "Following up - \(lead.company)", body: stripCitations(rawBody2))
     }
     
     // MARK: - JSON Helpers
+
+    private func stripCitations(_ text: String) -> String {
+        var result = text
+        let pattern = "\\s*\\[\\d+(,\\s*\\d+)*\\]"
+        if let regex = try? NSRegularExpression(pattern: pattern) {
+            let range = NSRange(result.startIndex..., in: result)
+            result = regex.stringByReplacingMatches(in: result, range: range, withTemplate: "")
+        }
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private func cleanJSON(_ content: String) -> String {
         var s = content.trimmingCharacters(in: .whitespacesAndNewlines)
         if s.hasPrefix("```json") { s = String(s.dropFirst(7)) }

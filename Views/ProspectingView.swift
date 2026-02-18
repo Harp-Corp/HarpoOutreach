@@ -85,7 +85,7 @@ struct ProspectingCompanyList: View {
             } else {
                 List {
                     ForEach(vm.companies) { company in
-                        CompanyRow(company: company, onFindContacts: { Task { await vm.findContacts(for: company) } }, onAddManual: { selectedCompanyForContact = company; showManualContactSheet = true })
+                        CompanyRow(company: company, hasContacts: vm.leads.contains { $0.company == company.name }, onFindContacts: { Task { await vm.findContacts(for: company) } }, onAddManual: { selectedCompanyForContact = company; showManualContactSheet = true })
                     }
                 }
             }
@@ -127,12 +127,13 @@ struct ProspectingContactList: View {
 // MARK: - Company Row
 struct CompanyRow: View {
     let company: Company
+    let hasContacts: Bool
     let onFindContacts: () -> Void
     let onAddManual: () -> Void
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(company.name).font(.headline)
+                HStack(spacing: 4) { Text(company.name).font(.headline); if hasContacts { Image(systemName: "person.fill.checkmark").foregroundStyle(.green).font(.caption) } }
                 HStack(spacing: 8) {
                     Text(company.industry).font(.caption).padding(.horizontal, 6).padding(.vertical, 2).background(.blue.opacity(0.1)).cornerRadius(4)
                     Text(company.region).font(.caption).padding(.horizontal, 6).padding(.vertical, 2).background(.green.opacity(0.1)).cornerRadius(4)
