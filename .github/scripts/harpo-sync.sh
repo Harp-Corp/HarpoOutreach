@@ -1,6 +1,6 @@
 #!/bin/bash
 # harpo-sync: Robuster GitHub-Sync (GitHub ist IMMER fuehrend)
-# Version 3.0 - macOS-kompatibel, kein GNU timeout noetig
+# Version 3.1 - macOS-kompatibel, kein GNU timeout noetig
 
 # Farben fuer Output
 RED='\033[0;31m'
@@ -12,6 +12,31 @@ NC='\033[0m' # No Color
 PROJECT_DIR="$HOME/SpecialProjects/HarpoOutreach"
 REPO_URL="https://github.com/Harp-Corp/HarpoOutreach.git"
 GIT_TIMEOUT=60
+
+# Self-Update: Aktualisiert /usr/local/bin/harpo-sync aus GitHub
+SCRIPT_VERSION="3.1"
+RAW_URL="https://raw.githubusercontent.com/Harp-Corp/HarpoOutreach/main/.github/scripts/harpo-sync.sh"
+INSTALLED_SCRIPT="/usr/local/bin/harpo-sync"
+
+self_update() {
+  if [ -w "$INSTALLED_SCRIPT" ] || [ -w "$(dirname "$INSTALLED_SCRIPT")" ]; then
+    local tmp_script
+    tmp_script=$(mktemp)
+    if curl -fsSL "$RAW_URL" -o "$tmp_script" 2>/dev/null; then
+      local remote_ver
+      remote_ver=$(grep '^SCRIPT_VERSION=' "$tmp_script" | head -1 | cut -d'"' -f2)
+      if [ -n "$remote_ver" ] && [ "$remote_ver" != "$SCRIPT_VERSION" ]; then
+        cp "$tmp_script" "$INSTALLED_SCRIPT"
+        chmod +x "$INSTALLED_SCRIPT"
+        echo -e "${GREEN}AUTO-UPDATE${NC} harpo-sync $SCRIPT_VERSION -> $remote_ver"
+        rm -f "$tmp_script"
+        exec "$INSTALLED_SCRIPT" "$@"
+      fi
+      rm -f "$tmp_script"
+    fi
+  fi
+}
+self_update "$@"
 
 # Hilfsfunktionen
 TOTAL_STEPS=6
@@ -35,7 +60,7 @@ run_with_timeout() {
   return $exit_code
 }
 
-echo -e "${BLUE}harpo-sync v3.0${NC} - GitHub ist fuehrend"
+echo -e "${BLUE}harpo-sync v$SCRIPT_VERSION${NC} - GitHub ist fuehrend"
 echo "=========================================="
 
 # --- Schritt 1: Xcode beenden ---
