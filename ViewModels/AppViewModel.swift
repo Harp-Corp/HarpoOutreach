@@ -85,7 +85,7 @@ class AppViewModel: ObservableObject {
                     }
                     companies.append(contentsOf: newOnes)
                 } catch {
-                    statusMessage = "Fehler \(industry.rawValue)/\(region.rawValue): \(error.localizedDescription)"
+                    errorMessage = "Fehler \(industry.rawValue)/\(region.rawValue): \(error.localizedDescription)"
                 }
             }
         }
