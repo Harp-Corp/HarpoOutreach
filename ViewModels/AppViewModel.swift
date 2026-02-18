@@ -514,36 +514,51 @@ class AppViewModel: ObservableObject {
             errorMessage = "Kein Draft vorhanden fuer \(lead.name)"
             return
         }
-        
+
+        guard !lead.email.isEmpty else {
+            errorMessage = "Keine Email-Adresse fuer \(lead.name)"
+            return
+        }
+
+        guard authService.isAuthenticated else {
+            errorMessage = "Nicht bei Google angemeldet. Bitte unter Einstellungen mit Google anmelden."
+            return
+        }
+
+        // FIX: Verwende authentifizierte Gmail-Adresse als Absender
+        let senderEmail = authService.userEmail.isEmpty ? settings.senderEmail : authService.userEmail
+        print("[SendEmail] Sende an: \(lead.email), von: \(senderEmail), Betreff: \(draft.subject)")
+
         isLoading = true
+        errorMessage = ""
         currentStep = "Sende Email an \(lead.name)..."
-        
+
         do {
-            _ =             try await gmailService.sendEmail(
+            _ = try await gmailService.sendEmail(
                 to: lead.email,
-                            from: settings.senderEmail,
+                from: senderEmail,
                 subject: draft.subject,
                 body: draft.body
             )
-            
+
             // Update lead status
             if let index = leads.firstIndex(where: { $0.id == lead.id }) {
-                leads[index].status = .contacted
+                leads[index].status = .emailSent
                 leads[index].dateEmailSent = Date()
-                // Draft nach Versand entfernen
-                leads[index].draftedEmail = nil
+                leads[index].draftedEmail?.sentDate = Date()
                 saveLeads()
             }
-            
+
             statusMessage = "Email an \(lead.name) erfolgreich gesendet"
+            print("[SendEmail] Erfolgreich gesendet an \(lead.email)")
         } catch {
-            errorMessage = "Fehler beim Senden: \(error.localizedDescription)"
+            errorMessage = "Senden fehlgeschlagen: \(error.localizedDescription)"
+            print("[SendEmail] FEHLER: \(error)")
         }
-        
+
         isLoading = false
         currentStep = ""
     }
-
 
 
 }
