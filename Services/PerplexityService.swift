@@ -2,7 +2,7 @@ import Foundation
 
 class PerplexityService {
     private let apiURL = "https://api.perplexity.ai/chat/completions"
-    private let model = "sonar"
+    private let model = "sonar-pro"
     
     // MARK: - Generic API Call
     private func callAPI(systemPrompt: String, userPrompt: String, apiKey: String, maxTokens: Int = 4000) async throws -> String {
@@ -378,6 +378,7 @@ class PerplexityService {
         let finalEmail = best?.email ?? lead.email
         let isVerified = best?.confidence == "high"
             || (best != nil && (uniqueEmails[best!.email]?.count ?? 0) > 1)
+                    || best?.confidence == "medium"
         
         let summaryParts = [
             best.map { "Best: \($0.email) (\($0.source), \($0.confidence) confidence)" } ?? "No email found",
