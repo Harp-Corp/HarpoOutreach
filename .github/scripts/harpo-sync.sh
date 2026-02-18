@@ -1,6 +1,6 @@
 #!/bin/bash
 # harpo-sync: Robuster GitHub-Sync (GitHub ist IMMER fuehrend)
-# Version 3.4 - Build im Vordergrund mit Live-Status
+# Version 3.5 - Fetch-Timeout fix, verhindert Haenger bei git fetch
 
 # Farben fuer Output
 RED='\033[0;31m'
@@ -12,13 +12,14 @@ NC='\033[0m'
 
 PROJECT_DIR="$HOME/SpecialProjects/HarpoOutreach"
 REPO_URL="https://github.com/Harp-Corp/HarpoOutreach.git"
+FETCH_TIMEOUT=60
 
 # ANTI-HANG: Verhindert dass git auf Passwort-Eingabe wartet
 export GIT_TERMINAL_PROMPT=0
 export GIT_SSH_COMMAND="ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
 # Self-Update
-SCRIPT_VERSION="3.4"
+SCRIPT_VERSION="3.5"
 RAW_URL="https://raw.githubusercontent.com/Harp-Corp/HarpoOutreach/main/.github/scripts/harpo-sync.sh"
 INSTALLED_SCRIPT="/usr/local/bin/harpo-sync"
 
@@ -49,19 +50,28 @@ ok()   { echo -e "  ${GREEN}OK${NC} $1"; }
 warn() { echo -e "  ${YELLOW}WARN${NC} $1"; }
 fail() { echo -e "  ${RED}FEHLER${NC} $1"; }
 
-# Spinner fuer lange Operationen
-spinner() {
+# Spinner mit Timeout - killt Prozess nach timeout_sec
+spinner_with_timeout() {
   local pid=$1
   local msg=$2
-  local chars='|/-\\'
+  local timeout_sec=${3:-60}
+  local chars='|/-\'
   local i=0
   local start=$SECONDS
   while kill -0 "$pid" 2>/dev/null; do
     local elapsed=$((SECONDS - start))
-    printf "\r  ${YELLOW}%s${NC} %s (%ds)" "${chars:i++%4:1}" "$msg" "$elapsed"
+    if [ $elapsed -ge $timeout_sec ]; then
+      kill "$pid" 2>/dev/null
+      sleep 1
+      kill -9 "$pid" 2>/dev/null
+      printf "\r"
+      return 1
+    fi
+    printf "\r  ${YELLOW}%s${NC} %s (%ds/%ds)" "${chars:i++%4:1}" "$msg" "$elapsed" "$timeout_sec"
     sleep 0.3
   done
   printf "\r"
+  return 0
 }
 
 echo -e "${BLUE}${BOLD}harpo-sync v$SCRIPT_VERSION${NC} - GitHub ist fuehrend"
@@ -100,20 +110,42 @@ fi
 
 # --- Schritt 4: Git Synchronisierung ---
 step 4 "Git Synchronisierung (GitHub -> Lokal)"
+
+# Git Timeout-Konfiguration
 git config --local http.lowSpeedLimit 1000
-git config --local http.lowSpeedTime 30
+git config --local http.lowSpeedTime 10
+git config --local http.postBuffer 524288
 
 echo "  Verwerfe lokale Aenderungen..."
 git reset --hard HEAD 2>/dev/null
 git clean -fd 2>/dev/null
 ok "Lokale Aenderungen verworfen"
 
+# Fetch mit echtem Timeout
 echo "  Hole Aenderungen von GitHub..."
 git fetch origin main --depth=1 --no-tags 2>&1 &
 FETCH_PID=$!
-spinner $FETCH_PID "Fetch laeuft"
-wait $FETCH_PID
-FETCH_EXIT=$?
+spinner_with_timeout $FETCH_PID "Fetch laeuft" $FETCH_TIMEOUT
+SPINNER_EXIT=$?
+
+if [ $SPINNER_EXIT -ne 0 ]; then
+  warn "Fetch Timeout nach ${FETCH_TIMEOUT}s - versuche erneut..."
+  # Zweiter Versuch: noch aggressiver
+  git fetch origin main --depth=1 --no-tags --single-branch 2>&1 &
+  FETCH_PID=$!
+  spinner_with_timeout $FETCH_PID "Retry Fetch" $FETCH_TIMEOUT
+  SPINNER_EXIT=$?
+  if [ $SPINNER_EXIT -ne 0 ]; then
+    fail "Fetch Timeout - auch zweiter Versuch fehlgeschlagen"
+    echo "  Pruefe deine Internetverbindung und versuche es erneut."
+    exit 1
+  fi
+  wait $FETCH_PID 2>/dev/null
+  FETCH_EXIT=$?
+else
+  wait $FETCH_PID 2>/dev/null
+  FETCH_EXIT=$?
+fi
 
 if [ $FETCH_EXIT -eq 0 ]; then
   ok "Fetch erfolgreich"
@@ -175,7 +207,7 @@ xcodebuild -project "$PROJECT_DIR/HarpoOutreach.xcodeproj" \
       printf "\r  ${BLUE}Kompiliere${NC} $(echo "$line" | grep -oE '[^ /]+\.swift' | tail -1)          "
       ;;
     *"Linking "*|*"Ld "*)
-      printf "\r  ${BLUE}Linke${NC} HarpoOutreach                    \n"
+      printf "\r  ${BLUE}Linke${NC} HarpoOutreach              \n"
       ;;
   esac
 done
