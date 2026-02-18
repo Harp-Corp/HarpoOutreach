@@ -10,27 +10,72 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    
+    timeout-minutes: 30
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-      
-    - name: Show Xcode version
-      run: xcodebuild -version
-      
-    - name: Build app
-      run: |
-        xcodebuild -project HarpoOutreach.xcodeproj \
-          -scheme HarpoOutreach \
-          -configuration Debug \
-          -destination 'platform=macOS' \
-          build
-          
-    - name: Build status
-      if: success()
-      run: echo "Build successful!"
-      
-    - name: Build failed
-      if: failure()
-      run: echo "Build failed! Check the logs above for errors."
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build app
+        run: |
+          xcodebuild -project HarpoOutreach.xcodeproj \
+            -scheme HarpoOutreach \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath build \
+            build 2>&1 | tee build.log
+
+      - name: Upload Build Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          retention-days: 14
+
+      - name: Upload Build Artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HarpoOutreach-build
+          path: build/Build/Products/Debug/
+          retention-days: 30
+
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "## Build Result" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ **Build erfolgreich**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Generierte Dateien:" >> $GITHUB_STEP_SUMMARY
+            ls -lh build/Build/Products/Debug/ 2>/dev/null | head -20 >> $GITHUB_STEP_SUMMARY || echo "Keine Dateien gefunden" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Build fehlgeschlagen**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Letzte Fehler:" >> $GITHUB_STEP_SUMMARY
+            grep -i "error:" build.log | tail -20 >> $GITHUB_STEP_SUMMARY || echo "Siehe build.log Artifact" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const run_id = context.runId;
+            const run_url = `https://github.com/${owner}/${repo}/actions/runs/${run_id}`;
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title: `❌ Build #${context.runNumber} fehlgeschlagen`,
+              body: `Build **#${context.runNumber}** ist fehlgeschlagen!\n\n` +
+                    `- **Commit:** ${context.sha.substring(0,7)}\n` +
+                    `- **Branch:** ${context.ref}\n` +
+                    `- **Autor:** @${context.actor}\n\n` +
+                    `[Build Details](${run_url})`,
+              labels: ['build-failure']
+            });
