@@ -23,6 +23,8 @@ class AppViewModel: ObservableObject {
     @Published var currentStep = ""
 
     private let saveURL: URL
+        private let companiesSaveURL: URL
+    private var currentTask: Task<Void, Never>?
 
     // MARK: - Init
     init() {
@@ -31,8 +33,10 @@ class AppViewModel: ObservableObject {
         let appDir = appSupport.appendingPathComponent("HarpoOutreach", isDirectory: true)
         try? FileManager.default.createDirectory(at: appDir, withIntermediateDirectories: true)
         self.saveURL = appDir.appendingPathComponent("leads.json")
+        self.companiesSaveURL = appDir.appendingPathComponent("companies.json")
         loadSettings()
         loadLeads()
+        loadCompanies()
         configureAuth()
     }
 
@@ -90,6 +94,7 @@ class AppViewModel: ObservableObject {
             }
         }
         currentStep = "\(companies.count) Unternehmen gefunden"
+            saveCompanies()
         isLoading = false
     }
 
@@ -165,15 +170,14 @@ class AppViewModel: ObservableObject {
         currentStep = "Recherchiere Challenges fuer \(leads[idx].company)..."
 
         do {
-            // Schritt 4: Challenges recherchieren
-            // let challenges = try await pplxService.researchChallenges(
-//                                    company: leads[idx].company, apiKey: settings.perplexityAPIKey)
-            
-
-            // Schritt 5: Email drafting
+                        // Schritt 4: Challenges recherchieren
+            let companyForResearch = companies.first { $0.name.lowercased() == leads[idx].company.lowercased() }
+                ?? Company(name: leads[idx].company, industry: "", region: "")
+            let challenges = try await pplxService.researchChallenges(
+                company: companyForResearch, apiKey: settings.perplexityAPIKey)
             currentStep = "Erstelle personalisierte Email fuer \(leads[idx].name)..."
             let email = try await pplxService.draftEmail(
-                lead: leads[idx], challenges: "",
+                lead: leads[idx], challenges: challenges,
                 senderName: settings.senderName,
                 apiKey: settings.perplexityAPIKey)
             leads[idx].draftedEmail = email
@@ -230,6 +234,19 @@ class AppViewModel: ObservableObject {
               let saved = try? JSONDecoder().decode([Lead].self, from: data)
         else { return }
         leads = saved
+    }
+
+    private func saveCompanies() {
+        if let data = try? JSONEncoder().encode(companies) {
+            try? data.write(to: companiesSaveURL)
+        }
+    }
+
+    private func loadCompanies() {
+        guard let data = try? Data(contentsOf: companiesSaveURL),
+              let saved = try? JSONDecoder().decode([Company].self, from: data)
+        else { return }
+        companies = saved
     }
     // MARK: - 5) Email freigeben
     func approveEmail(for leadID: UUID) {
@@ -399,6 +416,8 @@ class AppViewModel: ObservableObject {
     
     // MARK: - Cancel Operations
     func cancelOperation() {
+                currentTask?.cancel()
+        currentTask = nil
         isLoading = false
         currentStep = ""
         statusMessage = "Operation cancelled"
