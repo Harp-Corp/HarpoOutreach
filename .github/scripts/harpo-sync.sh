@@ -1,6 +1,6 @@
 #!/bin/bash
 # harpo-sync: Robuster GitHub-Sync (GitHub ist IMMER fuehrend)
-# Version 3.1 - macOS-kompatibel, kein GNU timeout noetig
+# Version 3.2 - macOS-kompatibel, kein GNU timeout noetig
 
 # Farben fuer Output
 RED='\033[0;31m'
@@ -11,10 +11,10 @@ NC='\033[0m' # No Color
 
 PROJECT_DIR="$HOME/SpecialProjects/HarpoOutreach"
 REPO_URL="https://github.com/Harp-Corp/HarpoOutreach.git"
-GIT_TIMEOUT=60
+GIT_TIMEOUT=180
 
 # Self-Update: Aktualisiert /usr/local/bin/harpo-sync aus GitHub
-SCRIPT_VERSION="3.1"
+SCRIPT_VERSION="3.2"
 RAW_URL="https://raw.githubusercontent.com/Harp-Corp/HarpoOutreach/main/.github/scripts/harpo-sync.sh"
 INSTALLED_SCRIPT="/usr/local/bin/harpo-sync"
 
@@ -104,12 +104,12 @@ ok "Lokale Aenderungen verworfen"
 
 # 4b: Remote aktualisieren (mit Timeout)
 echo "  Hole Aenderungen von GitHub..."
-if run_with_timeout $GIT_TIMEOUT git fetch origin --prune 2>&1; then
+if git fetch origin --prune 2>&1; then
   ok "Fetch erfolgreich"
 else
   FETCH_EXIT=$?
   warn "Fetch fehlgeschlagen (Exit: $FETCH_EXIT) - versuche shallow fetch..."
-  if run_with_timeout $GIT_TIMEOUT git fetch origin main --depth=1 2>&1; then
+  if git fetch origin main --depth=1 2>&1; then
     ok "Shallow Fetch erfolgreich"
   else
     fail "Auch Shallow Fetch fehlgeschlagen"
