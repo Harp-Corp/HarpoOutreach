@@ -42,6 +42,21 @@ struct EmailDraftView: View {
 
             Divider()
 
+                        // FIX: Fehlermeldung auf Email Drafts Screen anzeigen
+            if !vm.errorMessage.isEmpty {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
+                    Text(vm.errorMessage).font(.caption).foregroundStyle(.red)
+                    Spacer()
+                    Button("X") { vm.errorMessage = "" }
+                        .buttonStyle(.plain).foregroundStyle(.red)
+                }
+                .padding(12)
+                .background(Color.red.opacity(0.1))
+                .cornerRadius(8)
+                .padding(.horizontal, 24)
+            }
+
             if draftsReady.isEmpty && draftsNeeded.isEmpty {
                 EmailDraftEmptyView()
             } else {
