@@ -1,6 +1,6 @@
 #!/bin/bash
 # harpo-sync: Robuster GitHub-Sync (GitHub ist IMMER fuehrend)
-# Version 3.5 - Fetch-Timeout fix, verhindert Haenger bei git fetch
+# Version 3.6 - Fresh-Clone Fallback wenn Fetch haengt
 
 # Farben fuer Output
 RED='\033[0;31m'
@@ -19,7 +19,7 @@ export GIT_TERMINAL_PROMPT=0
 export GIT_SSH_COMMAND="ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
 # Self-Update
-SCRIPT_VERSION="3.5"
+SCRIPT_VERSION="3.6"
 RAW_URL="https://raw.githubusercontent.com/Harp-Corp/HarpoOutreach/main/.github/scripts/harpo-sync.sh"
 INSTALLED_SCRIPT="/usr/local/bin/harpo-sync"
 
@@ -74,6 +74,24 @@ spinner_with_timeout() {
   return 0
 }
 
+# Fresh Clone - loescht altes Repo und klont neu (Fallback)
+fresh_clone() {
+  warn "Loesche altes Repo und klone neu..."
+  cd "$HOME" || exit 1
+  rm -rf "$PROJECT_DIR"
+  git clone --depth=1 "$REPO_URL" "$PROJECT_DIR" 2>&1 &
+  local CLONE_PID=$!
+  spinner_with_timeout $CLONE_PID "Clone laeuft" 90
+  local CLONE_SPINNER=$?
+  if [ $CLONE_SPINNER -ne 0 ]; then
+    kill $CLONE_PID 2>/dev/null
+    kill -9 $CLONE_PID 2>/dev/null
+    return 1
+  fi
+  wait $CLONE_PID 2>/dev/null
+  return $?
+}
+
 echo -e "${BLUE}${BOLD}harpo-sync v$SCRIPT_VERSION${NC} - GitHub ist fuehrend"
 echo "=========================================="
 BUILD_START=$SECONDS
@@ -114,7 +132,6 @@ step 4 "Git Synchronisierung (GitHub -> Lokal)"
 # Git Timeout-Konfiguration
 git config --local http.lowSpeedLimit 1000
 git config --local http.lowSpeedTime 10
-git config --local http.postBuffer 524288
 
 echo "  Verwerfe lokale Aenderungen..."
 git reset --hard HEAD 2>/dev/null
@@ -129,34 +146,36 @@ spinner_with_timeout $FETCH_PID "Fetch laeuft" $FETCH_TIMEOUT
 SPINNER_EXIT=$?
 
 if [ $SPINNER_EXIT -ne 0 ]; then
-  warn "Fetch Timeout nach ${FETCH_TIMEOUT}s - versuche erneut..."
-  # Zweiter Versuch: noch aggressiver
-  git fetch origin main --depth=1 --no-tags --single-branch 2>&1 &
-  FETCH_PID=$!
-  spinner_with_timeout $FETCH_PID "Retry Fetch" $FETCH_TIMEOUT
-  SPINNER_EXIT=$?
-  if [ $SPINNER_EXIT -ne 0 ]; then
-    fail "Fetch Timeout - auch zweiter Versuch fehlgeschlagen"
+  warn "Fetch Timeout nach ${FETCH_TIMEOUT}s"
+  # Fallback: Komplett neu klonen
+  if fresh_clone; then
+    cd "$PROJECT_DIR" || { fail "cd fehlgeschlagen"; exit 1; }
+    ok "Fresh Clone erfolgreich"
+  else
+    fail "Auch Fresh Clone fehlgeschlagen"
     echo "  Pruefe deine Internetverbindung und versuche es erneut."
     exit 1
   fi
-  wait $FETCH_PID 2>/dev/null
-  FETCH_EXIT=$?
 else
   wait $FETCH_PID 2>/dev/null
   FETCH_EXIT=$?
-fi
-
-if [ $FETCH_EXIT -eq 0 ]; then
-  ok "Fetch erfolgreich"
-else
-  fail "Fetch fehlgeschlagen (Exit: $FETCH_EXIT)"
-  echo "  Pruefe deine Internetverbindung und versuche es erneut."
-  exit 1
+  if [ $FETCH_EXIT -eq 0 ]; then
+    ok "Fetch erfolgreich"
+  else
+    warn "Fetch fehlgeschlagen (Exit: $FETCH_EXIT) - versuche Fresh Clone..."
+    if fresh_clone; then
+      cd "$PROJECT_DIR" || { fail "cd fehlgeschlagen"; exit 1; }
+      ok "Fresh Clone erfolgreich"
+    else
+      fail "Auch Fresh Clone fehlgeschlagen"
+      echo "  Pruefe deine Internetverbindung und versuche es erneut."
+      exit 1
+    fi
+  fi
 fi
 
 git checkout main 2>/dev/null || git checkout -b main origin/main 2>/dev/null
-git reset --hard origin/main
+git reset --hard origin/main 2>/dev/null
 ok "Lokal = GitHub (origin/main)"
 
 echo -e "  ${GREEN}Aktueller Commit:${NC}"
@@ -178,8 +197,6 @@ fi
 step 6 "Clean Build"
 sleep 2
 BUILD_LOG="/tmp/harpo-build.log"
-ERROR_COUNT=0
-WARN_COUNT=0
 
 echo "  Kompiliere..."
 
@@ -189,7 +206,6 @@ xcodebuild -project "$PROJECT_DIR/HarpoOutreach.xcodeproj" \
   -destination 'platform=macOS' \
   clean build 2>&1 | while IFS= read -r line; do
   echo "$line" >> "$BUILD_LOG"
-  # Nur relevante Zeilen anzeigen
   case "$line" in
     *": error:"*)
       echo -e "  ${RED}ERROR${NC} $line"
