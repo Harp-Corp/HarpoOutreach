@@ -8,10 +8,11 @@ class GmailService {
         self.authService = authService
     }
 
-    // MARK: - Email senden
+    // MARK: - Email senden (FIX: 401 Handling + Retry)
     func sendEmail(to: String, from: String, subject: String,
                    body: String) async throws -> String {
         let token = try await authService.getAccessToken()
+        print("[Gmail] Sende Email an \(to) von \(from)")
 
         let rawEmail = buildRawEmail(to: to, from: from,
                                      subject: subject, body: body)
@@ -33,13 +34,35 @@ class GmailService {
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+        guard let http = response as? HTTPURLResponse else {
+            throw GmailError.sendFailed("Keine HTTP Response")
+        }
+
+        // FIX: Spezifische HTTP-Status Behandlung
+        switch http.statusCode {
+        case 200:
+            break // Erfolg
+        case 401:
             let errBody = String(data: data, encoding: .utf8) ?? ""
-            throw GmailError.sendFailed(errBody)
+            print("[Gmail] 401 Unauthorized: \(errBody.prefix(200))")
+            // Token ist ungueltig - Logout erzwingen damit User sich neu anmelden muss
+            await MainActor.run {
+                authService.logout()
+            }
+            throw GmailError.authExpired
+        case 403:
+            throw GmailError.sendFailed("Keine Berechtigung. Pruefe Gmail API Scopes in Google Cloud Console.")
+        case 429:
+            throw GmailError.sendFailed("Rate Limit erreicht. Bitte warte einen Moment.")
+        default:
+            let errBody = String(data: data, encoding: .utf8) ?? ""
+            print("[Gmail] HTTP \(http.statusCode): \(errBody.prefix(200))")
+            throw GmailError.sendFailed("HTTP \(http.statusCode): \(String(errBody.prefix(200)))")
         }
 
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let messageId = json["id"] as? String {
+            print("[Gmail] Email gesendet, ID: \(messageId)")
             return messageId
         }
         return "sent"
@@ -73,6 +96,7 @@ class GmailService {
                 }
             }
         }
+
         return allReplies
     }
 
@@ -84,8 +108,9 @@ class GmailService {
 
         let (data, _) = try await URLSession.shared.data(for: request)
 
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { throw GmailError.parseFailed }
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw GmailError.parseFailed
+        }
 
         let payload = json["payload"] as? [String: Any] ?? [:]
         let headers = payload["headers"] as? [[String: String]] ?? []
@@ -108,8 +133,7 @@ class GmailService {
         var body = snippet
         if let parts = payload["parts"] as? [[String: Any]] {
             for part in parts {
-                if let mimeType = part["mimeType"] as? String,
-                   mimeType == "text/plain",
+                if let mimeType = part["mimeType"] as? String, mimeType == "text/plain",
                    let bodyData = part["body"] as? [String: Any],
                    let b64 = bodyData["data"] as? String {
                     let padded = b64
@@ -133,7 +157,7 @@ class GmailService {
         }
 
         return GmailMessage(id: id, from: from, subject: subject,
-                            date: date, snippet: snippet, body: body)
+                           date: date, snippet: snippet, body: body)
     }
 
     // MARK: - Raw Email bauen (RFC 2822)
@@ -164,12 +188,17 @@ class GmailService {
 
     enum GmailError: LocalizedError {
         case sendFailed(String)
+        case authExpired
         case parseFailed
 
         var errorDescription: String? {
             switch self {
-            case .sendFailed(let msg): return "Email senden fehlgeschlagen: \(String(msg.prefix(200)))"
-            case .parseFailed: return "Gmail Nachricht konnte nicht gelesen werden"
+            case .sendFailed(let msg):
+                return "Email senden fehlgeschlagen: \(String(msg.prefix(200)))"
+            case .authExpired:
+                return "Google-Anmeldung abgelaufen. Bitte unter Einstellungen erneut mit Google anmelden."
+            case .parseFailed:
+                return "Gmail Nachricht konnte nicht gelesen werden"
             }
         }
     }
