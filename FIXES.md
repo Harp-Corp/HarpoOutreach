@@ -2,7 +2,7 @@
 
 ## Probleme (16.02.2026)
 
-### 1. ❌ Manuelle Eingabebox unbrauchbar
+### 1. ✅ Manuelle Eingabebox unbrauchbar
 **Problem**: Dialog zu klein, Felder abgeschnitten
 **Ursache**: NavigationView ohne Mindestgröße
 **Fix**: In `ProspectingView.swift` bei beiden Manual Entry Views hinzufügen:
@@ -14,7 +14,7 @@
 - Line ~270: `ManualCompanyEntryView` → nach `NavigationView {` hinzufügen
 - Line ~340: `ManualContactEntryView` → nach `NavigationView {` hinzufügen
 
-### 2. ❌ Automatische Unternehmenssuche bricht ab
+### 2. ✅ Automatische Unternehmenssuche bricht ab
 **Problem**: "No content in response error -2"
 **Ursache**: PerplexityService erwartet JSON, API gibt aber Text zurück
 **Fix**: In `Services/PerplexityService.swift`:
@@ -23,14 +23,14 @@
 2. Besseres JSON-Parsing mit Fallback
 3. Error-Handling verbessern
 
-### 3. ❌ Email-Verifikation funktioniert nicht
+### 3. ✅ Email-Verifikation funktioniert nicht
 **Problem**: Gibt keine verifizierten Emails zurück
 **Ursache**: Zu strenge Parsing-Logik
 **Fix**: In `PerplexityService.swift` → `verifyEmail()` Funktion:
 - Fallback auf Common Patterns erlauben
 - Auch nicht-100% verifizierte Emails akzeptieren wenn Muster stimmt
 
-### 4. ❌ Test-Modus fehlt
+### 4. ✅ Test-Modus fehlt
 **Problem**: Kann Email-Versand nicht testen ohne echte Empfänger
 **Lösung**: Testfirma "Harpocrates" hinzufügen
 
