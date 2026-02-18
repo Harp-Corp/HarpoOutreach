@@ -1,6 +1,6 @@
 #!/bin/bash
 # harpo-sync: Robuster GitHub-Sync (GitHub ist IMMER fuehrend)
-# Version 2.0 - Mit Timeout, Fehlerbehandlung und optimiertem Git-Flow
+# Version 3.0 - macOS-kompatibel, kein GNU timeout noetig
 
 # Farben fuer Output
 RED='\033[0;31m'
@@ -11,17 +11,31 @@ NC='\033[0m' # No Color
 
 PROJECT_DIR="$HOME/SpecialProjects/HarpoOutreach"
 REPO_URL="https://github.com/Harp-Corp/HarpoOutreach.git"
-GIT_TIMEOUT=60  # Sekunden fuer Git-Netzwerk-Operationen
+GIT_TIMEOUT=60
 
 # Hilfsfunktionen
+TOTAL_STEPS=6
 step() { echo -e "\n${BLUE}[$1/$TOTAL_STEPS]${NC} $2"; }
 ok()   { echo -e "  ${GREEN}OK${NC} $1"; }
 warn() { echo -e "  ${YELLOW}WARN${NC} $1"; }
 fail() { echo -e "  ${RED}FEHLER${NC} $1"; }
 
-TOTAL_STEPS=6
+# macOS-kompatibler Timeout (kein GNU coreutils noetig)
+run_with_timeout() {
+  local timeout_sec=$1
+  shift
+  "$@" &
+  local pid=$!
+  ( sleep "$timeout_sec" && kill "$pid" 2>/dev/null ) &
+  local watchdog=$!
+  wait "$pid" 2>/dev/null
+  local exit_code=$?
+  kill "$watchdog" 2>/dev/null
+  wait "$watchdog" 2>/dev/null
+  return $exit_code
+}
 
-echo -e "${BLUE}harpo-sync v2.0${NC} - GitHub ist fuehrend"
+echo -e "${BLUE}harpo-sync v3.0${NC} - GitHub ist fuehrend"
 echo "=========================================="
 
 # --- Schritt 1: Xcode beenden ---
@@ -48,7 +62,7 @@ ok "$PROJECT_DIR"
 step 3 "Xcode DerivedData loeschen"
 DERIVED="$HOME/Library/Developer/Xcode/DerivedData"
 if [ -d "$DERIVED" ]; then
-  rm -rf "${DERIVED:?}"/* 2>/dev/null
+  find "$DERIVED" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null
   ok "DerivedData bereinigt"
 else
   ok "Kein DerivedData vorhanden"
@@ -65,21 +79,16 @@ ok "Lokale Aenderungen verworfen"
 
 # 4b: Remote aktualisieren (mit Timeout)
 echo "  Hole Aenderungen von GitHub..."
-if timeout ${GIT_TIMEOUT} git fetch origin --prune 2>&1; then
+if run_with_timeout $GIT_TIMEOUT git fetch origin --prune 2>&1; then
   ok "Fetch erfolgreich"
 else
   FETCH_EXIT=$?
-  if [ $FETCH_EXIT -eq 124 ]; then
-    warn "Fetch Timeout nach ${GIT_TIMEOUT}s - versuche shallow fetch..."
-    if timeout ${GIT_TIMEOUT} git fetch origin main --depth=1 2>&1; then
-      ok "Shallow Fetch erfolgreich"
-    else
-      fail "Auch Shallow Fetch fehlgeschlagen"
-      echo "  Pruefe deine Internetverbindung und versuche es erneut."
-      exit 1
-    fi
+  warn "Fetch fehlgeschlagen (Exit: $FETCH_EXIT) - versuche shallow fetch..."
+  if run_with_timeout $GIT_TIMEOUT git fetch origin main --depth=1 2>&1; then
+    ok "Shallow Fetch erfolgreich"
   else
-    fail "Fetch fehlgeschlagen (Exit: $FETCH_EXIT)"
+    fail "Auch Shallow Fetch fehlgeschlagen"
+    echo "  Pruefe deine Internetverbindung und versuche es erneut."
     exit 1
   fi
 fi
@@ -105,15 +114,15 @@ else
   exit 1
 fi
 
-# --- Schritt 6: Build (optional, im Hintergrund) ---
+# --- Schritt 6: Build ---
 step 6 "Clean Build starten"
-sleep 2  # Xcode starten lassen
-
+sleep 3
 echo "  Starte xcodebuild..."
 if xcodebuild -project "$PROJECT_DIR/HarpoOutreach.xcodeproj" \
   -scheme HarpoOutreach \
   -configuration Debug \
-  clean build 2>&1 | tail -5; then
+  -destination 'platform=macOS' \
+  clean build 2>&1 | tail -20; then
   echo ""
   ok "Build erfolgreich!"
 else
