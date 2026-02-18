@@ -1,13 +1,14 @@
 #!/bin/bash
 # harpo-sync: Robuster GitHub-Sync (GitHub ist IMMER fuehrend)
-# Version 3.3 - Anti-Hang: Timeouts auf ALLEN Netzwerk-Operationen
+# Version 3.4 - Build im Vordergrund mit Live-Status
 
 # Farben fuer Output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+BOLD='\033[1m'
+NC='\033[0m'
 
 PROJECT_DIR="$HOME/SpecialProjects/HarpoOutreach"
 REPO_URL="https://github.com/Harp-Corp/HarpoOutreach.git"
@@ -16,8 +17,8 @@ REPO_URL="https://github.com/Harp-Corp/HarpoOutreach.git"
 export GIT_TERMINAL_PROMPT=0
 export GIT_SSH_COMMAND="ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
-# Self-Update: Aktualisiert /usr/local/bin/harpo-sync aus GitHub
-SCRIPT_VERSION="3.3"
+# Self-Update
+SCRIPT_VERSION="3.4"
 RAW_URL="https://raw.githubusercontent.com/Harp-Corp/HarpoOutreach/main/.github/scripts/harpo-sync.sh"
 INSTALLED_SCRIPT="/usr/local/bin/harpo-sync"
 
@@ -48,8 +49,24 @@ ok()   { echo -e "  ${GREEN}OK${NC} $1"; }
 warn() { echo -e "  ${YELLOW}WARN${NC} $1"; }
 fail() { echo -e "  ${RED}FEHLER${NC} $1"; }
 
-echo -e "${BLUE}harpo-sync v$SCRIPT_VERSION${NC} - GitHub ist fuehrend"
+# Spinner fuer lange Operationen
+spinner() {
+  local pid=$1
+  local msg=$2
+  local chars='|/-\\'
+  local i=0
+  local start=$SECONDS
+  while kill -0 "$pid" 2>/dev/null; do
+    local elapsed=$((SECONDS - start))
+    printf "\r  ${YELLOW}%s${NC} %s (%ds)" "${chars:i++%4:1}" "$msg" "$elapsed"
+    sleep 0.3
+  done
+  printf "\r"
+}
+
+echo -e "${BLUE}${BOLD}harpo-sync v$SCRIPT_VERSION${NC} - GitHub ist fuehrend"
 echo "=========================================="
+BUILD_START=$SECONDS
 
 # --- Schritt 1: Xcode beenden ---
 step 1 "Xcode beenden"
@@ -83,35 +100,33 @@ fi
 
 # --- Schritt 4: Git Synchronisierung ---
 step 4 "Git Synchronisierung (GitHub -> Lokal)"
-
-# ANTI-HANG: Git Timeouts konfigurieren
 git config --local http.lowSpeedLimit 1000
 git config --local http.lowSpeedTime 30
-git config --local http.postBuffer 524288000
 
-# 4a: Lokale Aenderungen verwerfen
 echo "  Verwerfe lokale Aenderungen..."
 git reset --hard HEAD 2>/dev/null
 git clean -fd 2>/dev/null
 ok "Lokale Aenderungen verworfen"
 
-# 4b: Remote aktualisieren
 echo "  Hole Aenderungen von GitHub..."
-if git fetch origin main --depth=1 --no-tags 2>&1; then
+git fetch origin main --depth=1 --no-tags 2>&1 &
+FETCH_PID=$!
+spinner $FETCH_PID "Fetch laeuft"
+wait $FETCH_PID
+FETCH_EXIT=$?
+
+if [ $FETCH_EXIT -eq 0 ]; then
   ok "Fetch erfolgreich"
 else
-  FETCH_EXIT=$?
-  warn "Fetch fehlgeschlagen (Exit: $FETCH_EXIT)"
+  fail "Fetch fehlgeschlagen (Exit: $FETCH_EXIT)"
   echo "  Pruefe deine Internetverbindung und versuche es erneut."
   exit 1
 fi
 
-# 4c: Auf main Branch wechseln und auf Remote zuruecksetzen
 git checkout main 2>/dev/null || git checkout -b main origin/main 2>/dev/null
 git reset --hard origin/main
 ok "Lokal = GitHub (origin/main)"
 
-# 4d: Status anzeigen
 echo -e "  ${GREEN}Aktueller Commit:${NC}"
 git log -1 --oneline --decorate
 echo ""
@@ -127,31 +142,57 @@ else
   exit 1
 fi
 
-# --- Schritt 6: Build (im Hintergrund, blockiert NICHT) ---
-step 6 "Build starten"
+# --- Schritt 6: Build (Vordergrund mit Live-Status) ---
+step 6 "Clean Build"
 sleep 2
-echo "  Starte xcodebuild im Hintergrund..."
-BUILD_LOG="/tmp/harpo-build-$(date +%Y%m%d-%H%M%S).log"
+BUILD_LOG="/tmp/harpo-build.log"
+ERROR_COUNT=0
+WARN_COUNT=0
 
-(
-  xcodebuild -project "$PROJECT_DIR/HarpoOutreach.xcodeproj" \
-    -scheme HarpoOutreach \
-    -configuration Debug \
-    -destination 'platform=macOS' \
-    clean build 2>&1 > "$BUILD_LOG"
-  BUILD_EXIT=$?
-  if [ $BUILD_EXIT -eq 0 ]; then
-    osascript -e 'display notification "Build erfolgreich!" with title "HarpoOutreach"' 2>/dev/null
-  else
-    osascript -e 'display notification "Build fehlgeschlagen - siehe Xcode" with title "HarpoOutreach"' 2>/dev/null
-  fi
-) &
+echo "  Kompiliere..."
 
-ok "Build laeuft im Hintergrund (Log: $BUILD_LOG)"
-ok "Pruefe Build-Status in Xcode oder: tail -f $BUILD_LOG"
+xcodebuild -project "$PROJECT_DIR/HarpoOutreach.xcodeproj" \
+  -scheme HarpoOutreach \
+  -configuration Debug \
+  -destination 'platform=macOS' \
+  clean build 2>&1 | while IFS= read -r line; do
+  echo "$line" >> "$BUILD_LOG"
+  # Nur relevante Zeilen anzeigen
+  case "$line" in
+    *": error:"*)
+      echo -e "  ${RED}ERROR${NC} $line"
+      ;;
+    *": warning:"*)
+      echo -e "  ${YELLOW}WARN${NC} $(echo "$line" | sed 's/.*warning: //')"
+      ;;
+    *"Build Succeeded"*)
+      echo -e "  ${GREEN}${BOLD}BUILD SUCCEEDED${NC}"
+      ;;
+    *"BUILD FAILED"*|*"Build Failed"*)
+      echo -e "  ${RED}${BOLD}BUILD FAILED${NC}"
+      ;;
+    *"Compiling "*|*"CompileSwift"*)
+      printf "\r  ${BLUE}Kompiliere${NC} $(echo "$line" | grep -oE '[^ /]+\.swift' | tail -1)          "
+      ;;
+    *"Linking "*|*"Ld "*)
+      printf "\r  ${BLUE}Linke${NC} HarpoOutreach                    \n"
+      ;;
+  esac
+done
+
+BUILD_EXIT=${PIPESTATUS[0]}
+BUILD_DURATION=$((SECONDS - BUILD_START))
 
 echo ""
-echo -e "${GREEN}==========================================${NC}"
-echo -e "${GREEN}Synchronisierung abgeschlossen!${NC}"
-echo -e "Projekt ist 100% synchron mit GitHub"
-echo "=========================================="
+echo -e "${BOLD}==========================================${NC}"
+if [ ${BUILD_EXIT:-1} -eq 0 ]; then
+  echo -e "${GREEN}${BOLD}  FERTIG - Build erfolgreich! (${BUILD_DURATION}s)${NC}"
+  echo -e "${GREEN}  Xcode ist bereit - du kannst loslegen.${NC}"
+  osascript -e 'display notification "Build erfolgreich! Xcode ist bereit." with title "HarpoOutreach" sound name "Glass"' 2>/dev/null
+else
+  echo -e "${RED}${BOLD}  Build fehlgeschlagen (${BUILD_DURATION}s)${NC}"
+  echo -e "${YELLOW}  Xcode ist geoeffnet - pruefe die Fehler dort.${NC}"
+  echo -e "  Log: $BUILD_LOG"
+  osascript -e 'display notification "Build fehlgeschlagen - siehe Xcode" with title "HarpoOutreach" sound name "Basso"' 2>/dev/null
+fi
+echo -e "${BOLD}==========================================${NC}"
