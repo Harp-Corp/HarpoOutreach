@@ -3,17 +3,17 @@ import Foundation
 class GmailService {
     private let baseURL = "https://gmail.googleapis.com/gmail/v1/users/me"
     private let authService: GoogleAuthService
-
+    
     init(authService: GoogleAuthService) {
         self.authService = authService
     }
-
-    // MARK: - Email senden (FIX: 401 Handling + Retry)
+    
+    // MARK: - Email senden (FIX: 401 Token-Refresh + Retry)
     func sendEmail(to: String, from: String, subject: String,
                    body: String) async throws -> String {
         let token = try await authService.getAccessToken()
         print("[Gmail] Sende Email an \(to) von \(from)")
-
+        
         let rawEmail = buildRawEmail(to: to, from: from,
                                      subject: subject, body: body)
         let base64Email = rawEmail
@@ -22,44 +22,84 @@ class GmailService {
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
-
+        
         let payload: [String: String] = ["raw": base64Email]
         let jsonData = try JSONSerialization.data(withJSONObject: payload)
-
+        
+        // Erster Versuch
+        let result = try await executeGmailSend(jsonData: jsonData, token: token)
+        
+        switch result {
+        case .success(let data):
+            return parseMessageId(from: data)
+        case .needsRetry:
+            // 401 bekommen - Token refreshen und nochmal versuchen
+            print("[Gmail] 401 erhalten - versuche Token-Refresh und Retry...")
+            let freshToken = try await authService.getAccessToken()
+            let retryResult = try await executeGmailSend(jsonData: jsonData, token: freshToken)
+            switch retryResult {
+            case .success(let data):
+                print("[Gmail] Retry erfolgreich!")
+                return parseMessageId(from: data)
+            case .needsRetry:
+                // Auch nach Refresh noch 401 - Logout erzwingen
+                print("[Gmail] Retry ebenfalls 401 - Logout wird erzwungen")
+                await MainActor.run {
+                    authService.logout()
+                }
+                throw GmailError.authExpired
+            case .failure(let error):
+                throw error
+            }
+        case .failure(let error):
+            throw error
+        }
+    }
+    
+    // MARK: - Gmail API Request ausfuehren
+    private enum SendResult {
+        case success(Data)
+        case needsRetry
+        case failure(GmailError)
+    }
+    
+    private func executeGmailSend(jsonData: Data, token: String) async throws -> SendResult {
         var request = URLRequest(url: URL(string: "\(baseURL)/messages/send")!)
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = jsonData
-
+        
         let (data, response) = try await URLSession.shared.data(for: request)
-
+        
         guard let http = response as? HTTPURLResponse else {
-            throw GmailError.sendFailed("Keine HTTP Response")
+            return .failure(.sendFailed("Keine HTTP Response"))
         }
-
-        // FIX: Spezifische HTTP-Status Behandlung
+        
         switch http.statusCode {
         case 200:
-            break // Erfolg
+            return .success(data)
         case 401:
             let errBody = String(data: data, encoding: .utf8) ?? ""
             print("[Gmail] 401 Unauthorized: \(errBody.prefix(200))")
-            // Token ist ungueltig - Logout erzwingen damit User sich neu anmelden muss
+            // Token bei AuthService invalidieren damit getAccessToken() neu refresht
             await MainActor.run {
-                authService.logout()
+                authService.invalidateAccessToken()
             }
-            throw GmailError.authExpired
+            return .needsRetry
         case 403:
-            throw GmailError.sendFailed("Keine Berechtigung. Pruefe Gmail API Scopes in Google Cloud Console.")
+            return .failure(.sendFailed("Keine Berechtigung. Pruefe Gmail API Scopes in Google Cloud Console."))
         case 429:
-            throw GmailError.sendFailed("Rate Limit erreicht. Bitte warte einen Moment.")
+            return .failure(.sendFailed("Rate Limit erreicht. Bitte warte einen Moment."))
         default:
             let errBody = String(data: data, encoding: .utf8) ?? ""
             print("[Gmail] HTTP \(http.statusCode): \(errBody.prefix(200))")
-            throw GmailError.sendFailed("HTTP \(http.statusCode): \(String(errBody.prefix(200)))")
+            return .failure(.sendFailed("HTTP \(http.statusCode): \(String(errBody.prefix(200)))"))
         }
-
+    }
+    
+    // MARK: - Message ID aus Response extrahieren
+    private func parseMessageId(from data: Data) -> String {
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let messageId = json["id"] as? String {
             print("[Gmail] Email gesendet, ID: \(messageId)")
@@ -67,28 +107,28 @@ class GmailService {
         }
         return "sent"
     }
-
+    
     // MARK: - Antworten pruefen
     func checkReplies(sentToEmails: [String]) async throws -> [GmailMessage] {
         let token = try await authService.getAccessToken()
-
         var allReplies: [GmailMessage] = []
-
+        
         for email in sentToEmails {
             let query = "from:\(email) is:unread"
             let encodedQuery = query.addingPercentEncoding(
                 withAllowedCharacters: .urlQueryAllowed) ?? query
             let urlStr = "\(baseURL)/messages?q=\(encodedQuery)&maxResults=10"
-
+            
             var request = URLRequest(url: URL(string: urlStr)!)
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
+            
             let (data, _) = try await URLSession.shared.data(for: request)
-
+            
             guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let messages = json["messages"] as? [[String: Any]]
-            else { continue }
-
+                  let messages = json["messages"] as? [[String: Any]] else {
+                continue
+            }
+            
             for msg in messages {
                 guard let msgId = msg["id"] as? String else { continue }
                 if let detail = try? await fetchMessage(id: msgId, token: token) {
@@ -96,28 +136,28 @@ class GmailService {
                 }
             }
         }
-
         return allReplies
     }
-
+    
     // MARK: - Einzelne Nachricht abrufen
     private func fetchMessage(id: String, token: String) async throws -> GmailMessage {
         let urlStr = "\(baseURL)/messages/\(id)?format=full"
         var request = URLRequest(url: URL(string: urlStr)!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
+        
         let (data, _) = try await URLSession.shared.data(for: request)
-
+        
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw GmailError.parseFailed
         }
-
+        
         let payload = json["payload"] as? [String: Any] ?? [:]
         let headers = payload["headers"] as? [[String: String]] ?? []
-
+        
         var from = ""
         var subject = ""
         var date = ""
+        
         for header in headers {
             switch header["name"]?.lowercased() {
             case "from": from = header["value"] ?? ""
@@ -126,14 +166,15 @@ class GmailService {
             default: break
             }
         }
-
+        
         let snippet = json["snippet"] as? String ?? ""
-
+        
         // Body extrahieren
         var body = snippet
         if let parts = payload["parts"] as? [[String: Any]] {
             for part in parts {
-                if let mimeType = part["mimeType"] as? String, mimeType == "text/plain",
+                if let mimeType = part["mimeType"] as? String,
+                   mimeType == "text/plain",
                    let bodyData = part["body"] as? [String: Any],
                    let b64 = bodyData["data"] as? String {
                     let padded = b64
@@ -155,11 +196,11 @@ class GmailService {
                 body = text
             }
         }
-
+        
         return GmailMessage(id: id, from: from, subject: subject,
                            date: date, snippet: snippet, body: body)
     }
-
+    
     // MARK: - Raw Email bauen (RFC 2822)
     private func buildRawEmail(to: String, from: String,
                                subject: String, body: String) -> String {
@@ -175,7 +216,7 @@ class GmailService {
         \(Data(body.utf8).base64EncodedString())
         """
     }
-
+    
     // MARK: - Types
     struct GmailMessage: Identifiable, Codable {
         let id: String
@@ -185,12 +226,12 @@ class GmailService {
         let snippet: String
         let body: String
     }
-
+    
     enum GmailError: LocalizedError {
         case sendFailed(String)
         case authExpired
         case parseFailed
-
+        
         var errorDescription: String? {
             switch self {
             case .sendFailed(let msg):
