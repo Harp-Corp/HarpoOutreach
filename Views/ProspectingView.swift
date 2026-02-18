@@ -356,7 +356,7 @@ struct ManualContactEntryView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Verantwortungsbereich (optional)").font(.headline)
                         TextEditor(text: $responsibility)
-                            .frame(minHeight: 60)
+                            .frame(minHeight: 100)
                             .font(.body)
                             .border(Color.gray.opacity(0.3))
                     }
@@ -364,6 +364,6 @@ struct ManualContactEntryView: View {
                 .padding(24)
             }
         }
-        .frame(width: 800, height: 750)
+        .frame(width: 900, height: 850)
     }
 }
