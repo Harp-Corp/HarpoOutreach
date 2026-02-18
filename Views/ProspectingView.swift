@@ -364,6 +364,7 @@ struct ManualContactEntryView: View {
                 .padding(24)
             }
         }
+                    .frame(maxHeight: .infinity)
         .frame(width: 900, height: 850)
     }
 }
