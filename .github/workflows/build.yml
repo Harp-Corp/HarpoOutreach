@@ -24,6 +24,14 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: deriveddata-${{ runner.os }}-${{ hashFiles('**/*.swift', '**/*.xcodeproj/**') }}
+          restore-keys: |
+            deriveddata-${{ runner.os }}-
+
       - name: Resolve dependencies
         run: |
           xcodebuild -project HarpoOutreach.xcodeproj \
@@ -46,18 +54,20 @@ jobs:
         if: always()
         run: |
           echo "## Compiler Analysis" >> $GITHUB_STEP_SUMMARY
-          ERROR_COUNT=$(grep -c "error:" build.log 2>/dev/null || echo "0")
-          WARNING_COUNT=$(grep -c "warning:" build.log 2>/dev/null || echo "0")
+          ERROR_COUNT=$(grep -c "error:" build.log 2>/dev/null || true)
+          ERROR_COUNT=${ERROR_COUNT:-0}
+          WARNING_COUNT=$(grep -c "warning:" build.log 2>/dev/null || true)
+          WARNING_COUNT=${WARNING_COUNT:-0}
           echo "- Errors: **${ERROR_COUNT}**" >> $GITHUB_STEP_SUMMARY
           echo "- Warnings: **${WARNING_COUNT}**" >> $GITHUB_STEP_SUMMARY
-          if [ "$ERROR_COUNT" -gt 0 ]; then
+          if [ "${ERROR_COUNT}" -gt 0 ] 2>/dev/null; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Errors:" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             grep "error:" build.log | head -30 >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
           fi
-          if [ "$WARNING_COUNT" -gt 0 ]; then
+          if [ "${WARNING_COUNT}" -gt 0 ] 2>/dev/null; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Warnings:" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
