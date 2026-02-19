@@ -148,7 +148,7 @@ class AppViewModel: ObservableObject {
     // MARK: - 4) Recherche + Email Draft (Schritt 4+5)
     func draftEmail(for leadID: UUID) async {
         guard let idx = leads.firstIndex(where: { $0.id == leadID }) else { return }
-        guard leads[idx].emailVerified else { errorMessage = "Email muss zuerst verifiziert sein."; return }
+        guard leads[idx].emailVerified || leads[idx].isManuallyCreated else { errorMessage = "Email muss zuerst verifiziert sein."; return }
         isLoading = true
         currentStep = "Recherchiere Challenges fuer \(leads[idx].company)..."
         do {
