@@ -561,5 +561,71 @@ class AppViewModel: ObservableObject {
     }
 
 
+    // MARK: - Email Sent Count (fuer Kontaktliste)
+    func emailSentCount(for lead: Lead) -> Int {
+        var count = 0
+        if lead.dateEmailSent != nil { count += 1 }
+        if lead.dateFollowUpSent != nil { count += 1 }
+        return count
+    }
+
+    // MARK: - Follow-Up aus Kontaktliste (statusbasierter Text)
+    func draftFollowUpFromContact(for leadID: UUID) async {
+        guard let idx = leads.firstIndex(where: { $0.id == leadID }) else { return }
+        let lead = leads[idx]
+
+        // Pruefe ob schon eine Email gesendet wurde
+        guard lead.dateEmailSent != nil else {
+            errorMessage = "Erst eine Email senden bevor Follow-Up moeglich ist."
+            return
+        }
+
+        // Wenn schon ein Follow-Up Draft existiert, nicht ueberschreiben
+        if lead.followUpEmail != nil {
+            statusMessage = "Follow-Up Draft existiert bereits fuer \(lead.name). Siehe Outbox."
+            return
+        }
+
+        guard let originalEmail = lead.draftedEmail else {
+            errorMessage = "Kein Original-Draft vorhanden fuer \(lead.name)"
+            return
+        }
+
+        isLoading = true
+        currentStep = "Erstelle Follow-Up fuer \(lead.name)..."
+
+        do {
+            let followUp = try await pplxService.draftFollowUp(
+                lead: lead,
+                originalEmail: originalEmail.body,
+                senderName: settings.senderName,
+                apiKey: settings.perplexityAPIKey)
+            leads[idx].followUpEmail = followUp
+            leads[idx].status = .followUpDrafted
+            saveLeads()
+            currentStep = "Follow-Up erstellt fuer \(lead.name)"
+        } catch {
+            errorMessage = "Fehler: \(error.localizedDescription)"
+        }
+        isLoading = false
+    }
+
+    // MARK: - Quick Draft fuer Kontakt ohne vorherige Email
+    func quickDraftAndShowInOutbox(for leadID: UUID) async {
+        guard let idx = leads.firstIndex(where: { $0.id == leadID }) else { return }
+
+        // Wenn noch kein Draft existiert, erst einen erstellen
+        if leads[idx].draftedEmail == nil {
+            await draftEmail(for: leadID)
+        }
+
+        // Email automatisch freigeben fuer Outbox
+        if leads[idx].draftedEmail != nil && leads[idx].draftedEmail?.isApproved == false {
+            leads[idx].draftedEmail?.isApproved = true
+            leads[idx].status = .emailApproved
+            saveLeads()
+        }
+    }
+
 }
 
