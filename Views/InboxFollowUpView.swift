@@ -3,6 +3,7 @@ import SwiftUI
 struct InboxFollowUpView: View {
     @ObservedObject var vm: AppViewModel
     @State private var selectedTab = 0
+    @State private var hasCheckedReplies = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,6 +28,18 @@ struct InboxFollowUpView: View {
                 followUpView
             }
         }
+        .task {
+            // Automatisch Antworten pruefen beim Oeffnen des Tabs
+            if !hasCheckedReplies {
+                let sentCount = vm.leads.filter {
+                    $0.status == .emailSent || $0.status == .followUpSent
+                }.count
+                if sentCount > 0 {
+                    await vm.checkForReplies()
+                    hasCheckedReplies = true
+                }
+            }
+        }
     }
 
     var repliesView: some View {
@@ -34,7 +47,10 @@ struct InboxFollowUpView: View {
             HStack {
                 Spacer()
                 Button("Posteingang pruefen") {
-                    Task { await vm.checkForReplies() }
+                    Task {
+                        await vm.checkForReplies()
+                        hasCheckedReplies = true
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(vm.isLoading)
@@ -52,6 +68,10 @@ struct InboxFollowUpView: View {
                         .font(.system(size: 48)).foregroundStyle(.secondary)
                     Text("Keine Antworten gefunden.")
                         .foregroundStyle(.secondary)
+                    if !hasCheckedReplies {
+                        Text("Posteingang wird automatisch geprueft...")
+                            .font(.caption).foregroundStyle(.tertiary)
+                    }
                     Spacer()
                 }
             } else {
@@ -66,20 +86,22 @@ struct InboxFollowUpView: View {
 
     var followUpView: some View {
         VStack(spacing: 0) {
-            let needed = vm.checkFollowUpsNeeded()
+            let needsFollowUp = vm.checkFollowUpsNeeded()
 
-            if needed.isEmpty {
+            if needsFollowUp.isEmpty {
                 VStack {
                     Spacer()
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 48)).foregroundStyle(.green)
+                    Image(systemName: "clock.fill")
+                        .font(.system(size: 48)).foregroundStyle(.secondary)
                     Text("Keine Follow-Ups noetig.")
                         .foregroundStyle(.secondary)
+                    Text("Follow-Ups werden 14 Tage nach Erstversand vorgeschlagen.")
+                        .font(.caption).foregroundStyle(.tertiary)
                     Spacer()
                 }
             } else {
                 List {
-                    ForEach(needed) { lead in
+                    ForEach(needsFollowUp) { lead in
                         FollowUpCard(lead: lead, vm: vm)
                     }
                 }
@@ -92,95 +114,66 @@ struct ReplyCard: View {
     let reply: GmailService.GmailMessage
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Image(systemName: "envelope.open.fill")
-                    .foregroundStyle(.green)
+                Image(systemName: "arrowshape.turn.up.left.fill")
+                    .foregroundStyle(.blue)
                 Text(reply.from).font(.headline)
                 Spacer()
                 Text(reply.date).font(.caption).foregroundStyle(.secondary)
             }
-            Text(reply.subject).font(.subheadline).bold()
-            Text(reply.snippet).font(.caption).foregroundStyle(.secondary)
-            Divider()
-            ScrollView {
-                Text(reply.body)
-                    .font(.body)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .frame(maxHeight: 200)
+            Text(reply.subject).font(.subheadline).foregroundStyle(.secondary)
+            Text(reply.snippet)
+                .font(.caption).foregroundStyle(.tertiary)
+                .lineLimit(3)
         }
-        .padding(12)
-        .background(Color.green.opacity(0.05))
-        .cornerRadius(8)
+        .padding(.vertical, 4)
     }
 }
 
 struct FollowUpCard: View {
     let lead: Lead
     @ObservedObject var vm: AppViewModel
-    @State private var showDraft = false
-
-    var daysSinceEmail: Int {
-        guard let sent = lead.dateEmailSent else { return 0 }
-        return Calendar.current.dateComponents([.day], from: sent, to: Date()).day ?? 0
-    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
-                VStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(lead.name).font(.headline)
                     Text(lead.company).font(.subheadline).foregroundStyle(.secondary)
-                    Text("\(daysSinceEmail) Tage seit erster Email").font(.caption)
+                    Text(lead.email).font(.caption).foregroundStyle(.blue)
                 }
                 Spacer()
-                if lead.followUpEmail == nil {
-                    Button("Follow-Up erstellen") {
-                        Task {
-                            await vm.draftFollowUp(for: lead.id)
-                            showDraft = true
-                        }
+                if let sentDate = lead.dateEmailSent {
+                    VStack(alignment: .trailing) {
+                        let days = Calendar.current.dateComponents([.day], from: sentDate, to: Date()).day ?? 0
+                        Text("\(days) Tage seit Versand")
+                            .font(.caption).foregroundStyle(.orange)
                     }
-                    .controlSize(.small)
-                    .buttonStyle(.borderedProminent)
-                } else if lead.followUpEmail?.isApproved != true {
-                    Button("Freigeben") {
-                        vm.approveFollowUp(for: lead.id)
-                    }
-                    .controlSize(.small)
-                } else {
-                    Button {
-                        Task { await vm.sendFollowUp(for: lead.id) }
-                    } label: {
-                        Label("Senden", systemImage: "paperplane.fill")
-                    }
-                    .controlSize(.small)
-                    .buttonStyle(.borderedProminent)
                 }
             }
-
-            if showDraft || lead.followUpEmail != nil {
-                Divider()
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Betreff:").font(.caption).foregroundStyle(.secondary)
-                    Text(lead.followUpEmail?.subject ?? "").font(.body)
-                    Text("Email:").font(.caption).foregroundStyle(.secondary)
-                    ScrollView {
-                        Text(lead.followUpEmail?.body ?? "")
-                            .font(.caption)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 8) {
+                if lead.followUpEmail == nil {
+                    Button("Follow-Up erstellen") {
+                        Task { await vm.draftFollowUp(for: lead.id) }
                     }
-                    .frame(maxHeight: 120)
-                    .padding(6)
-                    .background(Color.gray.opacity(0.05))
-                    .cornerRadius(6)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                } else if lead.followUpEmail?.isApproved == false {
+                    Button("Follow-Up freigeben") {
+                        vm.approveFollowUp(for: lead.id)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                } else {
+                    Button("Follow-Up senden") {
+                        Task { await vm.sendFollowUp(for: lead.id) }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
                 }
             }
         }
-        .padding(12)
-        .background(Color.purple.opacity(0.05))
-        .cornerRadius(8)
+        .padding(.vertical, 4)
     }
 }
