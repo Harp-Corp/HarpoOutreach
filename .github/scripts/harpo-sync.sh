@@ -1,6 +1,6 @@
 #!/bin/bash
 # harpo-sync: Robuster GitHub-Sync (GitHub ist IMMER fuehrend)
-# Version 3.6 - Fresh-Clone Fallback wenn Fetch haengt
+# Version 3.7 - Fresh-Clone Fallback wenn Fetch haengt
 
 # Farben fuer Output
 RED='\033[0;31m'
@@ -19,8 +19,8 @@ export GIT_TERMINAL_PROMPT=0
 export GIT_SSH_COMMAND="ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
 # Self-Update
-SCRIPT_VERSION="3.6"
-RAW_URL="https://raw.githubusercontent.com/Harp-Corp/HarpoOutreach/main/.github/scripts/harpo-sync.sh"
+SCRIPT_VERSION="3.7"
+RAW_URL="https://raw.githubusercontent.com/Harp-Corp/HarpoOutreach/HarpoOutreachNewsletter/.github/scripts/harpo-sync.sh"
 INSTALLED_SCRIPT="/usr/local/bin/harpo-sync"
 
 self_update() {
@@ -79,7 +79,7 @@ fresh_clone() {
   warn "Loesche altes Repo und klone neu..."
   cd "$HOME" || exit 1
   rm -rf "$PROJECT_DIR"
-  git clone --depth=1 "$REPO_URL" "$PROJECT_DIR" 2>&1 &
+  git clone --depth=1 -b HarpoOutreachNewsletter "$REPO_URL" "$PROJECT_DIR" 2>&1 &
   local CLONE_PID=$!
   spinner_with_timeout $CLONE_PID "Clone laeuft" 90
   local CLONE_SPINNER=$?
@@ -111,7 +111,7 @@ step 2 "Projektverzeichnis pruefen"
 if [ ! -d "$PROJECT_DIR" ]; then
   fail "Verzeichnis nicht gefunden: $PROJECT_DIR"
   echo "  Klone Repository neu..."
-  git clone --depth=1 "$REPO_URL" "$PROJECT_DIR" || { fail "Klonen fehlgeschlagen"; exit 1; }
+  git clone --depth=1 -b HarpoOutreachNewsletter "$REPO_URL" "$PROJECT_DIR" || { fail "Klonen fehlgeschlagen"; exit 1; }
 fi
 cd "$PROJECT_DIR" || { fail "cd fehlgeschlagen"; exit 1; }
 ok "$PROJECT_DIR"
@@ -140,7 +140,7 @@ ok "Lokale Aenderungen verworfen"
 
 # Fetch mit echtem Timeout
 echo "  Hole Aenderungen von GitHub..."
-git fetch origin main --depth=1 --no-tags 2>&1 &
+git fetch origin HarpoOutreachNewsletter --depth=1 --no-tags 2>&1 &
 FETCH_PID=$!
 spinner_with_timeout $FETCH_PID "Fetch laeuft" $FETCH_TIMEOUT
 SPINNER_EXIT=$?
@@ -174,9 +174,9 @@ else
   fi
 fi
 
-git checkout main 2>/dev/null || git checkout -b main origin/main 2>/dev/null
-git reset --hard origin/main 2>/dev/null
-ok "Lokal = GitHub (origin/main)"
+git checkout HarpoOutreachNewsletter 2>/dev/null || git checkout -b HarpoOutreachNewsletter origin/HarpoOutreachNewsletter 2>/dev/null
+git reset --hard origin/HarpoOutreachNewsletter 2>/dev/null
+ok "Lokal = GitHub (origin/HarpoOutreachNewsletter)"
 
 echo -e "  ${GREEN}Aktueller Commit:${NC}"
 git log -1 --oneline --decorate
