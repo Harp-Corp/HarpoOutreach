@@ -5,22 +5,16 @@ import Foundation
 enum Industry: String, CaseIterable, Identifiable, Codable {
     // Sektion Q - Gesundheits- und Sozialwesen
     case Q_healthcare = "Q - Gesundheitswesen"
-
     // Sektion K - Finanz- und Versicherungsdienstleistungen
     case K_financialServices = "K - Finanzdienstleistungen"
-
     // Sektion D - Energieversorgung
     case D_energy = "D - Energieversorgung"
-
     // Sektion C - Verarbeitendes Gewerbe
     case C_manufacturing = "C - Verarbeitendes Gewerbe"
-
     // Sektion J - Information und Kommunikation
     case J_infoComm = "J - Information und Kommunikation"
-
     // Sektion H - Verkehr und Lagerei
     case H_transport = "H - Verkehr und Lagerei"
-
     // Sektion M - Freiberufliche, wissenschaftliche und technische Dienstleistungen
     case M_professional = "M - Freiberufliche Dienstleistungen"
 
@@ -198,6 +192,8 @@ struct Lead: Identifiable, Codable, Hashable {
     var dateFollowUpSent: Date?
     var replyReceived: String
     var isManuallyCreated: Bool
+    var unsubscribed: Bool
+    var unsubscribedDate: Date?
 
     init(id: UUID = UUID(), name: String, title: String = "", company: String,
          email: String, emailVerified: Bool = false, linkedInURL: String = "",
@@ -206,7 +202,8 @@ struct Lead: Identifiable, Codable, Hashable {
          verificationNotes: String = "", draftedEmail: OutboundEmail? = nil,
          followUpEmail: OutboundEmail? = nil, dateIdentified: Date = Date(),
          dateEmailSent: Date? = nil, dateFollowUpSent: Date? = nil,
-         replyReceived: String = "", isManuallyCreated: Bool = false) {
+         replyReceived: String = "", isManuallyCreated: Bool = false,
+         unsubscribed: Bool = false, unsubscribedDate: Date? = nil) {
         self.id = id
         self.name = name
         self.title = title
@@ -226,6 +223,8 @@ struct Lead: Identifiable, Codable, Hashable {
         self.dateFollowUpSent = dateFollowUpSent
         self.replyReceived = replyReceived
         self.isManuallyCreated = isManuallyCreated
+        self.unsubscribed = unsubscribed
+        self.unsubscribedDate = unsubscribedDate
     }
 }
 
@@ -287,6 +286,8 @@ struct AppSettings: Codable {
     var senderName: String
     var selectedIndustries: [String]
     var selectedRegions: [String]
+    var linkedInAccessToken: String
+    var linkedInOrgId: String
 
     init() {
         perplexityAPIKey = ""
@@ -297,5 +298,154 @@ struct AppSettings: Codable {
         senderName = "Martin Foerster"
         selectedIndustries = Industry.allCases.map { $0.rawValue }
         selectedRegions = Region.allCases.map { $0.rawValue }
+        linkedInAccessToken = ""
+        linkedInOrgId = "42109305"
+    }
+}
+
+// MARK: - Social Post Platform
+enum SocialPlatform: String, Codable, CaseIterable {
+    case linkedIn = "LinkedIn"
+    case twitter = "Twitter"
+}
+
+// MARK: - Social Post Status
+enum SocialPostStatus: String, Codable, CaseIterable {
+    case draft = "Draft"
+    case approved = "Approved"
+    case published = "Published"
+    case failed = "Failed"
+}
+
+// MARK: - Social Post
+struct SocialPost: Identifiable, Codable, Hashable {
+    let id: UUID
+    var platform: SocialPlatform
+    var content: String
+    var hashtags: [String]
+    var status: SocialPostStatus
+    var createdDate: Date
+    var publishedDate: Date?
+    var postURL: String
+    var engagementLikes: Int
+    var engagementComments: Int
+    var engagementShares: Int
+    var campaignId: UUID?
+
+    init(id: UUID = UUID(), platform: SocialPlatform = .linkedIn,
+         content: String, hashtags: [String] = [],
+         status: SocialPostStatus = .draft, createdDate: Date = Date(),
+         publishedDate: Date? = nil, postURL: String = "",
+         engagementLikes: Int = 0, engagementComments: Int = 0,
+         engagementShares: Int = 0, campaignId: UUID? = nil) {
+        self.id = id
+        self.platform = platform
+        self.content = content
+        self.hashtags = hashtags
+        self.status = status
+        self.createdDate = createdDate
+        self.publishedDate = publishedDate
+        self.postURL = postURL
+        self.engagementLikes = engagementLikes
+        self.engagementComments = engagementComments
+        self.engagementShares = engagementShares
+        self.campaignId = campaignId
+    }
+}
+
+// MARK: - Newsletter Campaign Status
+enum CampaignStatus: String, Codable, CaseIterable {
+    case draft = "Draft"
+    case scheduled = "Scheduled"
+    case sending = "Sending"
+    case sent = "Sent"
+    case failed = "Failed"
+}
+
+// MARK: - Newsletter Campaign
+struct NewsletterCampaign: Identifiable, Codable, Hashable {
+    let id: UUID
+    var name: String
+    var subject: String
+    var htmlBody: String
+    var plainTextBody: String
+    var targetIndustries: [String]
+    var targetRegions: [String]
+    var recipientCount: Int
+    var sentCount: Int
+    var openCount: Int
+    var clickCount: Int
+    var unsubscribeCount: Int
+    var bounceCount: Int
+    var status: CampaignStatus
+    var createdDate: Date
+    var scheduledDate: Date?
+    var sentDate: Date?
+    var socialPosts: [SocialPost]
+
+    init(id: UUID = UUID(), name: String, subject: String,
+         htmlBody: String = "", plainTextBody: String = "",
+         targetIndustries: [String] = [], targetRegions: [String] = [],
+         recipientCount: Int = 0, sentCount: Int = 0,
+         openCount: Int = 0, clickCount: Int = 0,
+         unsubscribeCount: Int = 0, bounceCount: Int = 0,
+         status: CampaignStatus = .draft, createdDate: Date = Date(),
+         scheduledDate: Date? = nil, sentDate: Date? = nil,
+         socialPosts: [SocialPost] = []) {
+        self.id = id
+        self.name = name
+        self.subject = subject
+        self.htmlBody = htmlBody
+        self.plainTextBody = plainTextBody
+        self.targetIndustries = targetIndustries
+        self.targetRegions = targetRegions
+        self.recipientCount = recipientCount
+        self.sentCount = sentCount
+        self.openCount = openCount
+        self.clickCount = clickCount
+        self.unsubscribeCount = unsubscribeCount
+        self.bounceCount = bounceCount
+        self.status = status
+        self.createdDate = createdDate
+        self.scheduledDate = scheduledDate
+        self.sentDate = sentDate
+        self.socialPosts = socialPosts
+    }
+}
+
+// MARK: - Content Topic (fuer KI-generierte Inhalte)
+enum ContentTopic: String, Codable, CaseIterable, Identifiable {
+    case regulatoryUpdate = "Regulatory Update"
+    case complianceBestPractices = "Compliance Best Practices"
+    case industryTrends = "Industry Trends"
+    case productUpdate = "Product Update"
+    case caseStudy = "Case Study"
+    case thoughtLeadership = "Thought Leadership"
+    case eventAnnouncement = "Event Announcement"
+
+    var id: String { rawValue }
+
+    var description: String {
+        switch self {
+        case .regulatoryUpdate: return "Neueste regulatorische Aenderungen und deren Auswirkungen"
+        case .complianceBestPractices: return "Bewaehrte Methoden fuer Compliance-Management"
+        case .industryTrends: return "Aktuelle Branchentrends und Marktentwicklungen"
+        case .productUpdate: return "Neuigkeiten zu Harpocrates Produkten und Features"
+        case .caseStudy: return "Erfolgsgeschichten und Anwendungsbeispiele"
+        case .thoughtLeadership: return "Expertenmeinungen und strategische Einblicke"
+        case .eventAnnouncement: return "Veranstaltungen, Webinare und Konferenzen"
+        }
+    }
+
+    var promptPrefix: String {
+        switch self {
+        case .regulatoryUpdate: return "Write about recent regulatory changes in"
+        case .complianceBestPractices: return "Share compliance best practices for"
+        case .industryTrends: return "Analyze current industry trends in"
+        case .productUpdate: return "Announce product updates for compliance automation in"
+        case .caseStudy: return "Present a case study about compliance automation in"
+        case .thoughtLeadership: return "Provide expert insights on compliance challenges in"
+        case .eventAnnouncement: return "Announce an upcoming compliance event for"
+        }
     }
 }
