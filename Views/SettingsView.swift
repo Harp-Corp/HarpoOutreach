@@ -16,6 +16,7 @@ struct SettingsView: View {
                 senderSection
                 industrySection
                 regionSection
+                                    dataManagementSection
 
                 Button("Einstellungen speichern") {
                     vm.saveSettings()
@@ -156,6 +157,40 @@ struct SettingsView: View {
                 }
             }
         )
+    }
+
+        // MARK: - Daten-Management
+    @State private var purgeConfirmation = false
+
+    private var dataManagementSection: some View {
+        GroupBox("Daten-Management") {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text("Datenbasis: \(vm.leads.count) Kontakte, \(vm.companies.count) Unternehmen")
+                            .font(.callout)
+                        Text("Alle Daten ausser bestimmtes Unternehmen loeschen")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button(role: .destructive) {
+                        purgeConfirmation = true
+                    } label: {
+                        Label("Bereinigen", systemImage: "trash")
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+            .padding(8)
+        }
+        .alert("Datenbasis bereinigen?", isPresented: $purgeConfirmation) {
+            Button("Abbrechen", role: .cancel) { }
+            Button("Bereinigen", role: .destructive) {
+                vm.purgeAllExcept(companyName: "axlimits")
+            }
+        } message: {
+            Text("Alle Kontakte und Unternehmen ausser 'axlimits' werden geloescht. Diese Aktion kann nicht rueckgaengig gemacht werden.")
+        }
     }
 }
 
