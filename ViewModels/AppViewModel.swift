@@ -294,6 +294,7 @@ class AppViewModel: ObservableObject {
             }
         }
         let uniqueSubjects = Array(Set(sentSubjects))
+        let sentLeadEmails = leads.filter { $0.dateEmailSent != nil || $0.dateFollowUpSent != nil }.map { $0.email }
         guard !uniqueSubjects.isEmpty else {
             statusMessage = "Keine gesendeten Emails zum Pruefen."
             return
@@ -301,7 +302,7 @@ class AppViewModel: ObservableObject {
         isLoading = true
         currentStep = "Pruefe Posteingang auf Antworten..."
         do {
-            let found = try await gmailService.checkReplies(sentSubjects: uniqueSubjects)
+            let found = try await gmailService.checkReplies(sentSubjects: uniqueSubjects, leadEmails: sentLeadEmails)
             replies = found
             print("[CheckReplies] \(found.count) Antworten von Gmail erhalten")
 
