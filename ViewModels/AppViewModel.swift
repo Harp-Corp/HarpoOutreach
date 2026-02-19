@@ -313,8 +313,12 @@ class AppViewModel: ObservableObject {
         currentStep = "Erstelle Follow-Up fuer \(leads[idx].name)..."
         do {
             let followUp = try await pplxService.draftFollowUp(
-                lead: leads[idx], originalEmail: originalEmail.body,
-                senderName: settings.senderName, apiKey: settings.perplexityAPIKey)
+                lead: leads[idx],
+                originalEmail: originalEmail.body,
+                followUpEmail: leads[idx].followUpEmail?.body ?? "",
+                replyReceived: leads[idx].replyReceived,
+                senderName: settings.senderName,
+                apiKey: settings.perplexityAPIKey)
             leads[idx].followUpEmail = followUp
             leads[idx].status = .followUpDrafted
             saveLeads()
@@ -515,12 +519,16 @@ class AppViewModel: ObservableObject {
         currentStep = "Erstelle Follow-Up fuer \(lead.name)..."
         do {
             let followUp = try await pplxService.draftFollowUp(
-                lead: lead, originalEmail: originalEmail.body,
-                senderName: settings.senderName, apiKey: settings.perplexityAPIKey)
-            leads[idx].followUpEmail = followUp
+                lead: lead,
+                originalEmail: originalEmail.body,
+                followUpEmail: lead.followUpEmail?.body ?? "",
+                replyReceived: lead.replyReceived,
+                senderName: settings.senderName,
+                apiKey: settings.perplexityAPIKey)
+                        leads[idx].followUpEmail = followUp
             leads[idx].status = .followUpDrafted
             saveLeads()
-            currentStep = "Follow-Up erstellt fuer \(lead.name)"
+            currentStep = "Follow-Up erstellt fuer \(leads[idx].name)"
         } catch {
             errorMessage = "Fehler: \(error.localizedDescription)"
         }
