@@ -5,16 +5,22 @@ import Foundation
 enum Industry: String, CaseIterable, Identifiable, Codable {
     // Sektion Q - Gesundheits- und Sozialwesen
     case Q_healthcare = "Q - Gesundheitswesen"
+
     // Sektion K - Finanz- und Versicherungsdienstleistungen
     case K_financialServices = "K - Finanzdienstleistungen"
+
     // Sektion D - Energieversorgung
     case D_energy = "D - Energieversorgung"
+
     // Sektion C - Verarbeitendes Gewerbe
     case C_manufacturing = "C - Verarbeitendes Gewerbe"
+
     // Sektion J - Information und Kommunikation
     case J_infoComm = "J - Information und Kommunikation"
+
     // Sektion H - Verkehr und Lagerei
     case H_transport = "H - Verkehr und Lagerei"
+
     // Sektion M - Freiberufliche, wissenschaftliche und technische Dienstleistungen
     case M_professional = "M - Freiberufliche Dienstleistungen"
 
@@ -75,40 +81,26 @@ enum Industry: String, CaseIterable, Identifiable, Codable {
     /// Suchbegriffe fuer die Perplexity-Unternehmenssuche
     var searchTerms: String {
         switch self {
-        case .Q_healthcare:
-            return "healthcare, pharma, medical devices, biotech, hospitals, Gesundheitswesen, Medizintechnik"
-        case .K_financialServices:
-            return "banking, insurance, asset management, fintech, Finanzdienstleistungen, Versicherungen"
-        case .D_energy:
-            return "energy, utilities, renewables, solar, wind, Energieversorgung, Stadtwerke"
-        case .C_manufacturing:
-            return "manufacturing, industrial, automotive, chemicals, Maschinenbau, Fertigung"
-        case .J_infoComm:
-            return "software, IT services, telecommunications, data processing, cloud computing"
-        case .H_transport:
-            return "logistics, transport, shipping, freight, warehousing, supply chain"
-        case .M_professional:
-            return "consulting, legal, accounting, engineering, R&D, Beratung, Wirtschaftspruefung"
+        case .Q_healthcare: return "healthcare, pharma, medical devices, biotech, hospitals, Gesundheitswesen, Medizintechnik"
+        case .K_financialServices: return "banking, insurance, asset management, fintech, Finanzdienstleistungen, Versicherungen"
+        case .D_energy: return "energy, utilities, renewables, solar, wind, Energieversorgung, Stadtwerke"
+        case .C_manufacturing: return "manufacturing, industrial, automotive, chemicals, Maschinenbau, Fertigung"
+        case .J_infoComm: return "software, IT services, telecommunications, data processing, cloud computing"
+        case .H_transport: return "logistics, transport, shipping, freight, warehousing, supply chain"
+        case .M_professional: return "consulting, legal, accounting, engineering, R&D, Beratung, Wirtschaftspruefung"
         }
     }
 
     /// Relevante EU-Regulierungen fuer diese Branche
     var keyRegulations: String {
         switch self {
-        case .Q_healthcare:
-            return "MDR, IVDR, GDPR/DSGVO, EU Health Data Space, NIS2"
-        case .K_financialServices:
-            return "MiFID II, DORA, PSD2, AMLD6, Basel III/IV, DSGVO, ESG-Reporting"
-        case .D_energy:
-            return "EU ETS, RED III, REMIT, NIS2, ESG, Energieeffizienzrichtlinie"
-        case .C_manufacturing:
-            return "Maschinenverordnung, REACH, RoHS, CSRD, Lieferkettengesetz, ISO 27001"
-        case .J_infoComm:
-            return "EU AI Act, NIS2, DSGVO, Digital Services Act, Data Act, Cyber Resilience Act"
-        case .H_transport:
-            return "EU Mobility Package, NIS2, DSGVO, ADR/RID, EU ETS Seeverkehr"
-        case .M_professional:
-            return "DSGVO, Geldwaeschegesetz, EU AI Act, Berufsrecht, CSRD"
+        case .Q_healthcare: return "MDR, IVDR, GDPR/DSGVO, EU Health Data Space, NIS2"
+        case .K_financialServices: return "MiFID II, DORA, PSD2, AMLD6, Basel III/IV, DSGVO, ESG-Reporting"
+        case .D_energy: return "EU ETS, RED III, REMIT, NIS2, ESG, Energieeffizienzrichtlinie"
+        case .C_manufacturing: return "Maschinenverordnung, REACH, RoHS, CSRD, Lieferkettengesetz, ISO 27001"
+        case .J_infoComm: return "EU AI Act, NIS2, DSGVO, Digital Services Act, Data Act, Cyber Resilience Act"
+        case .H_transport: return "EU Mobility Package, NIS2, DSGVO, ADR/RID, EU ETS Seeverkehr"
+        case .M_professional: return "DSGVO, Geldwaeschegesetz, EU AI Act, Berufsrecht, CSRD"
         }
     }
 }
@@ -181,6 +173,7 @@ enum LeadStatus: String, Codable, CaseIterable {
     case followUpDrafted = "Follow-Up Drafted"
     case followUpSent = "Follow-Up Sent"
     case replied = "Replied"
+    case doNotContact = "Do Not Contact"
     case closed = "Closed"
 }
 
@@ -208,12 +201,12 @@ struct Lead: Identifiable, Codable, Hashable {
 
     init(id: UUID = UUID(), name: String, title: String = "", company: String,
          email: String, emailVerified: Bool = false, linkedInURL: String = "",
-         phone: String = "", responsibility: String = "", status: LeadStatus = .identified,
-         source: String = "", verificationNotes: String = "",
-         draftedEmail: OutboundEmail? = nil, followUpEmail: OutboundEmail? = nil,
-         dateIdentified: Date = Date(), dateEmailSent: Date? = nil,
-         dateFollowUpSent: Date? = nil, replyReceived: String = "",
-         isManuallyCreated: Bool = false) {
+         phone: String = "", responsibility: String = "",
+         status: LeadStatus = .identified, source: String = "",
+         verificationNotes: String = "", draftedEmail: OutboundEmail? = nil,
+         followUpEmail: OutboundEmail? = nil, dateIdentified: Date = Date(),
+         dateEmailSent: Date? = nil, dateFollowUpSent: Date? = nil,
+         replyReceived: String = "", isManuallyCreated: Bool = false) {
         self.id = id
         self.name = name
         self.title = title
