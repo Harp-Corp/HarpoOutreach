@@ -17,10 +17,10 @@ class GoogleSheetsService {
         ]
 
         let existing = try await readRow(spreadsheetID: spreadsheetID,
-                                         range: "Tracking!A1:I1")
+                                         range: "Sheet1!A1:I1")
         if existing.isEmpty {
             try await appendRow(spreadsheetID: spreadsheetID,
-                               sheet: "Tracking", values: headers)
+                               sheet: "Sheet1", values: headers)
         }
     }
 
@@ -47,7 +47,7 @@ class GoogleSheetsService {
         ]
 
         try await appendRow(spreadsheetID: spreadsheetID,
-                           sheet: "Tracking", values: row)
+                           sheet: "Sheet1", values: row)
     }
 
     // MARK: - Antwort loggen
@@ -71,18 +71,18 @@ class GoogleSheetsService {
         ]
 
         try await appendRow(spreadsheetID: spreadsheetID,
-                           sheet: "Tracking", values: row)
+                           sheet: "Sheet1", values: row)
     }
 
     // MARK: - Alle Tracking-Daten lesen
     func readAllLeads(spreadsheetID: String) async throws -> [[String]] {
         return try await readRow(spreadsheetID: spreadsheetID,
-                                range: "Tracking!A:I")
+                                range: "Sheet1!A:I")
     }
 
     // MARK: - Low-Level: Zeile anhaengen
     private func appendRow(spreadsheetID: String,
-                          sheet: String = "Tracking",
+                          sheet: String = "Sheet1",
                           values: [String]) async throws {
         let token = try await authService.getAccessToken()
         let range = "\(sheet)!A:I"
