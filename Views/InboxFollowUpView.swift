@@ -77,7 +77,7 @@ struct InboxFollowUpView: View {
             } else {
                 List {
                     ForEach(vm.replies) { reply in
-                        ReplyCard(reply: reply)
+                        ReplyCard(reply: reply, vm: vm)
                     }
                 }
             }
@@ -112,20 +112,140 @@ struct InboxFollowUpView: View {
 
 struct ReplyCard: View {
     let reply: GmailService.GmailMessage
+    @ObservedObject var vm: AppViewModel
+    @State private var isExpanded = false
+
+    // Finde den passenden Lead fuer diesen Reply
+    private var matchedLead: Lead? {
+        let fromEmail = reply.from.lowercased()
+        return vm.leads.first { fromEmail.contains($0.email.lowercased()) && !$0.email.isEmpty }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            VStack(alignment: .leading, spacing: 12) {
+                // Kontakt-Info falls gefunden
+                if let lead = matchedLead {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(lead.name).font(.callout).bold()
+                            Text(lead.company).font(.caption).foregroundStyle(.secondary)
+                            Text(lead.title).font(.caption).foregroundStyle(.tertiary)
+                        }
+                        Spacer()
+                        // Status Badge
+                        Text(lead.status.rawValue)
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.green.opacity(0.15))
+                            .foregroundStyle(.green)
+                            .cornerRadius(4)
+                    }
+                    Divider()
+                }
+
+                // Gesendete Original-Email (falls vorhanden)
+                if let lead = matchedLead, let sentEmail = lead.draftedEmail {
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Image(systemName: "paperplane.fill")
+                                    .foregroundStyle(.blue)
+                                Text("Gesendete Email")
+                                    .font(.caption).bold()
+                                    .foregroundStyle(.blue)
+                                Spacer()
+                                if let sentDate = lead.dateEmailSent {
+                                    Text(sentDate, style: .date)
+                                        .font(.caption2).foregroundStyle(.secondary)
+                                }
+                            }
+                            Text("Betreff: \(sentEmail.subject)")
+                                .font(.caption).foregroundStyle(.secondary)
+                            ScrollView {
+                                Text(sentEmail.body)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .textSelection(.enabled)
+                            }
+                            .frame(maxHeight: 150)
+                        }
+                        .padding(4)
+                    }
+                }
+
+                // Follow-Up Email (falls vorhanden)
+                if let lead = matchedLead, let followUp = lead.followUpEmail, lead.dateFollowUpSent != nil {
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Image(systemName: "arrow.uturn.forward")
+                                    .foregroundStyle(.purple)
+                                Text("Follow-Up")
+                                    .font(.caption).bold()
+                                    .foregroundStyle(.purple)
+                                Spacer()
+                                if let sentDate = lead.dateFollowUpSent {
+                                    Text(sentDate, style: .date)
+                                        .font(.caption2).foregroundStyle(.secondary)
+                                }
+                            }
+                            Text("Betreff: \(followUp.subject)")
+                                .font(.caption).foregroundStyle(.secondary)
+                            ScrollView {
+                                Text(followUp.body)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .textSelection(.enabled)
+                            }
+                            .frame(maxHeight: 150)
+                        }
+                        .padding(4)
+                    }
+                }
+
+                // Empfangene Antwort (vollstaendig)
+                GroupBox {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Image(systemName: "arrowshape.turn.up.left.fill")
+                                .foregroundStyle(.green)
+                            Text("Antwort")
+                                .font(.caption).bold()
+                                .foregroundStyle(.green)
+                            Spacer()
+                            Text(reply.date)
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
+                        Text("Betreff: \(reply.subject)")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Divider()
+                        ScrollView {
+                            Text(reply.body)
+                                .font(.callout)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .textSelection(.enabled)
+                        }
+                        .frame(maxHeight: 300)
+                    }
+                    .padding(4)
+                }
+            }
+            .padding(.vertical, 8)
+        } label: {
+            HStack(spacing: 8) {
                 Image(systemName: "arrowshape.turn.up.left.fill")
-                    .foregroundStyle(.blue)
-                Text(reply.from).font(.headline)
+                    .foregroundStyle(.green)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(reply.from).font(.headline)
+                    Text(reply.subject).font(.subheadline).foregroundStyle(.secondary)
+                }
                 Spacer()
                 Text(reply.date).font(.caption).foregroundStyle(.secondary)
             }
-            Text(reply.subject).font(.subheadline).foregroundStyle(.secondary)
-            Text(reply.snippet)
-                .font(.caption).foregroundStyle(.tertiary)
-                .lineLimit(3)
         }
         .padding(.vertical, 4)
     }
@@ -152,6 +272,7 @@ struct FollowUpCard: View {
                     }
                 }
             }
+
             HStack(spacing: 8) {
                 if lead.followUpEmail == nil {
                     Button("Follow-Up erstellen") {
