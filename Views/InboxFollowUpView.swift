@@ -32,7 +32,7 @@ struct InboxFollowUpView: View {
             // Automatisch Antworten pruefen beim Oeffnen des Tabs
             if !hasCheckedReplies {
                 let sentCount = vm.leads.filter {
-                    $0.status == .emailSent || $0.status == .followUpSent
+                    $0.dateEmailSent != nil || $0.dateFollowUpSent != nil
                 }.count
                 if sentCount > 0 {
                     await vm.checkForReplies()
