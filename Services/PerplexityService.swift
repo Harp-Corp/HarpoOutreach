@@ -412,7 +412,7 @@ class PerplexityService {
     func draftEmail(lead: Lead, challenges: String, senderName: String, apiKey: String) async throws -> OutboundEmail {
         let system = "You write professional B2B outreach emails. Write a personalized, non-salesy email that provides value."
         let user = """
-        Write a cold outreach email from \(senderName) at Harpocrates Corp (RegTech company) to:
+        Write a cold outreach email from \(senderName) at Harpocrates Solutions GmbH (RegTech company) to:
         Name: \(lead.name), Title: \(lead.title), Company: \(lead.company)
         Their challenges: \(challenges)
         Our solution: Automated compliance monitoring, regulatory change tracking, risk assessment.
@@ -450,7 +450,7 @@ class PerplexityService {
             conversationContext += "\n\nReply received from \(lead.name):\n\(replyReceived)"
         }
         let user = """
-        Write a follow-up email from \(senderName) at Harpocrates Corp.
+        Write a follow-up email from \(senderName) at Harpocrates Solutions GmbH.
         
         CONVERSATION HISTORY:
         \(conversationContext)
@@ -475,7 +475,7 @@ class PerplexityService {
     // MARK: - 7) Newsletter Content generieren
     func generateNewsletterContent(topic: ContentTopic, industries: [String], apiKey: String) async throws -> (subject: String, htmlBody: String, plainText: String) {
         let system = """
-        You are a professional newsletter content writer for Harpocrates Corp, a RegTech company specializing in automated compliance monitoring.
+        You are a professional newsletter content writer for Harpocrates Solutions GmbH, a RegTech company specializing in automated compliance monitoring.
         Write engaging, informative newsletter content that positions Harpocrates as a thought leader.
         The newsletter should be professional, concise, and provide genuine value to compliance professionals.
         
@@ -502,7 +502,7 @@ class PerplexityService {
         Requirements:
         - 3-4 paragraphs of substantive content
         - Include 1-2 specific regulatory references or industry insights
-        - End with a clear call-to-action related to Harpocrates compliance solutions
+        - End with a clear call-to-action related to Harpocrates Solutions GmbH Compliance-Loesungen
         - Professional but approachable tone
         - Include a brief "Regulatory Radar" section with 2-3 bullet points on upcoming regulatory changes
         
@@ -524,7 +524,7 @@ class PerplexityService {
     // MARK: - 8) Social Post generieren
     func generateSocialPost(topic: ContentTopic, platform: SocialPlatform, industries: [String], apiKey: String) async throws -> SocialPost {
         let system = """
-        You are a social media content expert for Harpocrates Corp, a RegTech company.
+        You are a social media content expert for Harpocrates Solutions GmbH, a RegTech company.
         Write engaging social media posts that drive engagement and position the company as a compliance thought leader.
         
         Return a JSON object with:
@@ -542,7 +542,7 @@ class PerplexityService {
         
         Topic: \(topic.rawValue)
         Platform: \(platform.rawValue)
-        Company: Harpocrates Corp - Automated Compliance Monitoring
+        Company: Harpocrates Solutions GmbH - Automated Compliance Monitoring
         
         Return ONLY valid JSON with: content, hashtags
         """
