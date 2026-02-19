@@ -26,14 +26,11 @@ class GmailService {
         let payload: [String: String] = ["raw": base64Email]
         let jsonData = try JSONSerialization.data(withJSONObject: payload)
 
-        // Erster Versuch
         let result = try await executeGmailSend(jsonData: jsonData, token: token)
-
         switch result {
         case .success(let data):
             return parseMessageId(from: data)
         case .needsRetry:
-            // 401 bekommen - Token refreshen und nochmal versuchen
             print("[Gmail] 401 erhalten - versuche Token-Refresh und Retry...")
             let freshToken = try await authService.getAccessToken()
             let retryResult = try await executeGmailSend(jsonData: jsonData, token: freshToken)
@@ -42,17 +39,12 @@ class GmailService {
                 print("[Gmail] Retry erfolgreich!")
                 return parseMessageId(from: data)
             case .needsRetry:
-                // Auch nach Refresh noch 401 - Logout erzwingen
                 print("[Gmail] Retry ebenfalls 401 - Logout wird erzwungen")
-                await MainActor.run {
-                    authService.logout()
-                }
+                await MainActor.run { authService.logout() }
                 throw GmailError.authExpired
-            case .failure(let error):
-                throw error
+            case .failure(let error): throw error
             }
-        case .failure(let error):
-            throw error
+        case .failure(let error): throw error
         }
     }
 
@@ -74,29 +66,21 @@ class GmailService {
         guard let http = response as? HTTPURLResponse else {
             return .failure(.sendFailed("Keine HTTP Response"))
         }
-
         switch http.statusCode {
-        case 200:
-            return .success(data)
+        case 200: return .success(data)
         case 401:
             let errBody = String(data: data, encoding: .utf8) ?? ""
             print("[Gmail] 401 Unauthorized: \(errBody.prefix(200))")
-            await MainActor.run {
-                authService.invalidateAccessToken()
-            }
+            await MainActor.run { authService.invalidateAccessToken() }
             return .needsRetry
-        case 403:
-            return .failure(.sendFailed("Keine Berechtigung. Pruefe Gmail API Scopes in Google Cloud Console."))
-        case 429:
-            return .failure(.sendFailed("Rate Limit erreicht. Bitte warte einen Moment."))
+        case 403: return .failure(.sendFailed("Keine Berechtigung. Pruefe Gmail API Scopes."))
+        case 429: return .failure(.sendFailed("Rate Limit erreicht."))
         default:
             let errBody = String(data: data, encoding: .utf8) ?? ""
-            print("[Gmail] HTTP \(http.statusCode): \(errBody.prefix(200))")
             return .failure(.sendFailed("HTTP \(http.statusCode): \(String(errBody.prefix(200)))"))
         }
     }
 
-    // MARK: - Message ID aus Response extrahieren
     private func parseMessageId(from data: Data) -> String {
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let messageId = json["id"] as? String {
@@ -106,38 +90,37 @@ class GmailService {
         return "sent"
     }
 
-    // MARK: - Antworten pruefen (FIX: nur echte Antworten, eigene Mails ausgeschlossen)
-    func checkReplies(sentToEmails: [String], senderEmail: String) async throws -> [GmailMessage] {
+    // MARK: - Antworten pruefen (Subject-basiert, unabhaengig von Absender/Empfaenger)
+    func checkReplies(sentSubjects: [String]) async throws -> [GmailMessage] {
         let token = try await authService.getAccessToken()
         var allReplies: [GmailMessage] = []
         var seenIds = Set<String>()
 
-        // Eigene Email normalisieren fuer Vergleich
-        let ownEmail = senderEmail.lowercased().trimmingCharacters(in: .whitespaces)
+        for subject in sentSubjects {
+            // Suche nach Antworten anhand des Subjects
+            // Gmail antwortet typisch mit "Re: Original Subject"
+            // Wir suchen nach dem Original-Subject in allen eingehenden Mails
+            let cleanSubject = subject
+                .replacingOccurrences(of: "Re: ", with: "")
+                .replacingOccurrences(of: "RE: ", with: "")
+                .replacingOccurrences(of: "Fwd: ", with: "")
+                .trimmingCharacters(in: .whitespaces)
 
-        for email in sentToEmails {
-            let contactEmail = email.lowercased().trimmingCharacters(in: .whitespaces)
+            guard !cleanSubject.isEmpty else { continue }
 
-            // Eigene Email-Adresse ueberspringen - das sind keine Antworten
-            if contactEmail == ownEmail {
-                print("[Gmail] Ueberspringe eigene Email: \(email)")
-                continue
-            }
-
-            // FIX: Suche nur Mails VON dem Kontakt AN uns (= echte Antworten)
-            let query = "from:\(email) to:\(senderEmail) newer_than:30d"
+            // in:inbox = nur eingehende Mails, subject:"..." matcht den Betreff
+            let query = "in:inbox subject:\"\(cleanSubject)\" newer_than:30d"
             let encodedQuery = query.addingPercentEncoding(
                 withAllowedCharacters: .urlQueryAllowed) ?? query
 
-            let urlStr = "\(baseURL)/messages?q=\(encodedQuery)&maxResults=20"
-            print("[Gmail] Pruefe Antworten von: \(email) an: \(senderEmail)")
+            let urlStr = "\(baseURL)/messages?q=\(encodedQuery)&maxResults=10"
+            print("[Gmail] Suche Antworten mit Subject: \(cleanSubject)")
 
             var request = URLRequest(url: URL(string: urlStr)!)
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
             let (data, response) = try await URLSession.shared.data(for: request)
 
-            // HTTP Status pruefen
             if let http = response as? HTTPURLResponse, http.statusCode != 200 {
                 let errBody = String(data: data, encoding: .utf8) ?? ""
                 print("[Gmail] checkReplies HTTP \(http.statusCode): \(errBody.prefix(200))")
@@ -146,26 +129,23 @@ class GmailService {
 
             guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let messages = json["messages"] as? [[String: Any]] else {
-                print("[Gmail] Keine Nachrichten von \(email)")
+                print("[Gmail] Keine Antworten fuer Subject: \(cleanSubject)")
                 continue
             }
 
-            print("[Gmail] \(messages.count) Nachrichten von \(email) gefunden")
+            print("[Gmail] \(messages.count) Nachrichten fuer Subject: \(cleanSubject)")
 
             for msg in messages {
                 guard let msgId = msg["id"] as? String else { continue }
-                // Duplikate vermeiden
                 guard !seenIds.contains(msgId) else { continue }
                 seenIds.insert(msgId)
 
                 if let detail = try? await fetchMessage(id: msgId, token: token) {
-                    // Nochmal pruefen: from darf nicht die eigene Email sein
-                    let fromLower = detail.from.lowercased()
-                    if fromLower.contains(ownEmail) {
-                        print("[Gmail] Ueberspringe eigene Nachricht: \(detail.subject)")
-                        continue
+                    // Nur Mails die "Re:" im Subject haben oder nicht von uns sind
+                    let subjectLower = detail.subject.lowercased()
+                    if subjectLower.contains("re:") || subjectLower.contains("aw:") {
+                        allReplies.append(detail)
                     }
-                    allReplies.append(detail)
                 }
             }
         }
@@ -202,8 +182,6 @@ class GmailService {
         }
 
         let snippet = json["snippet"] as? String ?? ""
-
-        // Body extrahieren
         var body = snippet
         if let parts = payload["parts"] as? [[String: Any]] {
             for part in parts {
@@ -211,8 +189,7 @@ class GmailService {
                    mimeType == "text/plain",
                    let bodyData = part["body"] as? [String: Any],
                    let b64 = bodyData["data"] as? String {
-                    let padded = b64
-                        .replacingOccurrences(of: "-", with: "+")
+                    let padded = b64.replacingOccurrences(of: "-", with: "+")
                         .replacingOccurrences(of: "_", with: "/")
                     if let decoded = Data(base64Encoded: padded),
                        let text = String(data: decoded, encoding: .utf8) {
@@ -222,8 +199,7 @@ class GmailService {
             }
         } else if let bodyObj = payload["body"] as? [String: Any],
                   let b64 = bodyObj["data"] as? String {
-            let padded = b64
-                .replacingOccurrences(of: "-", with: "+")
+            let padded = b64.replacingOccurrences(of: "-", with: "+")
                 .replacingOccurrences(of: "_", with: "/")
             if let decoded = Data(base64Encoded: padded),
                let text = String(data: decoded, encoding: .utf8) {
@@ -231,11 +207,13 @@ class GmailService {
             }
         }
 
-        return GmailMessage(id: id, from: from, subject: subject, date: date, snippet: snippet, body: body)
+        return GmailMessage(id: id, from: from, subject: subject,
+                           date: date, snippet: snippet, body: body)
     }
 
     // MARK: - Raw Email bauen (RFC 2822)
-    private func buildRawEmail(to: String, from: String, subject: String, body: String) -> String {
+    private func buildRawEmail(to: String, from: String,
+                               subject: String, body: String) -> String {
         let encodedSubject = "=?UTF-8?B?\(Data(subject.utf8).base64EncodedString())?="
         return """
         From: \(from)\r
@@ -266,12 +244,9 @@ class GmailService {
 
         var errorDescription: String? {
             switch self {
-            case .sendFailed(let msg):
-                return "Email senden fehlgeschlagen: \(String(msg.prefix(200)))"
-            case .authExpired:
-                return "Google-Anmeldung abgelaufen. Bitte unter Einstellungen erneut mit Google anmelden."
-            case .parseFailed:
-                return "Gmail Nachricht konnte nicht gelesen werden"
+            case .sendFailed(let msg): return "Email senden fehlgeschlagen: \(String(msg.prefix(200)))"
+            case .authExpired: return "Google-Anmeldung abgelaufen. Bitte erneut anmelden."
+            case .parseFailed: return "Gmail Nachricht konnte nicht gelesen werden"
             }
         }
     }
