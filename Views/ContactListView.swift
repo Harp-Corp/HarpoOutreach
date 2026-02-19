@@ -226,43 +226,61 @@ struct ContactRow: View {
                     .cornerRadius(4)
             }
         }
-        // MARK: - Rechtsklick Context Menu
-        .contextMenu {
-            if lead.emailVerified && lead.draftedEmail == nil {
-                Button {
-                    Task { await vm.draftEmail(for: lead.id) }
+// MARK: - Rechtsklick Context Menu
+            .contextMenu {
+                // Neue Email erstellen (immer verfuegbar wenn Email vorhanden)
+                if !lead.email.isEmpty {
+                    Button {
+                                                Task { await vm.draftEmail(for: lead.id) }
+                    } label: {
+                        Label("Neue Email erstellen", systemImage: "envelope.badge")
+                    }
+                }
+
+                // Draft senden (wenn Draft vorhanden aber noch nicht gesendet)
+                if lead.draftedEmail != nil && lead.dateEmailSent == nil {
+                    Button {
+                        Task { await vm.sendEmail(to: lead) }
+                    } label: {
+                        Label("Email senden", systemImage: "paperplane")
+                    }
+                }
+
+                // Follow-Up erstellen
+                if lead.dateEmailSent != nil && lead.followUpEmail == nil {
+                    Button {
+                        Task { await vm.draftFollowUpFromContact(for: lead.id) }
+                    } label: {
+                        Label("Follow-Up Draft erstellen", systemImage: "arrow.uturn.forward")
+                    }
+                }
+
+                // Follow-Up senden (wenn Follow-Up Draft vorhanden)
+                if let followUp = lead.followUpEmail, followUp.isApproved, lead.dateFollowUpSent == nil {
+                    Button {
+                        Task { await vm.sendFollowUp(for: lead.id) }
+                    } label: {
+                        Label("Follow-Up senden", systemImage: "paperplane.fill")
+                    }
+                }
+
+                // Email verifizieren
+                if !lead.emailVerified {
+                    Button {
+                        Task { await vm.verifyEmail(for: lead.id) }
+                    } label: {
+                        Label("Email verifizieren", systemImage: "checkmark.shield")
+                    }
+                }
+
+                Divider()
+
+                Button(role: .destructive) {
+                    vm.deleteLead(lead.id)
                 } label: {
-                    Label("Email Draft erstellen", systemImage: "envelope.badge")
+                    Label("Kontakt loeschen", systemImage: "trash")
                 }
             }
-            if lead.draftedEmail != nil && lead.dateEmailSent == nil {
-                Button {
-                    Task { await vm.sendEmail(to: lead) }
-                } label: {
-                    Label("Email senden", systemImage: "paperplane")
-                }
-            }
-            if lead.dateEmailSent != nil && lead.followUpEmail == nil {
-                Button {
-                    Task { await vm.draftFollowUpFromContact(for: lead.id) }
-                } label: {
-                    Label("Follow-Up Draft erstellen", systemImage: "arrow.uturn.forward")
-                }
-            }
-            if !lead.emailVerified {
-                Button {
-                    Task { await vm.verifyEmail(for: lead.id) }
-                } label: {
-                    Label("Email verifizieren", systemImage: "checkmark.shield")
-                }
-            }
-            Divider()
-            Button(role: .destructive) {
-                vm.deleteLead(lead.id)
-            } label: {
-                Label("Kontakt loeschen", systemImage: "trash")
-            }
-        }
     }
 
     func statusColor(_ status: LeadStatus) -> Color {
