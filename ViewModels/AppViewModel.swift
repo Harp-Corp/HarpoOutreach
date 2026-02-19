@@ -307,7 +307,7 @@ class AppViewModel: ObservableObject {
         currentStep = "Pruefe Posteingang auf Antworten..."
 
         do {
-            let found = try await gmailService.checkReplies(sentToEmails: sentEmails)
+            let found = try await gmailService.checkReplies(sentToEmails: sentEmails, senderEmail: authService.userEmail.isEmpty ? settings.senderEmail : authService.userEmail)
             replies = found
 
             for reply in found {
