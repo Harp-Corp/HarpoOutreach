@@ -81,12 +81,13 @@ class GmailService {
         return "sent"
     }
 
-    // MARK: - Antworten pruefen (nur passend zu gesendeten Subjects)
-    func checkReplies(sentSubjects: [String]) async throws -> [GmailMessage] {
+    // MARK: - Antworten pruefen (Subject + Lead-Email Fallback)
+    func checkReplies(sentSubjects: [String], leadEmails: [String] = []) async throws -> [GmailMessage] {
         let token = try await authService.getAccessToken()
         var allReplies: [GmailMessage] = []
         var seenIds = Set<String>()
 
+        // 1. Subject-basierte Suche
         for subject in sentSubjects {
             let cleanSubject = subject
                 .replacingOccurrences(of: "Re: ", with: "")
@@ -98,86 +99,96 @@ class GmailService {
 
             guard !cleanSubject.isEmpty else { continue }
 
-            // Wichtig: Subject in Anfuehrungszeichen fuer exakte Suche
             let quotedSubject = "\"" + cleanSubject + "\""
             let query = "in:inbox subject:\(quotedSubject) -from:me newer_than:90d"
 
-            var components = URLComponents(string: "\(baseURL)/messages")!
-            components.queryItems = [
-                URLQueryItem(name: "q", value: query),
-                URLQueryItem(name: "maxResults", value: "10")
-            ]
-
-            guard let url = components.url else {
-                print("[Gmail] Ungueltige URL fuer Subject: \(cleanSubject)")
-                continue
+            let msgs = try await searchGmail(query: query, token: token, maxResults: 10)
+            for msg in msgs {
+                guard !seenIds.contains(msg.id) else { continue }
+                seenIds.insert(msg.id)
+                let fromLower = msg.from.lowercased()
+                if fromLower.contains("mf@harpocrates-corp.com") { continue }
+                allReplies.append(msg)
+                print("[Gmail] Subject-Match Antwort von: \(msg.from)")
             }
+        }
 
-            print("[Gmail] Suche Antworten mit Query: \(query)")
-
-            var request = URLRequest(url: url)
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-
-            if let http = response as? HTTPURLResponse, http.statusCode != 200 {
-                let errBody = String(data: data, encoding: .utf8) ?? ""
-                print("[Gmail] checkReplies HTTP \(http.statusCode): \(errBody.prefix(300))")
-
-                if http.statusCode == 401 {
-                    // Token refresh und nochmal versuchen
-                    let freshToken = try await authService.getAccessToken()
-                    var retryRequest = URLRequest(url: url)
-                    retryRequest.setValue("Bearer \(freshToken)", forHTTPHeaderField: "Authorization")
-                    let (retryData, retryResp) = try await URLSession.shared.data(for: retryRequest)
-                    if let retryHttp = retryResp as? HTTPURLResponse, retryHttp.statusCode != 200 {
-                        print("[Gmail] checkReplies Retry fehlgeschlagen: \(retryHttp.statusCode)")
-                        continue
-                    }
-                    // Parse retry data
-                    guard let retryJson = try? JSONSerialization.jsonObject(with: retryData) as? [String: Any],
-                          let retryMessages = retryJson["messages"] as? [[String: Any]] else {
-                        continue
-                    }
-                    for msg in retryMessages {
-                        guard let msgId = msg["id"] as? String, !seenIds.contains(msgId) else { continue }
-                        seenIds.insert(msgId)
-                        if let detail = try? await fetchMessage(id: msgId, token: freshToken) {
-                            let fromLower = detail.from.lowercased()
-                            if fromLower.contains("mf@harpocrates-corp.com") { continue }
-                            allReplies.append(detail)
-                            print("[Gmail] Antwort von: \(detail.from)")
-                        }
-                    }
-                }
-                continue
-            }
-
-            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let messages = json["messages"] as? [[String: Any]] else {
-                print("[Gmail] Keine Antworten fuer: \(cleanSubject)")
-                continue
-            }
-
-            print("[Gmail] \(messages.count) Nachrichten gefunden fuer: \(cleanSubject)")
-
-            for msg in messages {
-                guard let msgId = msg["id"] as? String, !seenIds.contains(msgId) else { continue }
-                seenIds.insert(msgId)
-                if let detail = try? await fetchMessage(id: msgId, token: token) {
-                    let fromLower = detail.from.lowercased()
+        // 2. Gezielter Fallback: Suche nach Emails VON bekannten Lead-Adressen
+        if allReplies.isEmpty && !leadEmails.isEmpty {
+            print("[Gmail] Kein Subject-Match - suche nach Lead-Emails...")
+            for email in leadEmails {
+                let emailLower = email.lowercased().trimmingCharacters(in: .whitespaces)
+                guard !emailLower.isEmpty else { continue }
+                let query = "in:inbox from:\(emailLower) newer_than:90d"
+                let msgs = try await searchGmail(query: query, token: token, maxResults: 5)
+                for msg in msgs {
+                    guard !seenIds.contains(msg.id) else { continue }
+                    seenIds.insert(msg.id)
+                    let fromLower = msg.from.lowercased()
                     if fromLower.contains("mf@harpocrates-corp.com") { continue }
-                    allReplies.append(detail)
-                    print("[Gmail] Antwort von: \(detail.from)")
+                    allReplies.append(msg)
+                    print("[Gmail] Email-Match Antwort von: \(msg.from)")
                 }
             }
         }
 
-        // KEIN Fallback: Nur Antworten auf tatsaechlich gesendete Subjects anzeigen
-        // Keine generische Inbox-Suche um irrelevante Emails zu vermeiden
-
         print("[Gmail] Total: \(allReplies.count) Antworten")
         return allReplies
+    }
+
+    // MARK: - Gmail Suche (wiederverwendbar)
+    private func searchGmail(query: String, token: String, maxResults: Int = 10) async throws -> [GmailMessage] {
+        var components = URLComponents(string: "\(baseURL)/messages")!
+        components.queryItems = [
+            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "maxResults", value: "\(maxResults)")
+        ]
+
+        guard let url = components.url else {
+            print("[Gmail] Ungueltige URL fuer Query: \(query)")
+            return []
+        }
+
+        print("[Gmail] Suche mit Query: \(query)")
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+            let freshToken = try await authService.getAccessToken()
+            var retryRequest = URLRequest(url: url)
+            retryRequest.setValue("Bearer \(freshToken)", forHTTPHeaderField: "Authorization")
+            let (retryData, retryResp) = try await URLSession.shared.data(for: retryRequest)
+            if let retryHttp = retryResp as? HTTPURLResponse, retryHttp.statusCode == 200 {
+                return try await parseMessageList(data: retryData, token: freshToken)
+            }
+            return []
+        }
+
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            let errBody = String(data: data, encoding: .utf8) ?? ""
+            print("[Gmail] Suche fehlgeschlagen: \(errBody.prefix(200))")
+            return []
+        }
+
+        return try await parseMessageList(data: data, token: token)
+    }
+
+    private func parseMessageList(data: Data, token: String) async throws -> [GmailMessage] {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let messages = json["messages"] as? [[String: Any]] else {
+            return []
+        }
+        var results: [GmailMessage] = []
+        for msg in messages {
+            guard let msgId = msg["id"] as? String else { continue }
+            if let detail = try? await fetchMessage(id: msgId, token: token) {
+                results.append(detail)
+            }
+        }
+        return results
     }
 
     // MARK: - Nachricht abrufen
@@ -230,7 +241,7 @@ class GmailService {
         return GmailMessage(id: id, from: from, subject: subject, date: date, snippet: snippet, body: body)
     }
 
-    // MARK: - MIME Email mit professioneller Visitenkarte
+    // MARK: - MIME Email mit professioneller Visitenkarte + Logo
     private func buildMimeEmail(to: String, from: String, subject: String, body: String) -> String {
         let encodedSubject = "=?UTF-8?B?\(Data(subject.utf8).base64EncodedString())?="
         let boundary = "HarpoMIME_\(UUID().uuidString)"
@@ -240,38 +251,44 @@ class GmailService {
             .components(separatedBy: "\n\n")
             .map { p in
                 let lines = p.components(separatedBy: "\n").joined(separator: "<br>")
-                return "<p style=\"margin:0 0 12px 0;line-height:1.6;color:#333333;font-size:14px;\">\(lines)</p>"
+                return "<p style=\"margin:0 0 14px 0;line-height:1.7;color:#2d3748;font-size:14px;font-family:Arial,Helvetica,sans-serif;\">\(lines)</p>"
             }
             .joined(separator: "\n")
 
-        // Professionelle HTML-Visitenkarte
+        let logoURL = "https://new.harpocrates-corp.com/harpocrates-logo.png"
+
+        // Professionelle HTML-Visitenkarte mit Logo
         let html = """
         <!DOCTYPE html>
         <html>
-        <head><meta charset="UTF-8"></head>
-        <body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;">
-        <div style="max-width:600px;margin:0 auto;padding:20px;">
+        <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+        <body style="margin:0;padding:0;background-color:#f7f7f7;">
+        <div style="max-width:600px;margin:0 auto;padding:24px;background-color:#ffffff;">
         \(htmlParagraphs)
-        <table cellpadding="0" cellspacing="0" border="0" style="margin-top:30px;border-top:2px solid #1a365d;padding-top:20px;width:100%;">
+        <table cellpadding="0" cellspacing="0" border="0" style="margin-top:32px;border-top:3px solid #1a365d;padding-top:20px;width:100%;">
         <tr>
-        <td style="vertical-align:top;padding-right:16px;width:4px;">
-        <div style="width:4px;height:70px;background:#1a365d;border-radius:2px;"></div>
+        <td style="vertical-align:top;padding-right:18px;width:60px;">
+        <img src="\(logoURL)" alt="Harpocrates" width="52" height="52" style="display:block;border:0;border-radius:6px;">
         </td>
-        <td style="vertical-align:top;">
-        <p style="margin:0 0 2px 0;font-size:16px;font-weight:bold;color:#1a365d;">Martin F\u{00F6}rster</p>
-        <p style="margin:0 0 8px 0;font-size:13px;color:#4a5568;">CEO & Founder</p>
-        <p style="margin:0 0 2px 0;font-size:13px;font-weight:600;color:#2d3748;">Harpocrates Solutions GmbH</p>
-        <p style="margin:0 0 2px 0;font-size:12px;color:#718096;">\u{260E} +49 172 6348377</p>
-        <p style="margin:0 0 2px 0;font-size:12px;color:#718096;">\u{2709} <a href="mailto:mf@harpocrates-corp.com" style="color:#2b6cb0;text-decoration:none;">mf@harpocrates-corp.com</a></p>
-        <p style="margin:0 0 2px 0;font-size:12px;color:#718096;">\u{1F310} <a href="https://www.harpocrates-corp.com" style="color:#2b6cb0;text-decoration:none;">www.harpocrates-corp.com</a></p>
-        <p style="margin:0;font-size:12px;color:#718096;">\u{1F4CD} Berlin, Germany</p>
+        <td style="vertical-align:top;font-family:Arial,Helvetica,sans-serif;">
+        <p style="margin:0 0 2px 0;font-size:16px;font-weight:bold;color:#1a365d;letter-spacing:0.3px;">Martin F\u{00F6}rster</p>
+        <p style="margin:0 0 10px 0;font-size:12px;color:#4a5568;text-transform:uppercase;letter-spacing:0.8px;">CEO & Founder</p>
+        <p style="margin:0 0 3px 0;font-size:13px;font-weight:600;color:#2d3748;">Harpocrates Solutions GmbH</p>
+        <table cellpadding="0" cellspacing="0" border="0" style="margin-top:6px;">
+        <tr><td style="padding:2px 8px 2px 0;font-size:12px;color:#718096;font-family:Arial,Helvetica,sans-serif;">Tel</td><td style="padding:2px 0;font-size:12px;color:#2d3748;font-family:Arial,Helvetica,sans-serif;">+49 172 6348377</td></tr>
+        <tr><td style="padding:2px 8px 2px 0;font-size:12px;color:#718096;font-family:Arial,Helvetica,sans-serif;">Mail</td><td style="padding:2px 0;font-size:12px;font-family:Arial,Helvetica,sans-serif;"><a href="mailto:mf@harpocrates-corp.com" style="color:#2b6cb0;text-decoration:none;">mf@harpocrates-corp.com</a></td></tr>
+        <tr><td style="padding:2px 8px 2px 0;font-size:12px;color:#718096;font-family:Arial,Helvetica,sans-serif;">Web</td><td style="padding:2px 0;font-size:12px;font-family:Arial,Helvetica,sans-serif;"><a href="https://www.harpocrates-corp.com" style="color:#2b6cb0;text-decoration:none;">www.harpocrates-corp.com</a></td></tr>
+        </table>
+        <p style="margin:6px 0 0 0;font-size:11px;color:#a0aec0;font-family:Arial,Helvetica,sans-serif;">Berlin, Germany</p>
         </td></tr>
         </table>
         </div>
-        <p style="margin-top:24px;font-size:10px;color:#a0aec0;font-family:Arial,Helvetica,sans-serif;">
+        <div style="max-width:600px;margin:0 auto;padding:12px 24px;">
+        <p style="margin:0;font-size:10px;color:#a0aec0;font-family:Arial,Helvetica,sans-serif;">
         <a href="mailto:mf@harpocrates-corp.com?subject=Unsubscribe&body=Bitte%20entfernen%20Sie%20mich%20von%20Ihrer%20Mailingliste."
            style="color:#a0aec0;text-decoration:underline;">Abmelden / Unsubscribe</a>
         </p>
+        </div>
         </body>
         </html>
         """
@@ -279,7 +296,6 @@ class GmailService {
         let plainB64 = Data(body.utf8).base64EncodedString()
         let htmlB64 = Data(html.utf8).base64EncodedString()
 
-        // MIME-Nachricht OHNE fuehrende Leerzeichen bei Headern
         var mime = "From: Martin Foerster <\(from)>\r\n"
         mime += "To: \(to)\r\n"
         mime += "Subject: \(encodedSubject)\r\n"
