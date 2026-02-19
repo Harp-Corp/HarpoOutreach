@@ -21,6 +21,16 @@ struct MainTabView: View {
                     .tag(5)
                 Label("Google Sheet", systemImage: "tablecells")
                     .tag(6)
+                
+                Divider()
+                
+                Label("Content Studio", systemImage: "sparkles")
+                    .tag(8)
+                Label("Campaigns", systemImage: "megaphone.fill")
+                    .tag(9)
+                
+                Divider()
+                
                 Label("Einstellungen", systemImage: "gear")
                     .tag(7)
             }
@@ -37,6 +47,8 @@ struct MainTabView: View {
                 case 5: InboxFollowUpView(vm: vm)
                 case 6: SheetLogView(vm: vm)
                 case 7: SettingsView(vm: vm)
+                case 8: ContentGenerationView(viewModel: vm)
+                case 9: NewsletterCampaignView(viewModel: vm)
                 default: DashboardView(vm: vm)
                 }
             }
