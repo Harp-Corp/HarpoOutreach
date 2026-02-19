@@ -23,6 +23,11 @@
 		EF67ADCA2F4220800066E6E9 /* SheetLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADC92F42207F0066E6E9 /* SheetLogView.swift */; };
 		EF67ADCC2F4223800066E6E9 /* ContactListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADCB2F42237A0066E6E9 /* ContactListView.swift */; };
 		EF67ADCD2F4227140066E6E9 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADBA2F4220060066E6E9 /* AppViewModel.swift */; };
+		EF67ADD12F4230020066E6E9 /* NewsletterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADD02F4230010066E6E9 /* NewsletterService.swift */; };
+		EF67ADD32F4230040066E6E9 /* SocialPostService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADD22F4230030066E6E9 /* SocialPostService.swift */; };
+		EF67ADD52F4230060066E6E9 /* ContentGenerationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADD42F4230050066E6E9 /* ContentGenerationView.swift */; };
+		EF67ADD72F4230080066E6E9 /* ManualEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADD62F4230070066E6E9 /* ManualEntryView.swift */; };
+		EF67ADD92F42300A0066E6E9 /* NewsletterCampaignView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADD82F4230090066E6E9 /* NewsletterCampaignView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,6 +48,11 @@
 		EF67ADC72F4220730066E6E9 /* InboxFollowUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxFollowUpView.swift; sourceTree = "<group>"; };
 		EF67ADC92F42207F0066E6E9 /* SheetLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetLogView.swift; sourceTree = "<group>"; };
 		EF67ADCB2F42237A0066E6E9 /* ContactListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactListView.swift; sourceTree = "<group>"; };
+		EF67ADD02F4230010066E6E9 /* NewsletterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsletterService.swift; sourceTree = "<group>"; };
+		EF67ADD22F4230030066E6E9 /* SocialPostService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialPostService.swift; sourceTree = "<group>"; };
+		EF67ADD42F4230050066E6E9 /* ContentGenerationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentGenerationView.swift; sourceTree = "<group>"; };
+		EF67ADD62F4230070066E6E9 /* ManualEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualEntryView.swift; sourceTree = "<group>"; };
+		EF67ADD82F4230090066E6E9 /* NewsletterCampaignView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsletterCampaignView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -83,6 +93,8 @@
 				EF67ADB32F421FC20066E6E9 /* GoogleAuthService.swift */,
 				EF67ADB52F421FD10066E6E9 /* GoogleSheetsService.swift */,
 				EF67ADB72F421FDB0066E6E9 /* GmailService.swift */,
+				EF67ADD02F4230010066E6E9 /* NewsletterService.swift */,
+				EF67ADD22F4230030066E6E9 /* SocialPostService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -99,6 +111,9 @@
 				EF67ADBD2F4220330066E6E9 /* DashboardView.swift */,
 				EF67ADBB2F4220160066E6E9 /* MainTabView.swift */,
 				EF44A7852F4108470054C161 /* SettingsView.swift */,
+				EF67ADD42F4230050066E6E9 /* ContentGenerationView.swift */,
+				EF67ADD62F4230070066E6E9 /* ManualEntryView.swift */,
+				EF67ADD82F4230090066E6E9 /* NewsletterCampaignView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -198,6 +213,11 @@
 				EF67ADAF2F410B8C0066E6E9 /* Models.swift in Sources */,
 				EF44A78A2F4108470054C161 /* PerplexityService.swift in Sources */,
 				EF67ADC42F4220590066E6E9 /* EmailDraftView.swift in Sources */,
+				EF67ADD12F4230020066E6E9 /* NewsletterService.swift in Sources */,
+				EF67ADD32F4230040066E6E9 /* SocialPostService.swift in Sources */,
+				EF67ADD52F4230060066E6E9 /* ContentGenerationView.swift in Sources */,
+				EF67ADD72F4230080066E6E9 /* ManualEntryView.swift in Sources */,
+				EF67ADD92F42300A0066E6E9 /* NewsletterCampaignView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
