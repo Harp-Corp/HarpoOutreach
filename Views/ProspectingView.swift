@@ -196,7 +196,7 @@ struct ManualCompanyEntryView: View {
     @ObservedObject var vm: AppViewModel
     @Environment(\.dismiss) var dismiss
     @State private var companyName = ""
-    @State private var industry = Industry.healthcare
+    @State private var industry = Industry.Q_healthcare
     @State private var region = Region.dach
     @State private var website = ""
     @State private var companyDescription = ""
