@@ -1,10 +1,3 @@
-//
-//  EmailDraftView.swift
-//  HarpoOutreach
-//
-//  View for managing email drafts - edit, delete, send
-//
-
 import SwiftUI
 
 struct EmailDraftView: View {
@@ -20,12 +13,21 @@ struct EmailDraftView: View {
         vm.leads.filter { $0.draftedEmail != nil && $0.dateEmailSent == nil }
     }
 
+    // NEU: Follow-Up Drafts (erstellt aber noch nicht gesendet)
+    var followUpDraftsReady: [Lead] {
+        vm.leads.filter { $0.followUpEmail != nil && $0.dateFollowUpSent == nil }
+    }
+
     @State private var selectedLead: Lead?
     @State private var showingEditSheet = false
     @State private var showingSendConfirmation = false
     @State private var showingDeleteConfirmation = false
     @State private var editSubject = ""
     @State private var emailBody = ""
+    // NEU: State fuer Follow-Up Edit
+    @State private var showingFollowUpEditSheet = false
+    @State private var showingFollowUpSendConfirmation = false
+    @State private var showingFollowUpDeleteConfirmation = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -42,7 +44,7 @@ struct EmailDraftView: View {
 
             Divider()
 
-                        // FIX: Fehlermeldung auf Email Drafts Screen anzeigen
+            // FIX: Fehlermeldung auf Email Drafts Screen anzeigen
             if !vm.errorMessage.isEmpty {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
@@ -57,7 +59,7 @@ struct EmailDraftView: View {
                 .padding(.horizontal, 24)
             }
 
-            if draftsReady.isEmpty && draftsNeeded.isEmpty {
+            if draftsReady.isEmpty && draftsNeeded.isEmpty && followUpDraftsReady.isEmpty {
                 EmailDraftEmptyView()
             } else {
                 List {
@@ -94,9 +96,37 @@ struct EmailDraftView: View {
                             }
                         }
                     }
+
+                    // NEU: Follow-Up Drafts
+                    if !followUpDraftsReady.isEmpty {
+                        Section("Follow-Up Drafts (\(followUpDraftsReady.count))") {
+                            ForEach(followUpDraftsReady, id: \.id) { lead in
+                                FollowUpDraftReadyRow(
+                                    lead: lead,
+                                    onEdit: {
+                                        selectedLead = lead
+                                        if let fu = lead.followUpEmail {
+                                            editSubject = fu.subject
+                                            emailBody = fu.body
+                                        }
+                                        showingFollowUpEditSheet = true
+                                    },
+                                    onSend: {
+                                        selectedLead = lead
+                                        showingFollowUpSendConfirmation = true
+                                    },
+                                    onDelete: {
+                                        selectedLead = lead
+                                        showingFollowUpDeleteConfirmation = true
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
+        // MARK: - Original Email Sheet + Alerts
         .sheet(isPresented: $showingEditSheet) {
             if let lead = selectedLead {
                 EditDraftSheet(
@@ -107,9 +137,7 @@ struct EmailDraftView: View {
                         vm.updateDraft(for: lead, subject: newSubject, body: newBody)
                         showingEditSheet = false
                     },
-                    onCancel: {
-                        showingEditSheet = false
-                    }
+                    onCancel: { showingEditSheet = false }
                 )
                 .frame(minWidth: 600, minHeight: 500)
             }
@@ -129,13 +157,52 @@ struct EmailDraftView: View {
         .alert("Draft loeschen?", isPresented: $showingDeleteConfirmation) {
             Button("Abbrechen", role: .cancel) { }
             Button("Loeschen", role: .destructive) {
-                if let lead = selectedLead {
-                    vm.deleteDraft(for: lead)
-                }
+                if let lead = selectedLead { vm.deleteDraft(for: lead) }
             }
         } message: {
             if let lead = selectedLead {
                 Text("Soll der Email-Draft fuer \(lead.name) geloescht werden?")
+            }
+        }
+        // MARK: - Follow-Up Sheet + Alerts
+        .sheet(isPresented: $showingFollowUpEditSheet) {
+            if let lead = selectedLead {
+                EditDraftSheet(
+                    lead: lead,
+                    subject: $editSubject,
+                    emailBody: $emailBody,
+                    titleLabel: "Follow-Up bearbeiten",
+                    onSave: { newSubject, newBody in
+                        vm.updateFollowUpDraft(for: lead, subject: newSubject, body: newBody)
+                        showingFollowUpEditSheet = false
+                    },
+                    onCancel: { showingFollowUpEditSheet = false }
+                )
+                .frame(minWidth: 600, minHeight: 500)
+            }
+        }
+        .alert("Follow-Up senden?", isPresented: $showingFollowUpSendConfirmation) {
+            Button("Abbrechen", role: .cancel) { }
+            Button("Senden") {
+                if let lead = selectedLead {
+                    // Erst freigeben, dann senden
+                    vm.approveFollowUp(for: lead.id)
+                    Task { await vm.sendFollowUp(for: lead.id) }
+                }
+            }
+        } message: {
+            if let lead = selectedLead {
+                Text("Soll das Follow-Up an \(lead.name) (\(lead.email)) gesendet werden?")
+            }
+        }
+        .alert("Follow-Up Draft loeschen?", isPresented: $showingFollowUpDeleteConfirmation) {
+            Button("Abbrechen", role: .cancel) { }
+            Button("Loeschen", role: .destructive) {
+                if let lead = selectedLead { vm.deleteFollowUpDraft(for: lead) }
+            }
+        } message: {
+            if let lead = selectedLead {
+                Text("Soll der Follow-Up Draft fuer \(lead.name) geloescht werden?")
             }
         }
     }
@@ -217,6 +284,53 @@ struct EmailDraftReadyRow: View {
     }
 }
 
+// MARK: - NEU: Follow-Up Draft Ready Row
+struct FollowUpDraftReadyRow: View {
+    let lead: Lead
+    let onEdit: () -> Void
+    let onSend: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.uturn.forward")
+                            .foregroundStyle(.purple)
+                        Text(lead.name).bold()
+                    }
+                    Text(lead.company).font(.caption).foregroundStyle(.secondary)
+                    Text(lead.email).font(.caption).foregroundStyle(.blue)
+                }
+                Spacer()
+                Text("Follow-Up")
+                    .font(.caption2)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.purple.opacity(0.2))
+                    .foregroundColor(.purple)
+                    .clipShape(Capsule())
+            }
+            // Follow-Up Draft Preview
+            if let followUp = lead.followUpEmail {
+                GroupBox {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Betreff: \(followUp.subject)")
+                            .font(.subheadline).bold()
+                        Text(followUp.body)
+                            .font(.caption)
+                            .lineLimit(3)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            EmailDraftActions(onEdit: onEdit, onSend: onSend, onDelete: onDelete)
+        }
+        .padding(.vertical, 8)
+    }
+}
+
 // MARK: - Draft Ready Header
 struct EmailDraftReadyHeader: View {
     let lead: Lead
@@ -270,19 +384,25 @@ struct EmailDraftActions: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Button { onEdit() } label: {
+            Button {
+                onEdit()
+            } label: {
                 Label("Bearbeiten", systemImage: "pencil")
             }
             .buttonStyle(.bordered)
 
-            Button { onSend() } label: {
+            Button {
+                onSend()
+            } label: {
                 Label("Senden", systemImage: "paperplane")
             }
             .buttonStyle(.borderedProminent)
 
             Spacer()
 
-            Button(role: .destructive) { onDelete() } label: {
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
                 Label("Loeschen", systemImage: "trash")
             }
             .buttonStyle(.bordered)
@@ -290,11 +410,12 @@ struct EmailDraftActions: View {
     }
 }
 
-// MARK: - Edit Draft Sheet
+// MARK: - Edit Draft Sheet (wiederverwendbar fuer Email + Follow-Up)
 struct EditDraftSheet: View {
     let lead: Lead
     @Binding var subject: String
     @Binding var emailBody: String
+    var titleLabel: String = "Email bearbeiten"
     let onSave: (String, String) -> Void
     let onCancel: () -> Void
 
@@ -302,7 +423,7 @@ struct EditDraftSheet: View {
         VStack(spacing: 0) {
             HStack {
                 VStack(alignment: .leading) {
-                    Text("Email bearbeiten")
+                    Text(titleLabel)
                         .font(.headline)
                     Text("An: \(lead.name) <\(lead.email)>")
                         .font(.caption)
