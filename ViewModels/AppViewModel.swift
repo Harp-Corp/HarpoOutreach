@@ -33,9 +33,12 @@ class AppViewModel: ObservableObject {
     // MARK: - Init
     init() {
         let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let appDir = appSupport.appendingPathComponent("HarpoOutreach", isDirectory: true)
-        try? FileManager.default.createDirectory(at: appDir, withIntermediateDirectories: true)
+            for: .applicationSupportDirectory,
+            in: .userDomainMask).first!
+        let appDir = appSupport.appendingPathComponent("HarpoOutreach",
+            isDirectory: true)
+        try? FileManager.default.createDirectory(at: appDir,
+            withIntermediateDirectories: true)
         self.saveURL = appDir.appendingPathComponent("leads.json")
         self.companiesSaveURL = appDir.appendingPathComponent("companies.json")
         loadSettings()
@@ -49,7 +52,7 @@ class AppViewModel: ObservableObject {
 
     private func configureAuth() {
         authService.configure(clientID: settings.googleClientID,
-                              clientSecret: settings.googleClientSecret)
+                            clientSecret: settings.googleClientSecret)
     }
 
     // MARK: - Settings
@@ -83,7 +86,8 @@ class AppViewModel: ObservableObject {
                 currentStep = "Suche \(industry.rawValue) Unternehmen in \(region.rawValue)..."
                 do {
                     let found = try await pplxService.findCompanies(
-                        industry: industry, region: region, apiKey: settings.perplexityAPIKey)
+                        industry: industry, region: region,
+                        apiKey: settings.perplexityAPIKey)
                     let newOnes = found.filter { new in
                         !companies.contains { $0.name.lowercased() == new.name.lowercased() }
                     }
@@ -100,13 +104,19 @@ class AppViewModel: ObservableObject {
 
     // MARK: - 2) Kontakte finden (Schritt 2)
     func findContacts(for company: Company) async {
-        guard !settings.perplexityAPIKey.isEmpty else { errorMessage = "Perplexity API Key fehlt."; return }
+        guard !settings.perplexityAPIKey.isEmpty else {
+            errorMessage = "Perplexity API Key fehlt."; return
+        }
         isLoading = true
         currentStep = "Suche Compliance-Kontakte bei \(company.name)..."
         do {
-            let found = try await pplxService.findContacts(company: company, apiKey: settings.perplexityAPIKey)
+            let found = try await pplxService.findContacts(company: company,
+                apiKey: settings.perplexityAPIKey)
             let newLeads = found.filter { newLead in
-                !leads.contains { $0.name.lowercased() == newLead.name.lowercased() && $0.company.lowercased() == newLead.company.lowercased() }
+                !leads.contains {
+                    $0.name.lowercased() == newLead.name.lowercased() &&
+                    $0.company.lowercased() == newLead.company.lowercased()
+                }
             }
             leads.append(contentsOf: newLeads)
             saveLeads()
@@ -118,7 +128,9 @@ class AppViewModel: ObservableObject {
     }
 
     func findContactsForAll() async {
-        for company in companies { await findContacts(for: company) }
+        for company in companies {
+            await findContacts(for: company)
+        }
     }
 
     // MARK: - 3) Email verifizieren (Schritt 3)
@@ -127,13 +139,16 @@ class AppViewModel: ObservableObject {
         isLoading = true
         currentStep = "Verifiziere Email fuer \(leads[idx].name)..."
         do {
-            let result = try await pplxService.verifyEmail(lead: leads[idx], apiKey: settings.perplexityAPIKey)
+            let result = try await pplxService.verifyEmail(lead: leads[idx],
+                apiKey: settings.perplexityAPIKey)
             leads[idx].email = result.email
             leads[idx].emailVerified = result.verified
             leads[idx].verificationNotes = result.notes
             leads[idx].status = result.verified ? .contacted : .identified
             saveLeads()
-            currentStep = result.verified ? "Email verifiziert: \(result.email)" : "Email nicht verifiziert: \(result.notes)"
+            currentStep = result.verified ?
+                "Email verifiziert: \(result.email)" :
+                "Email nicht verifiziert: \(result.notes)"
         } catch {
             errorMessage = "Fehler: \(error.localizedDescription)"
         }
@@ -142,21 +157,31 @@ class AppViewModel: ObservableObject {
 
     func verifyAllEmails() async {
         let unverified = leads.filter { !$0.emailVerified }
-        for lead in unverified { await verifyEmail(for: lead.id) }
+        for lead in unverified {
+            await verifyEmail(for: lead.id)
+        }
     }
 
     // MARK: - 4) Recherche + Email Draft (Schritt 4+5)
     func draftEmail(for leadID: UUID) async {
         guard let idx = leads.firstIndex(where: { $0.id == leadID }) else { return }
-        guard leads[idx].emailVerified || leads[idx].isManuallyCreated else { errorMessage = "Email muss zuerst verifiziert sein."; return }
+        guard leads[idx].emailVerified || leads[idx].isManuallyCreated else {
+            errorMessage = "Email muss zuerst verifiziert sein."; return
+        }
         isLoading = true
         currentStep = "Recherchiere Challenges fuer \(leads[idx].company)..."
         do {
-            let companyForResearch = companies.first { $0.name.lowercased() == leads[idx].company.lowercased() }
-                ?? Company(name: leads[idx].company, industry: "", region: "")
-            let challenges = try await pplxService.researchChallenges(company: companyForResearch, apiKey: settings.perplexityAPIKey)
+            let companyForResearch = companies.first {
+                $0.name.lowercased() == leads[idx].company.lowercased()
+            } ?? Company(name: leads[idx].company, industry: "", region: "")
+            let challenges = try await pplxService.researchChallenges(
+                company: companyForResearch,
+                apiKey: settings.perplexityAPIKey)
             currentStep = "Erstelle personalisierte Email fuer \(leads[idx].name)..."
-            let email = try await pplxService.draftEmail(lead: leads[idx], challenges: challenges, senderName: settings.senderName, apiKey: settings.perplexityAPIKey)
+            let email = try await pplxService.draftEmail(
+                lead: leads[idx], challenges: challenges,
+                senderName: settings.senderName,
+                apiKey: settings.perplexityAPIKey)
             leads[idx].draftedEmail = email
             leads[idx].status = .emailDrafted
             saveLeads()
@@ -169,7 +194,9 @@ class AppViewModel: ObservableObject {
 
     func draftAllEmails() async {
         let verified = leads.filter { $0.emailVerified && $0.draftedEmail == nil }
-        for lead in verified { await draftEmail(for: lead.id) }
+        for lead in verified {
+            await draftEmail(for: lead.id)
+        }
     }
 
     func initializeSheet() async {
@@ -199,19 +226,28 @@ class AppViewModel: ObservableObject {
 
     // MARK: - Persistenz
     private func saveLeads() {
-        if let data = try? JSONEncoder().encode(leads) { try? data.write(to: saveURL) }
+        if let data = try? JSONEncoder().encode(leads) {
+            try? data.write(to: saveURL)
+        }
     }
+
     private func loadLeads() {
         guard let data = try? Data(contentsOf: saveURL),
-              let saved = try? JSONDecoder().decode([Lead].self, from: data) else { return }
+              let saved = try? JSONDecoder().decode([Lead].self, from: data)
+        else { return }
         leads = saved
     }
+
     private func saveCompanies() {
-        if let data = try? JSONEncoder().encode(companies) { try? data.write(to: companiesSaveURL) }
+        if let data = try? JSONEncoder().encode(companies) {
+            try? data.write(to: companiesSaveURL)
+        }
     }
+
     private func loadCompanies() {
         guard let data = try? Data(contentsOf: companiesSaveURL),
-              let saved = try? JSONDecoder().decode([Company].self, from: data) else { return }
+              let saved = try? JSONDecoder().decode([Company].self, from: data)
+        else { return }
         companies = saved
     }
 
@@ -226,7 +262,8 @@ class AppViewModel: ObservableObject {
     // MARK: - 6) Email senden (Sender: mf@harpocrates-corp.com)
     func sendEmail(for leadID: UUID) async {
         guard let idx = leads.firstIndex(where: { $0.id == leadID }),
-              let email = leads[idx].draftedEmail, email.isApproved else {
+              let email = leads[idx].draftedEmail,
+              email.isApproved else {
             errorMessage = "Email muss zuerst freigegeben werden."
             return
         }
@@ -243,7 +280,11 @@ class AppViewModel: ObservableObject {
             leads[idx].status = .emailSent
             saveLeads()
             if !settings.spreadsheetID.isEmpty {
-                try? await sheetsService.logEmailEvent(spreadsheetID: settings.spreadsheetID, lead: leads[idx], emailType: "Erstversand", subject: email.subject, body: email.body, summary: "Outreach-Email an \(leads[idx].name) (\(leads[idx].company)) gesendet")
+                try? await sheetsService.logEmailEvent(
+                    spreadsheetID: settings.spreadsheetID,
+                    lead: leads[idx], emailType: "Erstversand",
+                    subject: email.subject, body: email.body,
+                    summary: "Outreach-Email an \(leads[idx].name) (\(leads[idx].company)) gesendet")
             }
             currentStep = "Email gesendet an \(leads[idx].email)"
         } catch {
@@ -252,15 +293,17 @@ class AppViewModel: ObservableObject {
         isLoading = false
     }
 
-    // MARK: - 7) Antworten pruefen (Subject-basiert)
+    // MARK: - 7) Antworten pruefen (Subject + Email-basiert)
     func checkForReplies() async {
         // Sammle alle Subjects von gesendeten Emails
         var sentSubjects: [String] = []
         for lead in leads {
-            if lead.dateEmailSent != nil, let subj = lead.draftedEmail?.subject, !subj.isEmpty {
+            if lead.dateEmailSent != nil,
+               let subj = lead.draftedEmail?.subject, !subj.isEmpty {
                 sentSubjects.append(subj)
             }
-            if lead.dateFollowUpSent != nil, let subj = lead.followUpEmail?.subject, !subj.isEmpty {
+            if lead.dateFollowUpSent != nil,
+               let subj = lead.followUpEmail?.subject, !subj.isEmpty {
                 sentSubjects.append(subj)
             }
         }
@@ -269,29 +312,84 @@ class AppViewModel: ObservableObject {
             statusMessage = "Keine gesendeten Emails zum Pruefen."
             return
         }
+
         isLoading = true
         currentStep = "Pruefe Posteingang auf Antworten..."
+
         do {
-            let found = try await gmailService.checkReplies(sentSubjects: uniqueSubjects)
+            let found = try await gmailService.checkReplies(
+                sentSubjects: uniqueSubjects)
             replies = found
+
             for reply in found {
+                let replyFrom = reply.from.lowercased()
                 let replySubject = reply.subject.lowercased()
-                if let idx = leads.firstIndex(where: { lead in
-                    guard let origSubj = lead.draftedEmail?.subject ?? lead.followUpEmail?.subject else { return false }
-                    return replySubject.contains(origSubj.lowercased())
-                }) {
-                    leads[idx].replyReceived = reply.snippet
-                    leads[idx].status = .replied
-                    if !settings.spreadsheetID.isEmpty {
-                        try? await sheetsService.logReplyReceived(spreadsheetID: settings.spreadsheetID, lead: leads[idx], replySubject: reply.subject, replySnippet: reply.snippet, replyFrom: reply.from)
+                    .replacingOccurrences(of: "re: ", with: "")
+                    .replacingOccurrences(of: "aw: ", with: "")
+                    .replacingOccurrences(of: "fwd: ", with: "")
+                    .trimmingCharacters(in: .whitespaces)
+
+                // Versuche erst Subject-Matching, dann Email-Matching
+                var matchedIdx: Int?
+
+                // 1. Subject-Match: Pruefe beide Subjects (Draft + FollowUp)
+                matchedIdx = leads.firstIndex(where: { lead in
+                    if let draftSubj = lead.draftedEmail?.subject, !draftSubj.isEmpty {
+                        if replySubject.contains(draftSubj.lowercased()) {
+                            return true
+                        }
+                    }
+                    if let followUpSubj = lead.followUpEmail?.subject, !followUpSubj.isEmpty {
+                        if replySubject.contains(followUpSubj.lowercased()) {
+                            return true
+                        }
+                    }
+                    return false
+                })
+
+                // 2. Email-Match als Fallback: Matche ueber Absender-Email
+                if matchedIdx == nil {
+                    matchedIdx = leads.firstIndex(where: { lead in
+                        !lead.email.isEmpty &&
+                        replyFrom.contains(lead.email.lowercased()) &&
+                        (lead.dateEmailSent != nil || lead.dateFollowUpSent != nil)
+                    })
+                    if matchedIdx != nil {
+                        print("[CheckReplies] Email-basierter Match fuer: \(reply.from)")
                     }
                 }
+
+                if let idx = matchedIdx {
+                    leads[idx].replyReceived = reply.snippet
+                    leads[idx].status = .replied
+                    print("[CheckReplies] Antwort zugeordnet: \(leads[idx].name) (\(leads[idx].company))")
+
+                    // Google Sheets Logging mit Fehlerausgabe
+                    if !settings.spreadsheetID.isEmpty {
+                        do {
+                            try await sheetsService.logReplyReceived(
+                                spreadsheetID: settings.spreadsheetID,
+                                lead: leads[idx],
+                                replySubject: reply.subject,
+                                replySnippet: reply.snippet,
+                                replyFrom: reply.from)
+                            print("[CheckReplies] Sheet-Log erfolgreich fuer \(leads[idx].name)")
+                        } catch {
+                            print("[CheckReplies] Sheet-Log FEHLER: \(error.localizedDescription)")
+                            errorMessage = "Sheet-Logging fehlgeschlagen: \(error.localizedDescription)"
+                        }
+                    }
+                } else {
+                    print("[CheckReplies] Kein Lead-Match fuer Reply von: \(reply.from) - \(reply.subject)")
+                }
             }
+
             saveLeads()
             currentStep = "\(found.count) Antworten gefunden"
         } catch {
             errorMessage = "Fehler: \(error.localizedDescription)"
         }
+
         isLoading = false
     }
 
@@ -299,9 +397,13 @@ class AppViewModel: ObservableObject {
     func checkFollowUpsNeeded() -> [Lead] {
         let calendar = Calendar.current
         return leads.filter { lead in
-            guard lead.status == .emailSent, let sentDate = lead.dateEmailSent,
-                  lead.replyReceived.isEmpty, lead.followUpEmail == nil else { return false }
-            let daysSince = calendar.dateComponents([.day], from: sentDate, to: Date()).day ?? 0
+            guard lead.status == .emailSent,
+                  let sentDate = lead.dateEmailSent,
+                  lead.replyReceived.isEmpty,
+                  lead.followUpEmail == nil
+            else { return false }
+            let daysSince = calendar.dateComponents(
+                [.day], from: sentDate, to: Date()).day ?? 0
             return daysSince >= 14
         }
     }
@@ -337,7 +439,8 @@ class AppViewModel: ObservableObject {
 
     func sendFollowUp(for leadID: UUID) async {
         guard let idx = leads.firstIndex(where: { $0.id == leadID }),
-              let followUp = leads[idx].followUpEmail, followUp.isApproved else {
+              let followUp = leads[idx].followUpEmail,
+              followUp.isApproved else {
             errorMessage = "Follow-Up muss zuerst freigegeben werden."
             return
         }
@@ -354,7 +457,11 @@ class AppViewModel: ObservableObject {
             leads[idx].status = .followUpSent
             saveLeads()
             if !settings.spreadsheetID.isEmpty {
-                try? await sheetsService.logEmailEvent(spreadsheetID: settings.spreadsheetID, lead: leads[idx], emailType: "Follow-Up", subject: followUp.subject, body: followUp.body, summary: "Follow-Up an \(leads[idx].name) (\(leads[idx].company)) gesendet")
+                try? await sheetsService.logEmailEvent(
+                    spreadsheetID: settings.spreadsheetID,
+                    lead: leads[idx], emailType: "Follow-Up",
+                    subject: followUp.subject, body: followUp.body,
+                    summary: "Follow-Up an \(leads[idx].name) (\(leads[idx].company)) gesendet")
             }
             currentStep = "Follow-Up gesendet an \(leads[idx].email)"
         } catch {
@@ -365,10 +472,13 @@ class AppViewModel: ObservableObject {
 
     // MARK: - Google Sheets lesen
     func refreshSheetData() async {
-        guard !settings.spreadsheetID.isEmpty else { errorMessage = "Spreadsheet ID fehlt."; return }
+        guard !settings.spreadsheetID.isEmpty else {
+            errorMessage = "Spreadsheet ID fehlt."; return
+        }
         isLoading = true
         do {
-            sheetData = try await sheetsService.readAllLeads(spreadsheetID: settings.spreadsheetID)
+            sheetData = try await sheetsService.readAllLeads(
+                spreadsheetID: settings.spreadsheetID)
             currentStep = "\(sheetData.count) Zeilen aus Sheet geladen"
         } catch {
             errorMessage = "Sheet Fehler: \(error.localizedDescription)"
@@ -396,7 +506,10 @@ class AppViewModel: ObservableObject {
     }
 
     func addLeadManually(_ lead: Lead) {
-        if !leads.contains(where: { $0.name.lowercased() == lead.name.lowercased() && $0.company.lowercased() == lead.company.lowercased() }) {
+        if !leads.contains(where: {
+            $0.name.lowercased() == lead.name.lowercased() &&
+            $0.company.lowercased() == lead.company.lowercased()
+        }) {
             leads.append(lead)
             saveLeads()
             statusMessage = "Kontakt \(lead.name) manuell hinzugefuegt"
@@ -412,8 +525,7 @@ class AppViewModel: ObservableObject {
             industry: "K - Finanzdienstleistungen",
             region: "DACH",
             website: "https://harpocrates-corp.com",
-            description: "RegTech Startup fuer Compliance Management"
-        )
+            description: "RegTech Startup fuer Compliance Management")
         if !companies.contains(where: { $0.name == "Harpocrates Corp" }) {
             companies.append(testCompany)
             statusMessage = "Testfirma Harpocrates hinzugefuegt"
@@ -426,8 +538,7 @@ class AppViewModel: ObservableObject {
             emailVerified: true,
             linkedInURL: "https://linkedin.com/in/martinfoerster",
             status: .contacted,
-            source: "test"
-        )
+            source: "test")
         if !leads.contains(where: { $0.email == "mf@harpocrates-corp.com" }) {
             leads.append(testLead)
             saveLeads()
@@ -480,9 +591,13 @@ class AppViewModel: ObservableObject {
                 leads[index].dateEmailSent = Date()
                 leads[index].draftedEmail?.sentDate = Date()
                 saveLeads()
-                                    if !settings.spreadsheetID.isEmpty {
-                        try? await sheetsService.logEmailEvent(spreadsheetID: settings.spreadsheetID, lead: leads[index], emailType: "Erstversand", subject: draft.subject, body: draft.body, summary: "Outreach-Email an \(lead.name) (\(lead.company)) gesendet")
-                    }
+                if !settings.spreadsheetID.isEmpty {
+                    try? await sheetsService.logEmailEvent(
+                        spreadsheetID: settings.spreadsheetID,
+                        lead: leads[index], emailType: "Erstversand",
+                        subject: draft.subject, body: draft.body,
+                        summary: "Outreach-Email an \(lead.name) (\(lead.company)) gesendet")
+                }
             }
             statusMessage = "Email an \(lead.name) erfolgreich gesendet"
             print("[SendEmail] Erfolgreich gesendet an \(lead.email)")
@@ -528,7 +643,7 @@ class AppViewModel: ObservableObject {
                 replyReceived: lead.replyReceived,
                 senderName: settings.senderName,
                 apiKey: settings.perplexityAPIKey)
-                        leads[idx].followUpEmail = followUp
+            leads[idx].followUpEmail = followUp
             leads[idx].status = .followUpDrafted
             saveLeads()
             currentStep = "Follow-Up erstellt fuer \(leads[idx].name)"
@@ -544,7 +659,8 @@ class AppViewModel: ObservableObject {
         if leads[idx].draftedEmail == nil {
             await draftEmail(for: leadID)
         }
-        if leads[idx].draftedEmail != nil && leads[idx].draftedEmail?.isApproved == false {
+        if leads[idx].draftedEmail != nil &&
+           leads[idx].draftedEmail?.isApproved == false {
             leads[idx].draftedEmail?.isApproved = true
             leads[idx].status = .emailApproved
             saveLeads()
