@@ -50,9 +50,9 @@ struct ContactListView: View {
 
                 // Batch Actions
                 if !selectedLeads.isEmpty {
-                    Text("\(selectedLeads.count) ausgewählt")
+                    Text("\(selectedLeads.count) ausgewaehlt")
                         .font(.caption).foregroundStyle(.secondary)
-                    
+
                     Button("Alle verifizieren") {
                         Task {
                             for id in selectedLeads {
@@ -61,7 +61,7 @@ struct ContactListView: View {
                         }
                     }
                     .controlSize(.small)
-                    
+
                     Button("Emails erstellen") {
                         Task {
                             for id in selectedLeads where vm.leads.first(where: { $0.id == id })?.emailVerified == true {
@@ -108,12 +108,12 @@ struct ContactRow: View {
                         Text(lead.company).font(.callout)
                     }
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Industrie").font(.caption).foregroundStyle(.secondary)
+                        Text("Verantwortung").font(.caption).foregroundStyle(.secondary)
                         Text(lead.responsibility).font(.callout)
                     }
                 }
 
-                // Email Verifikation - VERBESSERT
+                // Email Verifikation
                 GroupBox {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 4) {
@@ -124,9 +124,7 @@ struct ContactRow: View {
                                 Text(lead.email).font(.callout).bold()
                             }
                         }
-                        
                         Spacer()
-                        
                         if lead.emailVerified {
                             HStack(spacing: 4) {
                                 Image(systemName: "checkmark.seal.fill")
@@ -176,7 +174,7 @@ struct ContactRow: View {
                     }
                 }
 
-                // Actions
+                // Actions - ERWEITERT mit Follow-Up
                 HStack(spacing: 8) {
                     if !lead.emailVerified {
                         Button {
@@ -188,7 +186,7 @@ struct ContactRow: View {
                         .buttonStyle(.borderedProminent)
                         .tint(.orange)
                     }
-                    
+
                     if lead.emailVerified && lead.draftedEmail == nil {
                         Button {
                             Task { await vm.draftEmail(for: lead.id) }
@@ -199,22 +197,53 @@ struct ContactRow: View {
                         .buttonStyle(.borderedProminent)
                         .tint(.blue)
                     }
-                    
-                    if lead.draftedEmail != nil {
-                        Text("Email Draft vorhanden →")
+
+                    // NEU: Follow-Up Button (nur wenn bereits eine Email gesendet wurde)
+                    if lead.dateEmailSent != nil && lead.followUpEmail == nil {
+                        Button {
+                            Task { await vm.draftFollowUpFromContact(for: lead.id) }
+                        } label: {
+                            Label("Follow-Up erstellen", systemImage: "arrow.uturn.forward")
+                        }
+                        .controlSize(.small)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.purple)
+                    }
+
+                    // Follow-Up Status anzeigen
+                    if let followUp = lead.followUpEmail {
+                        if !followUp.isApproved {
+                            Button {
+                                vm.approveFollowUp(for: lead.id)
+                            } label: {
+                                Label("Follow-Up freigeben", systemImage: "checkmark.circle")
+                            }
+                            .controlSize(.small)
+                            .buttonStyle(.bordered)
+                        } else if lead.dateFollowUpSent == nil {
+                            Button {
+                                Task { await vm.sendFollowUp(for: lead.id) }
+                            } label: {
+                                Label("Follow-Up senden", systemImage: "paperplane.fill")
+                            }
+                            .controlSize(.small)
+                            .buttonStyle(.borderedProminent)
+                            .tint(.green)
+                        }
+                    }
+
+                    if lead.draftedEmail != nil && lead.dateEmailSent == nil {
+                        Text("Draft vorhanden")
                             .font(.caption)
                             .foregroundStyle(.green)
-                        Text("Gehe zu 'Email Drafts' Tab")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
                     }
-                    
+
                     Spacer()
-                    
+
                     Button(role: .destructive) {
                         vm.deleteLead(lead.id)
                     } label: {
-                        Label("Löschen", systemImage: "trash")
+                        Label("Loeschen", systemImage: "trash")
                     }
                     .controlSize(.small)
                 }
@@ -227,16 +256,47 @@ struct ContactRow: View {
                 Circle()
                     .fill(statusColor(lead.status))
                     .frame(width: 10, height: 10)
-                
+
                 // Name
                 Text(lead.name).bold()
-                
+
                 // Company
                 Text("- \(lead.company)")
                     .foregroundStyle(.secondary)
-                
+
                 Spacer()
-                
+
+                // NEU: Email-Zaehler Badge
+                let sentCount = vm.emailSentCount(for: lead)
+                if sentCount > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "envelope.fill")
+                            .font(.caption2)
+                        Text("\(sentCount)")
+                            .font(.caption2).bold()
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.purple.opacity(0.15))
+                    .foregroundStyle(.purple)
+                    .cornerRadius(4)
+                }
+
+                // Antwort-Badge
+                if !lead.replyReceived.isEmpty {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrowshape.turn.up.left.fill")
+                            .font(.caption2)
+                        Text("Antwort")
+                            .font(.caption2).bold()
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.green.opacity(0.15))
+                    .foregroundStyle(.green)
+                    .cornerRadius(4)
+                }
+
                 // Email Verification Badge
                 if lead.emailVerified {
                     Image(systemName: "checkmark.seal.fill")
@@ -247,7 +307,7 @@ struct ContactRow: View {
                         .foregroundStyle(.orange)
                         .font(.caption)
                 }
-                
+
                 // Status Badge
                 Text(lead.status.rawValue)
                     .font(.caption)
@@ -264,10 +324,10 @@ struct ContactRow: View {
         switch status {
         case .identified: return .gray
         case .contacted: return .orange
-                    case .followedUp, .qualified: return .yellow
-                    case .converted: return .green
-                    case .notInterested: return .gray
-                    case .emailDrafted, .emailApproved: return .blue
+        case .followedUp, .qualified: return .yellow
+        case .converted: return .green
+        case .notInterested: return .gray
+        case .emailDrafted, .emailApproved: return .blue
         case .emailSent, .followUpDrafted, .followUpSent: return .purple
         case .replied: return .green
         case .closed: return .red
