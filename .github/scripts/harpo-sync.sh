@@ -1,6 +1,6 @@
 #!/bin/bash
 # harpo-sync: Robuster GitHub-Sync (GitHub ist IMMER fuehrend)
-# Version 3.7 - Fresh-Clone Fallback wenn Fetch haengt
+# Version 3.8 - Branch-Switch Fix fuer shallow clones
 
 # Farben fuer Output
 RED='\033[0;31m'
@@ -13,13 +13,14 @@ NC='\033[0m'
 PROJECT_DIR="$HOME/SpecialProjects/HarpoOutreach"
 REPO_URL="https://github.com/Harp-Corp/HarpoOutreach.git"
 FETCH_TIMEOUT=60
+TARGET_BRANCH="HarpoOutreachNewsletter"
 
 # ANTI-HANG: Verhindert dass git auf Passwort-Eingabe wartet
 export GIT_TERMINAL_PROMPT=0
 export GIT_SSH_COMMAND="ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
 # Self-Update
-SCRIPT_VERSION="3.7"
+SCRIPT_VERSION="3.8"
 RAW_URL="https://raw.githubusercontent.com/Harp-Corp/HarpoOutreach/HarpoOutreachNewsletter/.github/scripts/harpo-sync.sh"
 INSTALLED_SCRIPT="/usr/local/bin/harpo-sync"
 
@@ -79,7 +80,7 @@ fresh_clone() {
   warn "Loesche altes Repo und klone neu..."
   cd "$HOME" || exit 1
   rm -rf "$PROJECT_DIR"
-  git clone --depth=1 -b HarpoOutreachNewsletter "$REPO_URL" "$PROJECT_DIR" 2>&1 &
+  git clone --depth=1 -b "$TARGET_BRANCH" "$REPO_URL" "$PROJECT_DIR" 2>&1 &
   local CLONE_PID=$!
   spinner_with_timeout $CLONE_PID "Clone laeuft" 90
   local CLONE_SPINNER=$?
@@ -111,7 +112,7 @@ step 2 "Projektverzeichnis pruefen"
 if [ ! -d "$PROJECT_DIR" ]; then
   fail "Verzeichnis nicht gefunden: $PROJECT_DIR"
   echo "  Klone Repository neu..."
-  git clone --depth=1 -b HarpoOutreachNewsletter "$REPO_URL" "$PROJECT_DIR" || { fail "Klonen fehlgeschlagen"; exit 1; }
+  git clone --depth=1 -b "$TARGET_BRANCH" "$REPO_URL" "$PROJECT_DIR" || { fail "Klonen fehlgeschlagen"; exit 1; }
 fi
 cd "$PROJECT_DIR" || { fail "cd fehlgeschlagen"; exit 1; }
 ok "$PROJECT_DIR"
@@ -133,36 +134,33 @@ step 4 "Git Synchronisierung (GitHub -> Lokal)"
 git config --local http.lowSpeedLimit 1000
 git config --local http.lowSpeedTime 10
 
-echo "  Verwerfe lokale Aenderungen..."
-git reset --hard HEAD 2>/dev/null
-git clean -fd 2>/dev/null
-ok "Lokale Aenderungen verworfen"
-
-# Fetch mit echtem Timeout
-echo "  Hole Aenderungen von GitHub..."
-git fetch origin HarpoOutreachNewsletter --depth=1 --no-tags 2>&1 &
-FETCH_PID=$!
-spinner_with_timeout $FETCH_PID "Fetch laeuft" $FETCH_TIMEOUT
-SPINNER_EXIT=$?
-
-if [ $SPINNER_EXIT -ne 0 ]; then
-  warn "Fetch Timeout nach ${FETCH_TIMEOUT}s"
-  # Fallback: Komplett neu klonen
+# Pruefen ob wir auf dem richtigen Branch sind
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+if [ "$CURRENT_BRANCH" != "$TARGET_BRANCH" ]; then
+  warn "Falscher Branch: $CURRENT_BRANCH (erwartet: $TARGET_BRANCH)"
+  warn "Repo wird neu geklont mit korrektem Branch..."
   if fresh_clone; then
     cd "$PROJECT_DIR" || { fail "cd fehlgeschlagen"; exit 1; }
-    ok "Fresh Clone erfolgreich"
+    ok "Fresh Clone auf $TARGET_BRANCH erfolgreich"
   else
-    fail "Auch Fresh Clone fehlgeschlagen"
-    echo "  Pruefe deine Internetverbindung und versuche es erneut."
+    fail "Fresh Clone fehlgeschlagen"
     exit 1
   fi
 else
-  wait $FETCH_PID 2>/dev/null
-  FETCH_EXIT=$?
-  if [ $FETCH_EXIT -eq 0 ]; then
-    ok "Fetch erfolgreich"
-  else
-    warn "Fetch fehlgeschlagen (Exit: $FETCH_EXIT) - versuche Fresh Clone..."
+  echo "  Verwerfe lokale Aenderungen..."
+  git reset --hard HEAD 2>/dev/null
+  git clean -fd 2>/dev/null
+  ok "Lokale Aenderungen verworfen"
+
+  # Fetch mit echtem Timeout
+  echo "  Hole Aenderungen von GitHub..."
+  git fetch origin "$TARGET_BRANCH" --depth=1 --no-tags 2>&1 &
+  FETCH_PID=$!
+  spinner_with_timeout $FETCH_PID "Fetch laeuft" $FETCH_TIMEOUT
+  SPINNER_EXIT=$?
+
+  if [ $SPINNER_EXIT -ne 0 ]; then
+    warn "Fetch Timeout nach ${FETCH_TIMEOUT}s"
     if fresh_clone; then
       cd "$PROJECT_DIR" || { fail "cd fehlgeschlagen"; exit 1; }
       ok "Fresh Clone erfolgreich"
@@ -171,12 +169,28 @@ else
       echo "  Pruefe deine Internetverbindung und versuche es erneut."
       exit 1
     fi
+  else
+    wait $FETCH_PID 2>/dev/null
+    FETCH_EXIT=$?
+    if [ $FETCH_EXIT -eq 0 ]; then
+      ok "Fetch erfolgreich"
+    else
+      warn "Fetch fehlgeschlagen (Exit: $FETCH_EXIT) - versuche Fresh Clone..."
+      if fresh_clone; then
+        cd "$PROJECT_DIR" || { fail "cd fehlgeschlagen"; exit 1; }
+        ok "Fresh Clone erfolgreich"
+      else
+        fail "Auch Fresh Clone fehlgeschlagen"
+        echo "  Pruefe deine Internetverbindung und versuche es erneut."
+        exit 1
+      fi
+    fi
   fi
+
+  git reset --hard "origin/$TARGET_BRANCH" 2>/dev/null
 fi
 
-git checkout HarpoOutreachNewsletter 2>/dev/null || git checkout -b HarpoOutreachNewsletter origin/HarpoOutreachNewsletter 2>/dev/null
-git reset --hard origin/HarpoOutreachNewsletter 2>/dev/null
-ok "Lokal = GitHub (origin/HarpoOutreachNewsletter)"
+ok "Lokal = GitHub (origin/$TARGET_BRANCH)"
 
 echo -e "  ${GREEN}Aktueller Commit:${NC}"
 git log -1 --oneline --decorate
