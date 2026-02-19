@@ -9,25 +9,25 @@ import SwiftUI
 
 struct ManualEntryView: View {
     @ObservedObject var vm: AppViewModel
-    
+
     // Company fields
     @State private var companyName = ""
     @State private var industry: Industry = .Q_healthcare
     @State private var region: Region = .dach
     @State private var website = ""
     @State private var companyDescription = ""
-    
+
     // Contact fields
     @State private var contactName = ""
     @State private var contactTitle = ""
     @State private var contactEmail = ""
     @State private var linkedInURL = ""
     @State private var responsibility = ""
-    
+
     @State private var showingSuccess = false
     @State private var showingError = false
     @State private var errorMessage = ""
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -42,9 +42,9 @@ struct ManualEntryView: View {
                 Spacer()
             }
             .padding(24)
-            
+
             Divider()
-            
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     // Company Section
@@ -52,11 +52,11 @@ struct ManualEntryView: View {
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Unternehmensinformationen")
                                 .font(.headline)
-                            
+
                             TextField("Firmenname*", text: $companyName)
                                 .textFieldStyle(.roundedBorder)
                                 .multilineTextAlignment(.leading)
-                            
+
                             HStack(spacing: 12) {
                                 VStack(alignment: .leading) {
                                     Text("Branche*")
@@ -70,7 +70,7 @@ struct ManualEntryView: View {
                                     .pickerStyle(.menu)
                                     .frame(maxWidth: .infinity)
                                 }
-                                
+
                                 VStack(alignment: .leading) {
                                     Text("Region*")
                                         .font(.caption)
@@ -84,11 +84,11 @@ struct ManualEntryView: View {
                                     .frame(maxWidth: .infinity)
                                 }
                             }
-                            
+
                             TextField("Website", text: $website)
                                 .textFieldStyle(.roundedBorder)
                                 .multilineTextAlignment(.leading)
-                            
+
                             TextField("Beschreibung", text: $companyDescription, axis: .vertical)
                                 .textFieldStyle(.roundedBorder)
                                 .lineLimit(3...6)
@@ -96,32 +96,29 @@ struct ManualEntryView: View {
                         }
                         .padding(12)
                     }
-                    
+
                     // Contact Section
                     GroupBox {
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Ansprechpartner")
                                 .font(.headline)
-                            
+
                             TextField("Name*", text: $contactName)
                                 .textFieldStyle(.roundedBorder)
                                 .multilineTextAlignment(.leading)
-                            
+
                             TextField("Position", text: $contactTitle)
                                 .textFieldStyle(.roundedBorder)
                                 .multilineTextAlignment(.leading)
-                            
+
                             TextField("E-Mail*", text: $contactEmail)
                                 .textFieldStyle(.roundedBorder)
-                                .textContentType(.emailAddress)
-                                .keyboardType(.emailAddress)
                                 .multilineTextAlignment(.leading)
-                            
+
                             TextField("LinkedIn URL", text: $linkedInURL)
                                 .textFieldStyle(.roundedBorder)
-                                .textContentType(.URL)
                                 .multilineTextAlignment(.leading)
-                            
+
                             TextField("Verantwortungsbereich", text: $responsibility, axis: .vertical)
                                 .textFieldStyle(.roundedBorder)
                                 .lineLimit(2...4)
@@ -129,16 +126,16 @@ struct ManualEntryView: View {
                         }
                         .padding(12)
                     }
-                    
+
                     // Action Buttons
                     HStack(spacing: 12) {
                         Button("Zuruecksetzen", role: .cancel) {
                             resetForm()
                         }
                         .buttonStyle(.bordered)
-                        
+
                         Spacer()
-                        
+
                         Button("Speichern und Hinzufuegen") {
                             Task {
                                 await saveLead()
@@ -165,12 +162,12 @@ struct ManualEntryView: View {
             Text(errorMessage)
         }
     }
-    
+
     // MARK: - Validation
     private var isFormValid: Bool {
         !companyName.isEmpty && !contactName.isEmpty && !contactEmail.isEmpty
     }
-    
+
     // MARK: - Actions
     private func resetForm() {
         companyName = ""
@@ -182,7 +179,7 @@ struct ManualEntryView: View {
         linkedInURL = ""
         responsibility = ""
     }
-    
+
     private func saveLead() async {
         // Create company
         let company = Company(
@@ -192,41 +189,29 @@ struct ManualEntryView: View {
             website: website,
             description: companyDescription
         )
-        
+
         // Create lead with isManuallyCreated = true
-        var lead = Lead(
+        let lead = Lead(
             name: contactName,
             title: contactTitle,
             company: companyName,
             email: contactEmail,
-            emailVerified: true,  // Manuelle Kontakte sind automatisch verifiziert
+            emailVerified: true,
             linkedInURL: linkedInURL,
             responsibility: responsibility,
             status: .identified,
             source: "Manual Entry",
-            isManuallyCreated: true  // NEU: Flag fuer manuelle Erstellung
+            isManuallyCreated: true
         )
-        
-        // Add to ViewModel
+
+        // Add to ViewModel using public methods
         await MainActor.run {
-            vm.companies.append(company)
-            vm.leads.append(lead)
-            vm.saveLeads()
-            vm.saveCompanies()
+            vm.addCompanyManually(company)
+            vm.addLeadManually(lead)
         }
-        
-        // Save to Google Sheets if configured
-        if !vm.settings.spreadsheetID.isEmpty {
-            do {
-                try await vm.writeLeadToSheet(lead)
-                showingSuccess = true
-            } catch {
-                errorMessage = "Gespeichert, aber Fehler beim Schreiben ins Sheet: \(error.localizedDescription)"
-                showingError = true
-            }
-        } else {
-            showingSuccess = true
-        }
+
+        // Show success
+        showingSuccess = true
     }
 }
 
