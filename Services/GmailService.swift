@@ -81,7 +81,7 @@ class GmailService {
         return "sent"
     }
 
-    // MARK: - Antworten pruefen
+    // MARK: - Antworten pruefen (nur passend zu gesendeten Subjects)
     func checkReplies(sentSubjects: [String]) async throws -> [GmailMessage] {
         let token = try await authService.getAccessToken()
         var allReplies: [GmailMessage] = []
@@ -119,9 +119,11 @@ class GmailService {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
             let (data, response) = try await URLSession.shared.data(for: request)
+
             if let http = response as? HTTPURLResponse, http.statusCode != 200 {
                 let errBody = String(data: data, encoding: .utf8) ?? ""
                 print("[Gmail] checkReplies HTTP \(http.statusCode): \(errBody.prefix(300))")
+
                 if http.statusCode == 401 {
                     // Token refresh und nochmal versuchen
                     let freshToken = try await authService.getAccessToken()
@@ -162,7 +164,6 @@ class GmailService {
             for msg in messages {
                 guard let msgId = msg["id"] as? String, !seenIds.contains(msgId) else { continue }
                 seenIds.insert(msgId)
-
                 if let detail = try? await fetchMessage(id: msgId, token: token) {
                     let fromLower = detail.from.lowercased()
                     if fromLower.contains("mf@harpocrates-corp.com") { continue }
@@ -172,35 +173,8 @@ class GmailService {
             }
         }
 
-        // Fallback: Suche auch generisch nach allen Inbox-Antworten der letzten 90 Tage
-        if allReplies.isEmpty {
-            print("[Gmail] Kein Subject-Match - versuche generische Inbox-Suche...")
-            let fallbackQuery = "in:inbox -from:me newer_than:30d"
-            var components = URLComponents(string: "\(baseURL)/messages")!
-            components.queryItems = [
-                URLQueryItem(name: "q", value: fallbackQuery),
-                URLQueryItem(name: "maxResults", value: "20")
-            ]
-            if let url = components.url {
-                var request = URLRequest(url: url)
-                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-                let (data, response) = try await URLSession.shared.data(for: request)
-                if let http = response as? HTTPURLResponse, http.statusCode == 200,
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let messages = json["messages"] as? [[String: Any]] {
-                    print("[Gmail] Fallback: \(messages.count) Inbox-Nachrichten")
-                    for msg in messages.prefix(20) {
-                        guard let msgId = msg["id"] as? String, !seenIds.contains(msgId) else { continue }
-                        seenIds.insert(msgId)
-                        if let detail = try? await fetchMessage(id: msgId, token: token) {
-                            let fromLower = detail.from.lowercased()
-                            if fromLower.contains("mf@harpocrates-corp.com") { continue }
-                            allReplies.append(detail)
-                        }
-                    }
-                }
-            }
-        }
+        // KEIN Fallback: Nur Antworten auf tatsaechlich gesendete Subjects anzeigen
+        // Keine generische Inbox-Suche um irrelevante Emails zu vermeiden
 
         print("[Gmail] Total: \(allReplies.count) Antworten")
         return allReplies
@@ -210,8 +184,8 @@ class GmailService {
     private func fetchMessage(id: String, token: String) async throws -> GmailMessage {
         var request = URLRequest(url: URL(string: "\(baseURL)/messages/\(id)?format=full")!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
         let (data, _) = try await URLSession.shared.data(for: request)
+
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw GmailError.parseFailed
         }
@@ -278,30 +252,26 @@ class GmailService {
         <body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;">
         <div style="max-width:600px;margin:0 auto;padding:20px;">
         \(htmlParagraphs)
-        <table cellpadding="0" cellspacing="0" border="0" style="margin-top:30px;border-top:2px solid #1a365d;padding-top:16px;width:100%;">
+        <table cellpadding="0" cellspacing="0" border="0" style="margin-top:30px;border-top:2px solid #1a365d;padding-top:20px;width:100%;">
         <tr>
         <td style="vertical-align:top;padding-right:16px;width:4px;">
         <div style="width:4px;height:70px;background:#1a365d;border-radius:2px;"></div>
         </td>
         <td style="vertical-align:top;">
-        <table cellpadding="0" cellspacing="0" border="0">
-        <tr><td style="font-size:16px;font-weight:bold;color:#1a365d;padding-bottom:2px;font-family:Arial,Helvetica,sans-serif;">Martin F\u{00F6}rster</td></tr>
-        <tr><td style="font-size:12px;color:#4a5568;padding-bottom:8px;font-family:Arial,Helvetica,sans-serif;">CEO & Founder</td></tr>
-        <tr><td style="font-size:13px;font-weight:bold;color:#2d3748;padding-bottom:8px;font-family:Arial,Helvetica,sans-serif;">Harpocrates Solutions GmbH</td></tr>
-        <tr><td style="font-size:12px;color:#4a5568;line-height:1.8;font-family:Arial,Helvetica,sans-serif;">
-        \u{260E} +49 172 6348377<br>
-        \u{2709} <a href="mailto:mf@harpocrates-corp.com" style="color:#2b6cb0;text-decoration:none;">mf@harpocrates-corp.com</a><br>
-        \u{1F310} <a href="https://www.harpocrates-corp.com" style="color:#2b6cb0;text-decoration:none;">www.harpocrates-corp.com</a><br>
-        \u{1F4CD} Berlin, Germany
+        <p style="margin:0 0 2px 0;font-size:16px;font-weight:bold;color:#1a365d;">Martin F\u{00F6}rster</p>
+        <p style="margin:0 0 8px 0;font-size:13px;color:#4a5568;">CEO & Founder</p>
+        <p style="margin:0 0 2px 0;font-size:13px;font-weight:600;color:#2d3748;">Harpocrates Solutions GmbH</p>
+        <p style="margin:0 0 2px 0;font-size:12px;color:#718096;">\u{260E} +49 172 6348377</p>
+        <p style="margin:0 0 2px 0;font-size:12px;color:#718096;">\u{2709} <a href="mailto:mf@harpocrates-corp.com" style="color:#2b6cb0;text-decoration:none;">mf@harpocrates-corp.com</a></p>
+        <p style="margin:0 0 2px 0;font-size:12px;color:#718096;">\u{1F310} <a href="https://www.harpocrates-corp.com" style="color:#2b6cb0;text-decoration:none;">www.harpocrates-corp.com</a></p>
+        <p style="margin:0;font-size:12px;color:#718096;">\u{1F4CD} Berlin, Germany</p>
         </td></tr>
         </table>
-        </td>
-        </tr>
-        </table>
-        <p style="margin-top:24px;font-size:10px;color:#a0aec0;font-family:Arial,Helvetica,sans-serif;">
-        <a href="mailto:mf@harpocrates-corp.com?subject=Unsubscribe&body=Bitte%20entfernen%20Sie%20mich%20von%20Ihrer%20Mailingliste." style="color:#a0aec0;text-decoration:underline;">Abmelden / Unsubscribe</a>
-        </p>
         </div>
+        <p style="margin-top:24px;font-size:10px;color:#a0aec0;font-family:Arial,Helvetica,sans-serif;">
+        <a href="mailto:mf@harpocrates-corp.com?subject=Unsubscribe&body=Bitte%20entfernen%20Sie%20mich%20von%20Ihrer%20Mailingliste."
+           style="color:#a0aec0;text-decoration:underline;">Abmelden / Unsubscribe</a>
+        </p>
         </body>
         </html>
         """
