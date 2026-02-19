@@ -23,7 +23,6 @@ struct ContactListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             HStack {
                 Text("Kontakte").font(.largeTitle).bold()
                 Spacer()
@@ -32,12 +31,10 @@ struct ContactListView: View {
             }
             .padding(24)
 
-            // Controls
             HStack(spacing: 12) {
                 TextField("Suchen...", text: $searchText)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 300)
-
                 Picker("Status", selection: $filterStatus) {
                     Text("Alle").tag(nil as LeadStatus?)
                     ForEach(LeadStatus.allCases, id: \.self) { status in
@@ -45,23 +42,16 @@ struct ContactListView: View {
                     }
                 }
                 .frame(width: 200)
-
                 Spacer()
-
-                // Batch Actions
                 if !selectedLeads.isEmpty {
                     Text("\(selectedLeads.count) ausgewaehlt")
                         .font(.caption).foregroundStyle(.secondary)
-
                     Button("Alle verifizieren") {
                         Task {
-                            for id in selectedLeads {
-                                await vm.verifyEmail(for: id)
-                            }
+                            for id in selectedLeads { await vm.verifyEmail(for: id) }
                         }
                     }
                     .controlSize(.small)
-
                     Button("Emails erstellen") {
                         Task {
                             for id in selectedLeads where vm.leads.first(where: { $0.id == id })?.emailVerified == true {
@@ -78,7 +68,6 @@ struct ContactListView: View {
 
             Divider()
 
-            // List
             List(selection: $selectedLeads) {
                 ForEach(filteredLeads) { lead in
                     ContactRow(lead: lead, vm: vm)
@@ -97,7 +86,6 @@ struct ContactRow: View {
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
             VStack(alignment: .leading, spacing: 12) {
-                // Info
                 HStack(spacing: 20) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Titel").font(.caption).foregroundStyle(.secondary)
@@ -113,7 +101,6 @@ struct ContactRow: View {
                     }
                 }
 
-                // Email Verifikation
                 GroupBox {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 4) {
@@ -128,44 +115,32 @@ struct ContactRow: View {
                         if lead.emailVerified {
                             HStack(spacing: 4) {
                                 Image(systemName: "checkmark.seal.fill")
-                                    .foregroundStyle(.green)
-                                    .font(.title3)
-                                Text("Verifiziert")
-                                    .font(.callout).bold()
+                                    .foregroundStyle(.green).font(.title3)
+                                Text("Verifiziert").font(.callout).bold()
                                     .foregroundStyle(.green)
                             }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.green.opacity(0.15))
-                            .cornerRadius(8)
+                            .padding(.horizontal, 12).padding(.vertical, 6)
+                            .background(Color.green.opacity(0.15)).cornerRadius(8)
                         } else {
                             HStack(spacing: 4) {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .foregroundStyle(.orange)
-                                Text("Nicht verifiziert")
-                                    .font(.callout)
+                                Text("Nicht verifiziert").font(.callout)
                                     .foregroundStyle(.orange)
                             }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.orange.opacity(0.15))
-                            .cornerRadius(8)
+                            .padding(.horizontal, 12).padding(.vertical, 6)
+                            .background(Color.orange.opacity(0.15)).cornerRadius(8)
                         }
-                    }
-                    .padding(8)
+                    }.padding(8)
                 }
 
-                // Verifikations-Notizen
                 if !lead.verificationNotes.isEmpty {
                     GroupBox("Verifikations-Details") {
-                        Text(lead.verificationNotes)
-                            .font(.caption)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(8)
+                        Text(lead.verificationNotes).font(.caption)
+                            .frame(maxWidth: .infinity, alignment: .leading).padding(8)
                     }
                 }
 
-                // LinkedIn
                 if !lead.linkedInURL.isEmpty {
                     HStack {
                         Text("LinkedIn:").font(.caption).foregroundStyle(.secondary)
@@ -174,148 +149,118 @@ struct ContactRow: View {
                     }
                 }
 
-                // Actions - ERWEITERT mit Follow-Up
+                // Actions
                 HStack(spacing: 8) {
                     if !lead.emailVerified {
-                        Button {
-                            Task { await vm.verifyEmail(for: lead.id) }
-                        } label: {
+                        Button { Task { await vm.verifyEmail(for: lead.id) } } label: {
                             Label("Email verifizieren", systemImage: "checkmark.shield")
-                        }
-                        .controlSize(.small)
-                        .buttonStyle(.borderedProminent)
-                        .tint(.orange)
+                        }.controlSize(.small).buttonStyle(.borderedProminent).tint(.orange)
                     }
-
                     if lead.emailVerified && lead.draftedEmail == nil {
-                        Button {
-                            Task { await vm.draftEmail(for: lead.id) }
-                        } label: {
+                        Button { Task { await vm.draftEmail(for: lead.id) } } label: {
                             Label("Email erstellen", systemImage: "envelope.badge")
-                        }
-                        .controlSize(.small)
-                        .buttonStyle(.borderedProminent)
-                        .tint(.blue)
+                        }.controlSize(.small).buttonStyle(.borderedProminent).tint(.blue)
                     }
-
-                    // NEU: Follow-Up Button (nur wenn bereits eine Email gesendet wurde)
                     if lead.dateEmailSent != nil && lead.followUpEmail == nil {
-                        Button {
-                            Task { await vm.draftFollowUpFromContact(for: lead.id) }
-                        } label: {
+                        Button { Task { await vm.draftFollowUpFromContact(for: lead.id) } } label: {
                             Label("Follow-Up erstellen", systemImage: "arrow.uturn.forward")
-                        }
-                        .controlSize(.small)
-                        .buttonStyle(.borderedProminent)
-                        .tint(.purple)
+                        }.controlSize(.small).buttonStyle(.borderedProminent).tint(.purple)
                     }
-
-                    // Follow-Up Status anzeigen
                     if let followUp = lead.followUpEmail {
                         if !followUp.isApproved {
-                            Button {
-                                vm.approveFollowUp(for: lead.id)
-                            } label: {
+                            Button { vm.approveFollowUp(for: lead.id) } label: {
                                 Label("Follow-Up freigeben", systemImage: "checkmark.circle")
-                            }
-                            .controlSize(.small)
-                            .buttonStyle(.bordered)
+                            }.controlSize(.small).buttonStyle(.bordered)
                         } else if lead.dateFollowUpSent == nil {
-                            Button {
-                                Task { await vm.sendFollowUp(for: lead.id) }
-                            } label: {
+                            Button { Task { await vm.sendFollowUp(for: lead.id) } } label: {
                                 Label("Follow-Up senden", systemImage: "paperplane.fill")
-                            }
-                            .controlSize(.small)
-                            .buttonStyle(.borderedProminent)
-                            .tint(.green)
+                            }.controlSize(.small).buttonStyle(.borderedProminent).tint(.green)
                         }
                     }
-
                     if lead.draftedEmail != nil && lead.dateEmailSent == nil {
-                        Text("Draft vorhanden")
-                            .font(.caption)
-                            .foregroundStyle(.green)
+                        Text("Draft vorhanden").font(.caption).foregroundStyle(.green)
                     }
-
                     Spacer()
-
-                    Button(role: .destructive) {
-                        vm.deleteLead(lead.id)
-                    } label: {
+                    Button(role: .destructive) { vm.deleteLead(lead.id) } label: {
                         Label("Loeschen", systemImage: "trash")
-                    }
-                    .controlSize(.small)
-                }
-                .padding(.top, 8)
-            }
-            .padding(.vertical, 8)
+                    }.controlSize(.small)
+                }.padding(.top, 8)
+            }.padding(.vertical, 8)
         } label: {
             HStack(spacing: 12) {
-                // Status Circle
-                Circle()
-                    .fill(statusColor(lead.status))
-                    .frame(width: 10, height: 10)
-
-                // Name
+                Circle().fill(statusColor(lead.status)).frame(width: 10, height: 10)
                 Text(lead.name).bold()
-
-                // Company
-                Text("- \(lead.company)")
-                    .foregroundStyle(.secondary)
-
+                Text("- \(lead.company)").foregroundStyle(.secondary)
                 Spacer()
-
-                // NEU: Email-Zaehler Badge
                 let sentCount = vm.emailSentCount(for: lead)
                 if sentCount > 0 {
                     HStack(spacing: 3) {
-                        Image(systemName: "envelope.fill")
-                            .font(.caption2)
-                        Text("\(sentCount)")
-                            .font(.caption2).bold()
+                        Image(systemName: "envelope.fill").font(.caption2)
+                        Text("\(sentCount)").font(.caption2).bold()
                     }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
                     .background(Color.purple.opacity(0.15))
-                    .foregroundStyle(.purple)
-                    .cornerRadius(4)
+                    .foregroundStyle(.purple).cornerRadius(4)
                 }
-
-                // Antwort-Badge
                 if !lead.replyReceived.isEmpty {
                     HStack(spacing: 3) {
-                        Image(systemName: "arrowshape.turn.up.left.fill")
-                            .font(.caption2)
-                        Text("Antwort")
-                            .font(.caption2).bold()
+                        Image(systemName: "arrowshape.turn.up.left.fill").font(.caption2)
+                        Text("Antwort").font(.caption2).bold()
                     }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
                     .background(Color.green.opacity(0.15))
-                    .foregroundStyle(.green)
-                    .cornerRadius(4)
+                    .foregroundStyle(.green).cornerRadius(4)
                 }
-
-                // Email Verification Badge
                 if lead.emailVerified {
                     Image(systemName: "checkmark.seal.fill")
-                        .foregroundStyle(.green)
-                        .font(.caption)
+                        .foregroundStyle(.green).font(.caption)
                 } else if !lead.email.isEmpty {
                     Image(systemName: "questionmark.circle")
-                        .foregroundStyle(.orange)
-                        .font(.caption)
+                        .foregroundStyle(.orange).font(.caption)
                 }
-
-                // Status Badge
                 Text(lead.status.rawValue)
                     .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(statusColor(lead.status).opacity(0.15))
                     .foregroundStyle(statusColor(lead.status))
                     .cornerRadius(4)
+            }
+        }
+        // MARK: - Rechtsklick Context Menu
+        .contextMenu {
+            if lead.emailVerified && lead.draftedEmail == nil {
+                Button {
+                    Task { await vm.draftEmail(for: lead.id) }
+                } label: {
+                    Label("Email Draft erstellen", systemImage: "envelope.badge")
+                }
+            }
+            if lead.draftedEmail != nil && lead.dateEmailSent == nil {
+                Button {
+                    Task { await vm.sendEmail(to: lead) }
+                } label: {
+                    Label("Email senden", systemImage: "paperplane")
+                }
+            }
+            if lead.dateEmailSent != nil && lead.followUpEmail == nil {
+                Button {
+                    Task { await vm.draftFollowUpFromContact(for: lead.id) }
+                } label: {
+                    Label("Follow-Up Draft erstellen", systemImage: "arrow.uturn.forward")
+                }
+            }
+            if !lead.emailVerified {
+                Button {
+                    Task { await vm.verifyEmail(for: lead.id) }
+                } label: {
+                    Label("Email verifizieren", systemImage: "checkmark.shield")
+                }
+            }
+            Divider()
+            Button(role: .destructive) {
+                vm.deleteLead(lead.id)
+            } label: {
+                Label("Kontakt loeschen", systemImage: "trash")
             }
         }
     }
