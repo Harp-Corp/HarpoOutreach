@@ -10,12 +10,12 @@ struct EmailDraftView: View {
 
     // Leads mit Draft, noch nicht gesendet
     var draftsReady: [Lead] {
-        vm.leads.filter { $0.draftedEmail != nil && $0.dateEmailSent == nil }
+                vm.leads.filter { $0.draftedEmail != nil && $0.draftedEmail?.sentDate == nil }
     }
 
     // NEU: Follow-Up Drafts (erstellt aber noch nicht gesendet)
     var followUpDraftsReady: [Lead] {
-        vm.leads.filter { $0.followUpEmail != nil && $0.dateFollowUpSent == nil }
+        vm.leads.filter { $0.followUpEmail != nil && $0.followUpEmail?.sentDate == nil }
     }
 
     @State private var selectedLead: Lead?
