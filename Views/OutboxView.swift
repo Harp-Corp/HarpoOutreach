@@ -4,16 +4,25 @@ struct OutboxView: View {
     @ObservedObject var vm: AppViewModel
 
     var approvedEmails: [Lead] {
-        vm.leads.filter {
-            $0.draftedEmail?.isApproved == true && $0.dateEmailSent == nil
-        }
+        vm.leads.filter { $0.draftedEmail?.isApproved == true && $0.dateEmailSent == nil }
     }
 
     var sentEmails: [Lead] {
-        vm.leads.filter {
-            $0.dateEmailSent != nil
-        }.sorted {
-            ($0.dateEmailSent ?? .distantPast) > ($1.dateEmailSent ?? .distantPast)
+        vm.leads.filter { $0.dateEmailSent != nil }
+            .sorted { ($0.dateEmailSent ?? .distantPast) > ($1.dateEmailSent ?? .distantPast) }
+    }
+
+    // Replies die per Subject zu gesendeten Mails passen
+    func repliesForLead(_ lead: Lead) -> [GmailService.GmailMessage] {
+        guard let subject = lead.draftedEmail?.subject ?? lead.followUpEmail?.subject else { return [] }
+        let cleanSubject = subject.lowercased()
+            .replacingOccurrences(of: "re: ", with: "")
+            .replacingOccurrences(of: "aw: ", with: "")
+        return vm.replies.filter { reply in
+            let replySubj = reply.subject.lowercased()
+                .replacingOccurrences(of: "re: ", with: "")
+                .replacingOccurrences(of: "aw: ", with: "")
+            return replySubj.contains(cleanSubject) || cleanSubject.contains(replySubj)
         }
     }
 
@@ -31,6 +40,10 @@ struct OutboxView: View {
                         .foregroundStyle(.secondary)
                     Text("\(sentEmails.count) gesendet")
                         .foregroundStyle(.green)
+                    if !vm.replies.isEmpty {
+                        Text("\(vm.replies.count) Antworten")
+                            .foregroundStyle(.blue)
+                    }
                 }
             }
             .padding(24)
@@ -60,15 +73,15 @@ struct OutboxView: View {
                     if !approvedEmails.isEmpty {
                         Section(header: Text("Bereit zum Senden (\(approvedEmails.count))")) {
                             ForEach(approvedEmails) { lead in
-                                OutboxCard(lead: lead, vm: vm, isSent: false)
+                                OutboxCard(lead: lead, vm: vm, isSent: false, matchedReplies: [])
                             }
                         }
                     }
-
                     if !sentEmails.isEmpty {
                         Section(header: Text("Gesendet (\(sentEmails.count))")) {
                             ForEach(sentEmails) { lead in
-                                OutboxCard(lead: lead, vm: vm, isSent: true)
+                                OutboxCard(lead: lead, vm: vm, isSent: true,
+                                           matchedReplies: repliesForLead(lead))
                             }
                         }
                     }
@@ -82,10 +95,89 @@ struct OutboxCard: View {
     let lead: Lead
     @ObservedObject var vm: AppViewModel
     var isSent: Bool = false
+    var matchedReplies: [GmailService.GmailMessage] = []
+    @State private var isExpanded = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            VStack(alignment: .leading, spacing: 12) {
+                // Gesendete Email
+                if let email = lead.draftedEmail {
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Image(systemName: "paperplane.fill")
+                                    .foregroundStyle(.blue)
+                                Text("Gesendete Email").font(.caption).bold()
+                                    .foregroundStyle(.blue)
+                                Spacer()
+                                if let d = lead.dateEmailSent {
+                                    Text(d, style: .date).font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            Text("Betreff: \(email.subject)")
+                                .font(.caption).foregroundStyle(.secondary)
+                            Text(email.body.prefix(200) + (email.body.count > 200 ? "..." : ""))
+                                .font(.caption2).foregroundStyle(.tertiary)
+                                .lineLimit(4)
+                        }.padding(4)
+                    }
+                }
+
+                // Follow-Up (falls gesendet)
+                if let followUp = lead.followUpEmail, lead.dateFollowUpSent != nil {
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Image(systemName: "arrow.uturn.forward")
+                                    .foregroundStyle(.purple)
+                                Text("Follow-Up").font(.caption).bold()
+                                    .foregroundStyle(.purple)
+                                Spacer()
+                                if let d = lead.dateFollowUpSent {
+                                    Text(d, style: .date).font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            Text("Betreff: \(followUp.subject)")
+                                .font(.caption).foregroundStyle(.secondary)
+                            Text(followUp.body.prefix(150) + (followUp.body.count > 150 ? "..." : ""))
+                                .font(.caption2).foregroundStyle(.tertiary)
+                                .lineLimit(3)
+                        }.padding(4)
+                    }
+                }
+
+                // Antworten (Subject-basiert, unabhaengig vom Sender)
+                if !matchedReplies.isEmpty {
+                    ForEach(matchedReplies) { reply in
+                        GroupBox {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Image(systemName: "arrowshape.turn.up.left.fill")
+                                        .foregroundStyle(.green)
+                                    Text("Antwort von: \(reply.from)").font(.caption).bold()
+                                        .foregroundStyle(.green)
+                                    Spacer()
+                                    Text(reply.date).font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text("Betreff: \(reply.subject)")
+                                    .font(.caption).foregroundStyle(.secondary)
+                                Divider()
+                                Text(reply.body.prefix(300) + (reply.body.count > 300 ? "..." : ""))
+                                    .font(.caption)
+                                    .textSelection(.enabled)
+                                    .lineLimit(6)
+                            }.padding(4)
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+        } label: {
+            HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(lead.name).font(.headline)
                     Text(lead.company).font(.subheadline).foregroundStyle(.secondary)
@@ -99,8 +191,6 @@ struct OutboxCard: View {
                         if let sentDate = lead.dateEmailSent {
                             Text(sentDate, style: .date)
                                 .font(.caption2).foregroundStyle(.secondary)
-                            Text(sentDate, style: .time)
-                                .font(.caption2).foregroundStyle(.secondary)
                         }
                     }
                 } else {
@@ -110,35 +200,20 @@ struct OutboxCard: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                 }
-            }
-
-            if let email = lead.draftedEmail {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Betreff: \(email.subject)")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Text(email.body.prefix(150) + (email.body.count > 150 ? "..." : ""))
-                        .font(.caption2).foregroundStyle(.tertiary)
-                        .lineLimit(3)
-                }
-            }
-
-            if isSent {
-                HStack(spacing: 8) {
-                    Label(lead.status.rawValue, systemImage: "envelope.fill")
-                        .font(.caption2)
-                        .padding(.horizontal, 8).padding(.vertical, 2)
-                        .background(Color.green.opacity(0.15))
-                        .cornerRadius(4)
-                    if !lead.replyReceived.isEmpty {
-                        Label("Antwort erhalten", systemImage: "arrowshape.turn.up.left.fill")
+                if !matchedReplies.isEmpty {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrowshape.turn.up.left.fill")
                             .font(.caption2)
-                            .padding(.horizontal, 8).padding(.vertical, 2)
-                            .background(Color.blue.opacity(0.15))
-                            .cornerRadius(4)
+                        Text("\(matchedReplies.count)")
+                            .font(.caption2).bold()
                     }
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Color.green.opacity(0.15))
+                    .foregroundStyle(.green)
+                    .cornerRadius(4)
                 }
             }
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 4)
     }
 }
