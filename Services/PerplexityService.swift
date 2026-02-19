@@ -463,6 +463,94 @@ class PerplexityService {
         return OutboundEmail(subject: dict["subject"] as? String ?? "Following up - \(lead.company)", body: stripCitations(rawBody2))
     }
     
+
+    // MARK: - 7) Newsletter Content generieren
+    func generateNewsletterContent(topic: ContentTopic, industries: [String], apiKey: String) async throws -> (subject: String, htmlBody: String, plainText: String) {
+        let system = """
+        You are a professional newsletter content writer for Harpocrates Corp, a RegTech company specializing in automated compliance monitoring.
+        Write engaging, informative newsletter content that positions Harpocrates as a thought leader.
+        The newsletter should be professional, concise, and provide genuine value to compliance professionals.
+        
+        Return a JSON object with these fields:
+        - subject: Email subject line (compelling, under 60 characters)
+        - htmlBody: Full HTML email body with inline styles, professional formatting, header, content sections, and footer
+        - plainText: Plain text version of the same content
+        
+        HTML FORMATTING RULES:
+        - Use inline CSS styles (no external stylesheets)
+        - Include Harpocrates logo: <img src="https://new.harpocrates-corp.com/harpocrates-logo.png" width="180">
+        - Use brand colors: #1a1a2e (dark), #16213e (navy), #0f3460 (blue), #e94560 (accent red)
+        - Professional layout with header, main content, CTA button, and footer
+        - Mobile-responsive design with max-width: 600px
+        - Include unsubscribe link placeholder: {{UNSUBSCRIBE_URL}}
+        """
+        let industryContext = industries.isEmpty ? "various industries" : industries.joined(separator: ", ")
+        let user = """
+        Write a newsletter about: \(topic.promptPrefix) \(industryContext)
+        
+        Topic category: \(topic.rawValue)
+        Target audience: Compliance officers, regulatory affairs professionals, and risk managers in \(industryContext)
+        
+        Requirements:
+        - 3-4 paragraphs of substantive content
+        - Include 1-2 specific regulatory references or industry insights
+        - End with a clear call-to-action related to Harpocrates compliance solutions
+        - Professional but approachable tone
+        - Include a brief "Regulatory Radar" section with 2-3 bullet points on upcoming regulatory changes
+        
+        Return ONLY valid JSON with: subject, htmlBody, plainText
+        """
+        let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey, maxTokens: 6000)
+        let json = cleanJSON(content)
+        guard let data = json.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return (subject: "Harpocrates Compliance Update", htmlBody: content, plainText: content)
+        }
+        return (
+            subject: dict["subject"] as? String ?? "Harpocrates Compliance Update",
+            htmlBody: dict["htmlBody"] as? String ?? content,
+            plainText: dict["plainText"] as? String ?? content
+        )
+    }
+
+    // MARK: - 8) Social Post generieren
+    func generateSocialPost(topic: ContentTopic, platform: SocialPlatform, industries: [String], apiKey: String) async throws -> SocialPost {
+        let system = """
+        You are a social media content expert for Harpocrates Corp, a RegTech company.
+        Write engaging social media posts that drive engagement and position the company as a compliance thought leader.
+        
+        Return a JSON object with:
+        - content: The post text (LinkedIn: max 3000 chars, Twitter: max 280 chars)
+        - hashtags: Array of relevant hashtags (5-8 for LinkedIn, 3-5 for Twitter)
+        
+        STYLE GUIDELINES:
+        - LinkedIn: Professional, insightful, use line breaks for readability, include a hook in the first line
+        - Twitter: Concise, punchy, include a clear value proposition
+        - Both: Include relevant emoji sparingly, ask engaging questions, provide actionable insights
+        """
+        let industryContext = industries.isEmpty ? "various industries" : industries.joined(separator: ", ")
+        let user = """
+        Write a \(platform.rawValue) post about: \(topic.promptPrefix) \(industryContext)
+        
+        Topic: \(topic.rawValue)
+        Platform: \(platform.rawValue)
+        Company: Harpocrates Corp - Automated Compliance Monitoring
+        
+        Return ONLY valid JSON with: content, hashtags
+        """
+        let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey, maxTokens: 2000)
+        let json = cleanJSON(content)
+        guard let data = json.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return SocialPost(platform: platform, content: content)
+        }
+        let hashtags = (dict["hashtags"] as? [String]) ?? []
+        return SocialPost(
+            platform: platform,
+            content: dict["content"] as? String ?? content,
+            hashtags: hashtags
+        )
+    }
     // MARK: - JSON Helpers
 
     private func stripCitations(_ text: String) -> String {
