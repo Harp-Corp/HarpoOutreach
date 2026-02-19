@@ -9,6 +9,14 @@ struct OutboxView: View {
         }
     }
 
+    var sentEmails: [Lead] {
+        vm.leads.filter {
+            $0.dateEmailSent != nil
+        }.sorted {
+            ($0.dateEmailSent ?? .distantPast) > ($1.dateEmailSent ?? .distantPast)
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -18,8 +26,12 @@ struct OutboxView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Text("\(approvedEmails.count) bereit zum Senden")
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .trailing) {
+                    Text("\(approvedEmails.count) bereit zum Senden")
+                        .foregroundStyle(.secondary)
+                    Text("\(sentEmails.count) gesendet")
+                        .foregroundStyle(.green)
+                }
             }
             .padding(24)
 
@@ -33,7 +45,7 @@ struct OutboxView: View {
 
             Divider()
 
-            if approvedEmails.isEmpty {
+            if approvedEmails.isEmpty && sentEmails.isEmpty {
                 VStack(spacing: 12) {
                     Spacer()
                     Image(systemName: "paperplane.fill")
@@ -45,8 +57,20 @@ struct OutboxView: View {
                 }
             } else {
                 List {
-                    ForEach(approvedEmails) { lead in
-                        OutboxCard(lead: lead, vm: vm)
+                    if !approvedEmails.isEmpty {
+                        Section(header: Text("Bereit zum Senden (\(approvedEmails.count))")) {
+                            ForEach(approvedEmails) { lead in
+                                OutboxCard(lead: lead, vm: vm, isSent: false)
+                            }
+                        }
+                    }
+
+                    if !sentEmails.isEmpty {
+                        Section(header: Text("Gesendet (\(sentEmails.count))")) {
+                            ForEach(sentEmails) { lead in
+                                OutboxCard(lead: lead, vm: vm, isSent: true)
+                            }
+                        }
                     }
                 }
             }
@@ -57,38 +81,64 @@ struct OutboxView: View {
 struct OutboxCard: View {
     let lead: Lead
     @ObservedObject var vm: AppViewModel
+    var isSent: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                VStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(lead.name).font(.headline)
                     Text(lead.company).font(.subheadline).foregroundStyle(.secondary)
-                    Text("An: \(lead.email)").font(.caption)
+                    Text(lead.email).font(.caption).foregroundStyle(.blue)
                 }
                 Spacer()
-                Button {
-                    Task { await vm.sendEmail(for: lead.id) }
-                } label: {
-                    Label("Senden", systemImage: "paperplane.fill")
+                if isSent {
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        if let sentDate = lead.dateEmailSent {
+                            Text(sentDate, style: .date)
+                                .font(.caption2).foregroundStyle(.secondary)
+                            Text(sentDate, style: .time)
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }
+                } else {
+                    Button("Senden") {
+                        Task { await vm.sendEmail(for: lead.id) }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(vm.isLoading)
             }
 
-            Divider()
+            if let email = lead.draftedEmail {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Betreff: \(email.subject)")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text(email.body.prefix(150) + (email.body.count > 150 ? "..." : ""))
+                        .font(.caption2).foregroundStyle(.tertiary)
+                        .lineLimit(3)
+                }
+            }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Betreff:").font(.caption).foregroundStyle(.secondary)
-                Text(lead.draftedEmail?.subject ?? "").font(.body)
-                Text("Vorschau:").font(.caption).foregroundStyle(.secondary)
-                Text(String((lead.draftedEmail?.body ?? "").prefix(200)) + "...")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            if isSent {
+                HStack(spacing: 8) {
+                    Label(lead.status.rawValue, systemImage: "envelope.fill")
+                        .font(.caption2)
+                        .padding(.horizontal, 8).padding(.vertical, 2)
+                        .background(Color.green.opacity(0.15))
+                        .cornerRadius(4)
+                    if !lead.replyReceived.isEmpty {
+                        Label("Antwort erhalten", systemImage: "arrowshape.turn.up.left.fill")
+                            .font(.caption2)
+                            .padding(.horizontal, 8).padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.15))
+                            .cornerRadius(4)
+                    }
+                }
             }
         }
-        .padding(12)
-        .background(Color.blue.opacity(0.05))
-        .cornerRadius(8)
+        .padding(.vertical, 6)
     }
 }
