@@ -81,7 +81,6 @@ class GmailService {
         case 401:
             let errBody = String(data: data, encoding: .utf8) ?? ""
             print("[Gmail] 401 Unauthorized: \(errBody.prefix(200))")
-            // Token bei AuthService invalidieren damit getAccessToken() neu refresht
             await MainActor.run {
                 authService.invalidateAccessToken()
             }
@@ -107,20 +106,31 @@ class GmailService {
         return "sent"
     }
 
-    // MARK: - Antworten pruefen (FIX: sucht jetzt auch gelesene Mails, letzte 30 Tage)
-    func checkReplies(sentToEmails: [String]) async throws -> [GmailMessage] {
+    // MARK: - Antworten pruefen (FIX: nur echte Antworten, eigene Mails ausgeschlossen)
+    func checkReplies(sentToEmails: [String], senderEmail: String) async throws -> [GmailMessage] {
         let token = try await authService.getAccessToken()
         var allReplies: [GmailMessage] = []
         var seenIds = Set<String>()
 
+        // Eigene Email normalisieren fuer Vergleich
+        let ownEmail = senderEmail.lowercased().trimmingCharacters(in: .whitespaces)
+
         for email in sentToEmails {
-            // FIX: Kein is:unread mehr - suche ALLE Mails von diesem Absender der letzten 30 Tage
-            let query = "from:\(email) newer_than:30d"
+            let contactEmail = email.lowercased().trimmingCharacters(in: .whitespaces)
+
+            // Eigene Email-Adresse ueberspringen - das sind keine Antworten
+            if contactEmail == ownEmail {
+                print("[Gmail] Ueberspringe eigene Email: \(email)")
+                continue
+            }
+
+            // FIX: Suche nur Mails VON dem Kontakt AN uns (= echte Antworten)
+            let query = "from:\(email) to:\(senderEmail) newer_than:30d"
             let encodedQuery = query.addingPercentEncoding(
                 withAllowedCharacters: .urlQueryAllowed) ?? query
 
             let urlStr = "\(baseURL)/messages?q=\(encodedQuery)&maxResults=20"
-            print("[Gmail] Pruefe Antworten von: \(email)")
+            print("[Gmail] Pruefe Antworten von: \(email) an: \(senderEmail)")
 
             var request = URLRequest(url: URL(string: urlStr)!)
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -149,12 +159,18 @@ class GmailService {
                 seenIds.insert(msgId)
 
                 if let detail = try? await fetchMessage(id: msgId, token: token) {
+                    // Nochmal pruefen: from darf nicht die eigene Email sein
+                    let fromLower = detail.from.lowercased()
+                    if fromLower.contains(ownEmail) {
+                        print("[Gmail] Ueberspringe eigene Nachricht: \(detail.subject)")
+                        continue
+                    }
                     allReplies.append(detail)
                 }
             }
         }
 
-        print("[Gmail] Insgesamt \(allReplies.count) Antworten gefunden")
+        print("[Gmail] Insgesamt \(allReplies.count) echte Antworten gefunden")
         return allReplies
     }
 
@@ -165,7 +181,6 @@ class GmailService {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         let (data, _) = try await URLSession.shared.data(for: request)
-
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw GmailError.parseFailed
         }
@@ -216,13 +231,11 @@ class GmailService {
             }
         }
 
-        return GmailMessage(id: id, from: from, subject: subject,
-                            date: date, snippet: snippet, body: body)
+        return GmailMessage(id: id, from: from, subject: subject, date: date, snippet: snippet, body: body)
     }
 
     // MARK: - Raw Email bauen (RFC 2822)
-    private func buildRawEmail(to: String, from: String,
-                               subject: String, body: String) -> String {
+    private func buildRawEmail(to: String, from: String, subject: String, body: String) -> String {
         let encodedSubject = "=?UTF-8?B?\(Data(subject.utf8).base64EncodedString())?="
         return """
         From: \(from)\r
