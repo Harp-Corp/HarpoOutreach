@@ -567,4 +567,19 @@ class AppViewModel: ObservableObject {
             statusMessage = "Follow-Up Draft fuer \(lead.name) geloescht"
         }
     }
+
+    // MARK: - Datenbasis bereinigen
+    func purgeAllExcept(companyName: String) {
+        let keepName = companyName.lowercased()
+        let beforeLeads = leads.count
+        let beforeCompanies = companies.count
+        leads = leads.filter { $0.company.lowercased().contains(keepName) }
+        companies = companies.filter { $0.name.lowercased().contains(keepName) }
+        saveLeads()
+        saveCompanies()
+        replies = []
+        let removedLeads = beforeLeads - leads.count
+        let removedCompanies = beforeCompanies - companies.count
+        statusMessage = "Bereinigt: \(removedLeads) Leads und \(removedCompanies) Unternehmen geloescht. Behalten: \(leads.count) Leads, \(companies.count) Unternehmen."
+    }
 }
