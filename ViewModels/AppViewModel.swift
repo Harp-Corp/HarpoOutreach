@@ -458,7 +458,7 @@ class AppViewModel: ObservableObject {
     func addTestCompany() {
         let testCompany = Company(
             name: "Harpocrates Corp",
-            industry: "Financial Services",
+            industry: "K - Finanzdienstleistungen",
             region: "DACH",
             website: "https://harpocrates-corp.com",
             description: "RegTech Startup für Compliance Management",
