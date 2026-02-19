@@ -32,7 +32,7 @@ class GoogleSheetsService {
     // MARK: - URL sicher bauen (ohne doppeltes Encoding)
     private func buildURL(spreadsheetID: String, range: String, action: String = "") -> URL? {
         let cleanID = cleanSpreadsheetID(spreadsheetID)
-        // Range NICHT percent-encoden - Google API erwartet Sheet1!A:I unverändert im Pfad
+        // Range NICHT percent-encoden - Google API erwartet Sheet1!A:I unveraendert im Pfad
         var path = "/v4/spreadsheets/\(cleanID)/values/\(range)"
         if !action.isEmpty {
             path += ":\(action)"
@@ -68,31 +68,38 @@ class GoogleSheetsService {
     }
 
     // MARK: - Email-Event loggen (Tracking)
-    func logEmailEvent(spreadsheetID: String, lead: Lead, emailType: String,
-                       subject: String, body: String, summary: String) async throws {
+    func logEmailEvent(spreadsheetID: String, lead: Lead, emailType: String, subject: String, body: String, summary: String) async throws {
         print("[Sheets] Logge Email-Event: \(emailType) fuer \(lead.name)")
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "dd.MM.yyyy HH:mm"
         let bodyExcerpt = String(body.prefix(300)).replacingOccurrences(of: "\n", with: " ")
         let row: [String] = [
-            dateFormatter.string(from: Date()), emailType,
-            lead.company, lead.name, lead.email,
-            subject, bodyExcerpt, lead.status.rawValue, summary
+            dateFormatter.string(from: Date()),
+            emailType,
+            lead.company,
+            lead.name,
+            lead.email,
+            subject,
+            bodyExcerpt,
+            lead.status.rawValue,
+            summary
         ]
         try await appendRow(spreadsheetID: spreadsheetID, sheet: "Sheet1", values: row)
         print("[Sheets] Email-Event erfolgreich geloggt")
     }
 
     // MARK: - Antwort loggen
-    func logReplyReceived(spreadsheetID: String, lead: Lead,
-                          replySubject: String, replySnippet: String,
-                          replyFrom: String) async throws {
+    func logReplyReceived(spreadsheetID: String, lead: Lead, replySubject: String, replySnippet: String, replyFrom: String) async throws {
         print("[Sheets] Logge Antwort von \(lead.name)")
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "dd.MM.yyyy HH:mm"
         let row: [String] = [
-            dateFormatter.string(from: Date()), "Antwort erhalten",
-            lead.company, lead.name, replyFrom, replySubject,
+            dateFormatter.string(from: Date()),
+            "Antwort erhalten",
+            lead.company,
+            lead.name,
+            replyFrom,
+            replySubject,
             String(replySnippet.prefix(300)).replacingOccurrences(of: "\n", with: " "),
             lead.status.rawValue,
             "Antwort von \(lead.name) (\(lead.company)) erhalten auf Outreach-Email"
@@ -109,21 +116,22 @@ class GoogleSheetsService {
         return result
     }
 
+    // MARK: - Public appendRow for Newsletter Campaign tracking
+    func appendRow(row: [String], sheet: String, accessToken: String, spreadsheetID: String) async throws {
+        try await appendRow(spreadsheetID: spreadsheetID, sheet: sheet, values: row)
+    }
+
     // MARK: - Low-Level: Zeile anhaengen
-    private func appendRow(spreadsheetID: String, sheet: String = "Sheet1",
-                           values: [String]) async throws {
+    func appendRow(spreadsheetID: String, sheet: String = "Sheet1", values: [String]) async throws {
         let token = try await authService.getAccessToken()
         let range = "\(sheet)!A:I"
-
         guard let url = buildURL(spreadsheetID: spreadsheetID, range: range, action: "append") else {
             throw SheetsError.writeFailed("Ungueltige URL fuer Spreadsheet-ID: \(spreadsheetID.prefix(20))")
         }
-
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
         let body: [String: Any] = ["values": [values]]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
@@ -131,7 +139,6 @@ class GoogleSheetsService {
         guard let http = response as? HTTPURLResponse else {
             throw SheetsError.writeFailed("Keine HTTP Response")
         }
-
         if http.statusCode == 401 {
             print("[Sheets] 401 - Token wird erneuert...")
             let freshToken = try await authService.getAccessToken()
@@ -150,7 +157,6 @@ class GoogleSheetsService {
             print("[Sheets] appendRow Retry erfolgreich")
             return
         }
-
         guard (200...299).contains(http.statusCode) else {
             let err = String(data: data, encoding: .utf8) ?? ""
             print("[Sheets] appendRow FEHLER HTTP \(http.statusCode): \(err.prefix(200))")
@@ -162,12 +168,10 @@ class GoogleSheetsService {
     // MARK: - Low-Level: Zeilen lesen
     private func readRow(spreadsheetID: String, range: String) async throws -> [[String]] {
         let token = try await authService.getAccessToken()
-
         guard let url = buildURL(spreadsheetID: spreadsheetID, range: range) else {
             print("[Sheets] readRow: Ungueltige URL")
             return []
         }
-
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
@@ -176,7 +180,6 @@ class GoogleSheetsService {
             print("[Sheets] readRow: Keine HTTP Response")
             return []
         }
-
         if http.statusCode == 401 {
             print("[Sheets] readRow 401 - Token wird erneuert...")
             let freshToken = try await authService.getAccessToken()
@@ -189,16 +192,16 @@ class GoogleSheetsService {
                 return []
             }
             guard let json = try? JSONSerialization.jsonObject(with: retryData) as? [String: Any],
-                  let values = json["values"] as? [[String]] else { return [] }
+                  let values = json["values"] as? [[String]] else {
+                return []
+            }
             return values
         }
-
         guard (200...299).contains(http.statusCode) else {
             let err = String(data: data, encoding: .utf8) ?? ""
             print("[Sheets] readRow FEHLER HTTP \(http.statusCode): \(err.prefix(200))")
             return []
         }
-
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let values = json["values"] as? [[String]] else {
             print("[Sheets] readRow: Keine Daten im Response")
@@ -210,6 +213,7 @@ class GoogleSheetsService {
     // MARK: - Errors
     enum SheetsError: LocalizedError {
         case writeFailed(String)
+
         var errorDescription: String? {
             switch self {
             case .writeFailed(let msg):
