@@ -6,6 +6,11 @@ class PerplexityService {
     
     // MARK: - Generic API Call
     private func callAPI(systemPrompt: String, userPrompt: String, apiKey: String, maxTokens: Int = 4000) async throws -> String {
+                guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw PplxError.apiError(code: 401, message: "Perplexity API Key fehlt. Bitte in Einstellungen eintragen.")
+        }
+        print("[Perplexity] API Call mit Key: \(apiKey.prefix(8))...")
+
         let requestBody = PerplexityRequest(
             model: model,
             messages: [
@@ -25,10 +30,13 @@ class PerplexityService {
         
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw PplxError.invalidResponse }
-        guard http.statusCode == 200 else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw PplxError.apiError(code: http.statusCode, message: String(body.prefix(300)))
-        }
+                guard http.statusCode == 200 else {
+                let body = String(data: data, encoding: .utf8) ?? ""
+                if http.statusCode == 401 {
+                    throw PplxError.apiError(code: 401, message: "Perplexity API Key ungueltig oder abgelaufen. Bitte in Einstellungen pruefen. Key beginnt mit: \(apiKey.prefix(8))...")
+                }
+                throw PplxError.apiError(code: http.statusCode, message: String(body.prefix(300)))
+            }
         let apiResp = try JSONDecoder().decode(PerplexityResponse.self, from: data)
         guard let content = apiResp.choices?[0].message?.content else { throw PplxError.noContent }
         return content
