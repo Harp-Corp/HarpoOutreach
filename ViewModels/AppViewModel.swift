@@ -10,6 +10,9 @@ class AppViewModel: ObservableObject {
     private let pplxService = PerplexityService()
     private lazy var gmailService = GmailService(authService: authService)
     private lazy var sheetsService = GoogleSheetsService(authService: authService)
+    lazy var newsletterService = NewsletterService(gmailService: gmailService, sheetsService: sheetsService)
+    let socialPostService = SocialPostService()
+    var perplexityService: PerplexityService { pplxService }
 
     // MARK: - Constants
     static let senderEmail = "mf@harpocrates-corp.com"
@@ -20,6 +23,8 @@ class AppViewModel: ObservableObject {
     @Published var leads: [Lead] = []
     @Published var replies: [GmailService.GmailMessage] = []
     @Published var sheetData: [[String]] = []
+    @Published var campaigns: [NewsletterCampaign] = []
+    @Published var socialPosts: [SocialPost] = []
 
     @Published var isLoading = false
     @Published var statusMessage = ""
@@ -673,5 +678,59 @@ class AppViewModel: ObservableObject {
         let removedLeads = beforeLeads - leads.count
         let removedCompanies = beforeCompanies - companies.count
         statusMessage = "Bereinigt: \(removedLeads) Leads und \(removedCompanies) Unternehmen geloescht. Behalten: \(leads.count) Leads, \(companies.count) Unternehmen."
+    }
+
+    // MARK: - Newsletter Campaign
+    func sendNewsletterCampaign(at index: Int) async {
+        guard index < campaigns.count else { return }
+        let campaign = campaigns[index]
+        guard campaign.status == .draft else {
+            errorMessage = "Campaign is not in draft status"
+            return
+        }
+        guard authService.isAuthenticated else {
+            errorMessage = "Nicht bei Google angemeldet."
+            return
+        }
+        
+        let recipients = newsletterService.buildRecipientList(
+            from: leads,
+            industries: campaign.targetIndustries,
+            regions: campaign.targetRegions
+        )
+        
+        guard !recipients.isEmpty else {
+            errorMessage = "Keine Empfaenger fuer diese Kampagne gefunden."
+            return
+        }
+        
+        isLoading = true
+        currentStep = "Sende Newsletter an \(recipients.count) Empfaenger..."
+        
+        do {
+            let accessToken = try await authService.getAccessToken()
+            let updatedCampaign = try await newsletterService.sendCampaign(
+                campaign: campaign,
+                recipients: recipients,
+                accessToken: accessToken,
+                senderEmail: Self.senderEmail
+            )
+            campaigns[index] = updatedCampaign
+            
+            // Track in Google Sheets
+            if !settings.spreadsheetID.isEmpty {
+                try? await newsletterService.trackCampaign(
+                    campaign: updatedCampaign,
+                    accessToken: accessToken,
+                    spreadsheetID: settings.spreadsheetID
+                )
+            }
+            
+            currentStep = "Newsletter gesendet an \(updatedCampaign.sentCount) Empfaenger"
+        } catch {
+            errorMessage = "Newsletter senden fehlgeschlagen: \(error.localizedDescription)"
+        }
+        
+        isLoading = false
     }
 }
