@@ -42,6 +42,39 @@ class GmailService {
         }
     }
 
+    // MARK: - Newsletter HTML Email senden
+    func sendEmail(to: String, subject: String, htmlBody: String, accessToken: String, from: String) async throws {
+        let token = try await authService.getAccessToken()
+        print("[Gmail] Sende Newsletter an \(to) von \(from)")
+        let rawEmail = buildHtmlMimeEmail(to: to, from: from, subject: subject, htmlBody: htmlBody)
+
+        let base64Email = rawEmail
+            .data(using: .utf8)!
+            .base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        let payload: [String: String] = ["raw": base64Email]
+        let jsonData = try JSONSerialization.data(withJSONObject: payload)
+        let result = try await executeGmailSend(jsonData: jsonData, token: token)
+        switch result {
+        case .success(_):
+            print("[Gmail] Newsletter gesendet an \(to)")
+        case .needsRetry:
+            let freshToken = try await authService.getAccessToken()
+            let retryResult = try await executeGmailSend(jsonData: jsonData, token: freshToken)
+            switch retryResult {
+            case .success(_):
+                print("[Gmail] Newsletter Retry erfolgreich an \(to)")
+            case .needsRetry:
+                await MainActor.run { authService.logout() }
+                throw GmailError.authExpired
+            case .failure(let error): throw error
+            }
+        case .failure(let error): throw error
+        }
+    }
+
     // MARK: - Gmail API Ausfuehrung
     private enum SendResult {
         case success(Data)
@@ -96,12 +129,9 @@ class GmailService {
                 .replacingOccurrences(of: "AW: ", with: "")
                 .replacingOccurrences(of: "Fwd: ", with: "")
                 .trimmingCharacters(in: .whitespaces)
-
             guard !cleanSubject.isEmpty else { continue }
-
             let quotedSubject = "\"" + cleanSubject + "\""
             let query = "in:inbox subject:\(quotedSubject) -from:me newer_than:90d"
-
             let msgs = try await searchGmail(query: query, token: token, maxResults: 10)
             for msg in msgs {
                 guard !seenIds.contains(msg.id) else { continue }
@@ -131,7 +161,6 @@ class GmailService {
                 }
             }
         }
-
         print("[Gmail] Total: \(allReplies.count) Antworten")
         return allReplies
     }
@@ -143,19 +172,15 @@ class GmailService {
             URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "maxResults", value: "\(maxResults)")
         ]
-
         guard let url = components.url else {
             print("[Gmail] Ungueltige URL fuer Query: \(query)")
             return []
         }
-
         print("[Gmail] Suche mit Query: \(query)")
-
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         let (data, response) = try await URLSession.shared.data(for: request)
-
         if let http = response as? HTTPURLResponse, http.statusCode == 401 {
             let freshToken = try await authService.getAccessToken()
             var retryRequest = URLRequest(url: url)
@@ -166,13 +191,11 @@ class GmailService {
             }
             return []
         }
-
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
             let errBody = String(data: data, encoding: .utf8) ?? ""
             print("[Gmail] Suche fehlgeschlagen: \(errBody.prefix(200))")
             return []
         }
-
         return try await parseMessageList(data: data, token: token)
     }
 
@@ -196,14 +219,11 @@ class GmailService {
         var request = URLRequest(url: URL(string: "\(baseURL)/messages/\(id)?format=full")!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         let (data, _) = try await URLSession.shared.data(for: request)
-
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw GmailError.parseFailed
         }
-
         let payload = json["payload"] as? [String: Any] ?? [:]
         let headers = payload["headers"] as? [[String: String]] ?? []
-
         var from = "", subject = "", date = ""
         for header in headers {
             switch header["name"]?.lowercased() {
@@ -213,10 +233,8 @@ class GmailService {
             default: break
             }
         }
-
         let snippet = json["snippet"] as? String ?? ""
         var body = snippet
-
         if let parts = payload["parts"] as? [[String: Any]] {
             for part in parts {
                 if let mime = part["mimeType"] as? String, mime == "text/plain",
@@ -237,7 +255,6 @@ class GmailService {
                 body = text
             }
         }
-
         return GmailMessage(id: id, from: from, subject: subject, date: date, snippet: snippet, body: body)
     }
 
@@ -246,51 +263,35 @@ class GmailService {
         let encodedSubject = "=?UTF-8?B?\(Data(subject.utf8).base64EncodedString())?="
         let boundary = "HarpoMIME_\(UUID().uuidString)"
 
-        // Body-Text in HTML-Paragraphen
         let htmlParagraphs = body
             .components(separatedBy: "\n\n")
             .map { p in
                 let lines = p.components(separatedBy: "\n").joined(separator: "<br>")
-                return "<p style=\"margin:0 0 14px 0;line-height:1.7;color:#2d3748;font-size:14px;font-family:Arial,Helvetica,sans-serif;\">\(lines)</p>"
+                return "<p style=\"margin:0 0 12px 0;line-height:1.6;color:#333333;\">\(lines)</p>"
             }
             .joined(separator: "\n")
 
         let logoURL = "https://new.harpocrates-corp.com/harpocrates-logo.png"
 
-        // Professionelle HTML-Visitenkarte mit Logo
         let html = """
-        <!DOCTYPE html>
-        <html>
-        <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-        <body style="margin:0;padding:0;background-color:#f7f7f7;">
-        <div style="max-width:600px;margin:0 auto;padding:24px;background-color:#ffffff;">
+        <!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head>
+        <body style=\"font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#333;margin:0;padding:20px;\">
         \(htmlParagraphs)
-        <table cellpadding="0" cellspacing="0" border="0" style="margin-top:32px;border-top:3px solid #1a365d;padding-top:20px;width:100%;">
-        <tr>
-        <td style="vertical-align:top;padding-right:18px;width:60px;">
-        <img src="\(logoURL)" alt="Harpocrates" width="52" height="52" style="display:block;border:0;border-radius:6px;">
-        </td>
-        <td style="vertical-align:top;font-family:Arial,Helvetica,sans-serif;">
-        <p style="margin:0 0 2px 0;font-size:16px;font-weight:bold;color:#1a365d;letter-spacing:0.3px;">Martin F\u{00F6}rster</p>
-        <p style="margin:0 0 10px 0;font-size:12px;color:#4a5568;text-transform:uppercase;letter-spacing:0.8px;">CEO & Founder</p>
-        <p style="margin:0 0 3px 0;font-size:13px;font-weight:600;color:#2d3748;">Harpocrates Solutions GmbH</p>
-        <table cellpadding="0" cellspacing="0" border="0" style="margin-top:6px;">
-        <tr><td style="padding:2px 8px 2px 0;font-size:12px;color:#718096;font-family:Arial,Helvetica,sans-serif;">Tel</td><td style="padding:2px 0;font-size:12px;color:#2d3748;font-family:Arial,Helvetica,sans-serif;">+49 172 6348377</td></tr>
-        <tr><td style="padding:2px 8px 2px 0;font-size:12px;color:#718096;font-family:Arial,Helvetica,sans-serif;">Mail</td><td style="padding:2px 0;font-size:12px;font-family:Arial,Helvetica,sans-serif;"><a href="mailto:mf@harpocrates-corp.com" style="color:#2b6cb0;text-decoration:none;">mf@harpocrates-corp.com</a></td></tr>
-        <tr><td style="padding:2px 8px 2px 0;font-size:12px;color:#718096;font-family:Arial,Helvetica,sans-serif;">Web</td><td style="padding:2px 0;font-size:12px;font-family:Arial,Helvetica,sans-serif;"><a href="https://www.harpocrates-corp.com" style="color:#2b6cb0;text-decoration:none;">www.harpocrates-corp.com</a></td></tr>
-        </table>
-        <p style="margin:6px 0 0 0;font-size:11px;color:#a0aec0;font-family:Arial,Helvetica,sans-serif;">Berlin, Germany</p>
-        </td></tr>
-        </table>
-        </div>
-        <div style="max-width:600px;margin:0 auto;padding:12px 24px;">
-        <p style="margin:0;font-size:10px;color:#a0aec0;font-family:Arial,Helvetica,sans-serif;">
-        <a href="mailto:mf@harpocrates-corp.com?subject=Unsubscribe&body=Bitte%20entfernen%20Sie%20mich%20von%20Ihrer%20Mailingliste."
-           style="color:#a0aec0;text-decoration:underline;">Abmelden / Unsubscribe</a>
-        </p>
-        </div>
-        </body>
-        </html>
+        <table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"margin-top:24px;border-top:2px solid #1a1a2e;padding-top:16px;\">
+        <tr><td style=\"padding-right:16px;vertical-align:top;\"><img src=\"\(logoURL)\" alt=\"Harpocrates\" width=\"80\" style=\"border-radius:8px;\"></td>
+        <td style=\"vertical-align:top;font-family:'Helvetica Neue',Arial,sans-serif;\">
+        <strong style=\"font-size:14px;color:#1a1a2e;\">Martin F\u{00F6}rster</strong><br>
+        <span style=\"font-size:12px;color:#666;\">CEO & Founder</span><br>
+        <span style=\"font-size:12px;color:#666;\">Harpocrates Solutions GmbH</span><br>
+        <span style=\"font-size:11px;color:#999;\">---</span><br>
+        <span style=\"font-size:12px;color:#666;\">Tel&nbsp; +49 172 6348377</span><br>
+        <span style=\"font-size:12px;color:#666;\">Mail&nbsp; <a href=\"mailto:mf@harpocrates-corp.com\" style=\"color:#0f3460;\">mf@harpocrates-corp.com</a></span><br>
+        <span style=\"font-size:12px;color:#666;\">Web&nbsp; <a href=\"https://www.harpocrates-corp.com\" style=\"color:#0f3460;\">www.harpocrates-corp.com</a></span><br>
+        <span style=\"font-size:11px;color:#999;\">Berlin, Germany</span>
+        </td></tr></table>
+        <p style=\"margin-top:20px;font-size:10px;color:#999;\">
+        <a href=\"mailto:mf@harpocrates-corp.com?subject=Unsubscribe&body=Bitte%20entfernen%20Sie%20mich%20von%20Ihrer%20Mailingliste.\" style=\"color:#999;\">Abmelden / Unsubscribe</a></p>
+        </body></html>
         """
 
         let plainB64 = Data(body.utf8).base64EncodedString()
@@ -313,7 +314,44 @@ class GmailService {
         mime += "\r\n"
         mime += "\(htmlB64)\r\n"
         mime += "--\(boundary)--"
+        return mime
+    }
 
+    // MARK: - Newsletter HTML MIME Builder
+    private func buildHtmlMimeEmail(to: String, from: String, subject: String, htmlBody: String) -> String {
+        let encodedSubject = "=?UTF-8?B?\(Data(subject.utf8).base64EncodedString())?="
+        let boundary = "HarpoNewsletter_\(UUID().uuidString)"
+
+        // Strip HTML tags for plain text version
+        let plainText = htmlBody
+            .replacingOccurrences(of: "<br>", with: "\n")
+            .replacingOccurrences(of: "<br/>", with: "\n")
+            .replacingOccurrences(of: "<br />", with: "\n")
+            .replacingOccurrences(of: "</p>", with: "\n\n")
+            .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let plainB64 = Data(plainText.utf8).base64EncodedString()
+        let htmlB64 = Data(htmlBody.utf8).base64EncodedString()
+
+        var mime = "From: Harpocrates Corp <\(from)>\r\n"
+        mime += "To: \(to)\r\n"
+        mime += "Subject: \(encodedSubject)\r\n"
+        mime += "MIME-Version: 1.0\r\n"
+        mime += "Content-Type: multipart/alternative; boundary=\"\(boundary)\"\r\n"
+        mime += "List-Unsubscribe: <mailto:mf@harpocrates-corp.com?subject=Unsubscribe>\r\n"
+        mime += "\r\n"
+        mime += "--\(boundary)\r\n"
+        mime += "Content-Type: text/plain; charset=\"UTF-8\"\r\n"
+        mime += "Content-Transfer-Encoding: base64\r\n"
+        mime += "\r\n"
+        mime += "\(plainB64)\r\n"
+        mime += "--\(boundary)\r\n"
+        mime += "Content-Type: text/html; charset=\"UTF-8\"\r\n"
+        mime += "Content-Transfer-Encoding: base64\r\n"
+        mime += "\r\n"
+        mime += "\(htmlB64)\r\n"
+        mime += "--\(boundary)--"
         return mime
     }
 
@@ -334,9 +372,12 @@ class GmailService {
 
         var errorDescription: String? {
             switch self {
-            case .sendFailed(let msg): return "Email senden fehlgeschlagen: \(String(msg.prefix(200)))"
-            case .authExpired: return "Google-Anmeldung abgelaufen. Bitte erneut anmelden."
-            case .parseFailed: return "Gmail Nachricht konnte nicht gelesen werden"
+            case .sendFailed(let msg):
+                return "Email senden fehlgeschlagen: \(String(msg.prefix(200)))"
+            case .authExpired:
+                return "Google-Anmeldung abgelaufen. Bitte erneut anmelden."
+            case .parseFailed:
+                return "Gmail Nachricht konnte nicht gelesen werden"
             }
         }
     }
