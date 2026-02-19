@@ -93,7 +93,7 @@ class GmailService {
         return "sent"
     }
 
-    // MARK: - Antworten pruefen (Subject-basiert)
+    // MARK: - Antworten pruefen (Subject-basiert + from-Filter)
     func checkReplies(sentSubjects: [String]) async throws -> [GmailMessage] {
         let token = try await authService.getAccessToken()
         var allReplies: [GmailMessage] = []
@@ -103,12 +103,15 @@ class GmailService {
             let cleanSubject = subject
                 .replacingOccurrences(of: "Re: ", with: "")
                 .replacingOccurrences(of: "RE: ", with: "")
+                .replacingOccurrences(of: "Aw: ", with: "")
+                .replacingOccurrences(of: "AW: ", with: "")
                 .replacingOccurrences(of: "Fwd: ", with: "")
                 .trimmingCharacters(in: .whitespaces)
 
             guard !cleanSubject.isEmpty else { continue }
 
-            let query = "in:inbox subject:\"\(cleanSubject)\" newer_than:30d"
+            // Verwende -from:me um eigene gesendete Emails auszuschliessen
+            let query = "in:inbox subject:\"\(cleanSubject)\" -from:me newer_than:30d"
             let encodedQuery = query.addingPercentEncoding(
                 withAllowedCharacters: .urlQueryAllowed) ?? query
             let urlStr = "\(baseURL)/messages?q=\(encodedQuery)&maxResults=10"
@@ -116,7 +119,8 @@ class GmailService {
             print("[Gmail] Suche Antworten mit Subject: \(cleanSubject)")
 
             var request = URLRequest(url: URL(string: urlStr)!)
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.setValue("Bearer \(token)",
+                           forHTTPHeaderField: "Authorization")
 
             let (data, response) = try await URLSession.shared.data(for: request)
             if let http = response as? HTTPURLResponse, http.statusCode != 200 {
@@ -139,10 +143,14 @@ class GmailService {
                 seenIds.insert(msgId)
 
                 if let detail = try? await fetchMessage(id: msgId, token: token) {
-                    let subjectLower = detail.subject.lowercased()
-                    if subjectLower.contains("re:") || subjectLower.contains("aw:") {
-                        allReplies.append(detail)
+                    // Eigene Emails sicherheitshalber auch hier nochmal filtern
+                    let fromLower = detail.from.lowercased()
+                    if fromLower.contains("mf@harpocrates-corp.com") {
+                        print("[Gmail] Ueberspringe eigene Email von: \(detail.from)")
+                        continue
                     }
+                    allReplies.append(detail)
+                    print("[Gmail] Antwort gefunden von: \(detail.from) - \(detail.subject)")
                 }
             }
         }
@@ -155,7 +163,8 @@ class GmailService {
     private func fetchMessage(id: String, token: String) async throws -> GmailMessage {
         let urlStr = "\(baseURL)/messages/\(id)?format=full"
         var request = URLRequest(url: URL(string: urlStr)!)
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(token)",
+                       forHTTPHeaderField: "Authorization")
 
         let (data, _) = try await URLSession.shared.data(for: request)
 
@@ -180,8 +189,8 @@ class GmailService {
         }
 
         let snippet = json["snippet"] as? String ?? ""
-        var body = snippet
 
+        var body = snippet
         if let parts = payload["parts"] as? [[String: Any]] {
             for part in parts {
                 if let mimeType = part["mimeType"] as? String,
@@ -206,11 +215,13 @@ class GmailService {
             }
         }
 
-        return GmailMessage(id: id, from: from, subject: subject, date: date, snippet: snippet, body: body)
+        return GmailMessage(id: id, from: from, subject: subject,
+                           date: date, snippet: snippet, body: body)
     }
 
     // MARK: - Professionelle HTML Email bauen (RFC 2822 MIME)
-    private func buildHtmlEmail(to: String, from: String, subject: String, body: String) -> String {
+    private func buildHtmlEmail(to: String, from: String,
+                                subject: String, body: String) -> String {
         let encodedSubject = "=?UTF-8?B?\(Data(subject.utf8).base64EncodedString())?="
 
         // Body-Text in HTML Paragraphen umwandeln
@@ -219,55 +230,27 @@ class GmailService {
             .map { paragraph in
                 let lines = paragraph
                     .components(separatedBy: "\n")
-                    .joined(separator: "<br>")
-                return "<p style=\"margin:0 0 12px 0;line-height:1.6;\">\(lines)</p>"
+                    .joined(separator: "<br>\n")
+                return "<p>\(lines)</p>"
             }
             .joined(separator: "\n")
 
         let htmlBody = """
         <!DOCTYPE html>
-        <html>
-        <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="margin:0;padding:0;background-color:#f5f5f5;font-family:Arial,Helvetica,sans-serif;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5;">
-        <tr><td align="center" style="padding:20px 0;">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;">
-
-        <!-- Logo Header -->
-        <tr><td style="padding:24px 32px 16px 32px;border-bottom:2px solid #1a1a2e;">
-        <img src="https://new.harpocrates-corp.com/harpocrates-logo.png" alt="Harpocrates" width="180" style="display:block;max-width:180px;height:auto;">
-        </td></tr>
-
-        <!-- Email Body -->
-        <tr><td style="padding:32px;color:#333333;font-size:15px;">
+        <html><head><meta charset="UTF-8"></head>
+        <body style="font-family: -apple-system, Arial, sans-serif; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="margin-bottom: 30px;">
         \(htmlParagraphs)
-        </td></tr>
-
-        <!-- Footer -->
-        <tr><td style="padding:24px 32px;background-color:#1a1a2e;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-        <tr><td style="color:#ffffff;font-size:13px;line-height:1.8;">
-        <strong>Harpocrates Solutions GmbH&reg;</strong><br>
-        Berlin | Germany | Mobile: +49 172 6348377<br>
-        <a href="mailto:mf@harpocrates-corp.com" style="color:#8cb4ff;text-decoration:none;">mf@harpocrates-corp.com</a><br>
-        <a href="https://www.harpocrates-corp.com" style="color:#8cb4ff;text-decoration:none;">www.harpocrates-corp.com</a>
-        </td></tr>
-        </table>
-        </td></tr>
-
-        <!-- Unsubscribe -->
-        <tr><td align="center" style="padding:16px 32px;background-color:#f0f0f0;">
-        <a href="mailto:mf@harpocrates-corp.com?subject=Unsubscribe&body=Bitte%20entfernen%20Sie%20mich%20von%20Ihrer%20Mailingliste." style="color:#999999;font-size:11px;text-decoration:underline;">Abmelden / Unsubscribe</a>
-        </td></tr>
-
-        </table>
-        </td></tr>
-        </table>
-        </body>
-        </html>
+        </div>
+        <div style="border-top: 1px solid #e0e0e0; padding-top: 15px; margin-top: 30px; font-size: 12px; color: #666;">
+        <p style="margin: 0;"><strong>Harpocrates Solutions GmbH\u{00AE}</strong></p>
+        <p style="margin: 2px 0;">Berlin &middot; Germany</p>
+        <p style="margin: 2px 0;">Mobile: +49 172 6348377</p>
+        <p style="margin: 2px 0;"><a href="mailto:mf@harpocrates-corp.com" style="color: #0066cc;">mf@harpocrates-corp.com</a></p>
+        <p style="margin: 2px 0;"><a href="https://www.harpocrates-corp.com" style="color: #0066cc;">www.harpocrates-corp.com</a></p>
+        <p style="margin-top: 10px; font-size: 10px;"><a href="mailto:mf@harpocrates-corp.com?subject=Unsubscribe&body=Bitte%20entfernen%20Sie%20mich%20von%20Ihrer%20Mailingliste." style="color: #999;">Abmelden / Unsubscribe</a></p>
+        </div>
+        </body></html>
         """
 
         let boundary = "HarpoMIME_\(UUID().uuidString)"
