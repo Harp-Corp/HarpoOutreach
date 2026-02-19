@@ -421,15 +421,43 @@ class PerplexityService {
         return OutboundEmail(subject: dict["subject"] as? String ?? "Compliance Solutions for \(lead.company)", body: stripCitations(rawBody))
     }
     
-    // MARK: - 6) Follow-up Email erstellen
-    func draftFollowUp(lead: Lead, originalEmail: String, senderName: String, apiKey: String) async throws -> OutboundEmail {
-        let system = "You write professional follow-up emails. Keep it brief and add new value. Return ONLY JSON with subject and body."
-        let user = "Follow-up for \(lead.name) at \(lead.company). Original subject was about compliance. Under 100 words. Return JSON: subject, body"
+// MARK: - 6) Follow-up Email erstellen (mit Konversationshistorie)
+    func draftFollowUp(lead: Lead, originalEmail: String, followUpEmail: String = "", replyReceived: String = "", senderName: String, apiKey: String) async throws -> OutboundEmail {
+        let system = """
+        You write professional follow-up emails for B2B outreach. You have access to the full conversation history.
+        Based on the previous emails and any replies received, write a follow-up that:
+        - References the previous conversation naturally
+        - If there was a reply: acknowledge it and continue the dialogue
+        - If there was no reply: add new value and a different angle
+        - Summarizes key points from previous emails briefly
+        - Keeps it under 150 words, professional, value-focused
+        - Do NOT repeat the same pitch. Bring fresh insights.
+        Return ONLY a valid JSON object with: subject, body
+        """
+        var conversationContext = "Previous email sent to \(lead.name) at \(lead.company):\n\(originalEmail)"
+        if !followUpEmail.isEmpty {
+            conversationContext += "\n\nPrevious follow-up sent:\n\(followUpEmail)"
+        }
+        if !replyReceived.isEmpty {
+            conversationContext += "\n\nReply received from \(lead.name):\n\(replyReceived)"
+        }
+        let user = """
+        Write a follow-up email from \(senderName) at Harpocrates Corp.
+        
+        CONVERSATION HISTORY:
+        \(conversationContext)
+        
+        Based on the above conversation, write the next follow-up email.
+        If a reply was received, respond to it directly.
+        If no reply was received, try a different angle to provide value.
+        
+        Return JSON with: subject, body
+        """
         let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey)
         let json = cleanJSON(content)
         guard let data = json.data(using: .utf8),
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return OutboundEmail(subject: "Following up", body: content)
+            return OutboundEmail(subject: "Following up - \(lead.company)", body: content)
         }
         let rawBody2 = dict["body"] as? String ?? content
         return OutboundEmail(subject: dict["subject"] as? String ?? "Following up - \(lead.company)", body: stripCitations(rawBody2))
