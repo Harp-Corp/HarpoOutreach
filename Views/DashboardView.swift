@@ -58,7 +58,6 @@ struct DashboardStatusBanner: View {
                 .background(.blue.opacity(0.1))
                 .cornerRadius(8)
             }
-
             if !vm.errorMessage.isEmpty {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -89,16 +88,11 @@ struct DashboardKPIGrid: View {
             GridItem(.flexible()),
             GridItem(.flexible())
         ], spacing: 16) {
-            StatCard(title: "Identifiziert", value: "\(vm.statsIdentified)",
-                     icon: "person.badge.plus", color: .gray)
-            StatCard(title: "Verifiziert", value: "\(vm.statsVerified)",
-                     icon: "checkmark.shield", color: .orange)
-            StatCard(title: "Gesendet", value: "\(vm.statsSent)",
-                     icon: "paperplane", color: .blue)
-            StatCard(title: "Antworten", value: "\(vm.statsReplied)",
-                     icon: "envelope.open", color: .green)
-            StatCard(title: "Follow-Ups", value: "\(vm.statsFollowUp)",
-                     icon: "arrow.uturn.forward", color: .purple)
+            StatCard(title: "Identifiziert", value: "\(vm.statsIdentified)", icon: "person.badge.plus", color: .gray)
+            StatCard(title: "Verifiziert", value: "\(vm.statsVerified)", icon: "checkmark.shield", color: .orange)
+            StatCard(title: "Gesendet", value: "\(vm.statsSent)", icon: "paperplane", color: .blue)
+            StatCard(title: "Antworten", value: "\(vm.statsReplied)", icon: "envelope.open", color: .green)
+            StatCard(title: "Follow-Ups", value: "\(vm.statsFollowUp)", icon: "arrow.uturn.forward", color: .purple)
         }
     }
 }
@@ -128,6 +122,7 @@ struct DashboardIndustryRow: View {
         let count = leads.count
         let total = max(Double(count), 1)
         let matched = leads.filter { _ in false }.count
+
         HStack {
             Label(industry.rawValue, systemImage: industry.icon)
                 .frame(width: 180, alignment: .leading)
@@ -192,6 +187,7 @@ struct DashboardLeadRow: View {
         case .emailSent, .followUpDrafted, .followUpSent: return .purple
         case .replied: return .green
         case .contacted, .followedUp, .qualified, .converted, .notInterested: return .gray
+        case .doNotContact: return .red
         case .closed: return .red
         }
     }
