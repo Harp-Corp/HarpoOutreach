@@ -243,7 +243,7 @@ class AppViewModel: ObservableObject {
             leads[idx].status = .emailSent
             saveLeads()
             if !settings.spreadsheetID.isEmpty {
-                try? await sheetsService.logLead(spreadsheetID: settings.spreadsheetID, lead: leads[idx])
+                try? await sheetsService.logEmailEvent(spreadsheetID: settings.spreadsheetID, lead: leads[idx], emailType: "Erstversand", subject: email.subject, body: email.body, summary: "Outreach-Email an \(leads[idx].name) (\(leads[idx].company)) gesendet")
             }
             currentStep = "Email gesendet an \(leads[idx].email)"
         } catch {
@@ -283,7 +283,7 @@ class AppViewModel: ObservableObject {
                     leads[idx].replyReceived = reply.snippet
                     leads[idx].status = .replied
                     if !settings.spreadsheetID.isEmpty {
-                        try? await sheetsService.updateLead(spreadsheetID: settings.spreadsheetID, lead: leads[idx])
+                        try? await sheetsService.logReplyReceived(spreadsheetID: settings.spreadsheetID, lead: leads[idx], replySubject: reply.subject, replySnippet: reply.snippet, replyFrom: reply.from)
                     }
                 }
             }
@@ -354,7 +354,7 @@ class AppViewModel: ObservableObject {
             leads[idx].status = .followUpSent
             saveLeads()
             if !settings.spreadsheetID.isEmpty {
-                try? await sheetsService.updateLead(spreadsheetID: settings.spreadsheetID, lead: leads[idx])
+                try? await sheetsService.logEmailEvent(spreadsheetID: settings.spreadsheetID, lead: leads[idx], emailType: "Follow-Up", subject: followUp.subject, body: followUp.body, summary: "Follow-Up an \(leads[idx].name) (\(leads[idx].company)) gesendet")
             }
             currentStep = "Follow-Up gesendet an \(leads[idx].email)"
         } catch {
@@ -480,6 +480,9 @@ class AppViewModel: ObservableObject {
                 leads[index].dateEmailSent = Date()
                 leads[index].draftedEmail?.sentDate = Date()
                 saveLeads()
+                                    if !settings.spreadsheetID.isEmpty {
+                        try? await sheetsService.logEmailEvent(spreadsheetID: settings.spreadsheetID, lead: leads[index], emailType: "Erstversand", subject: draft.subject, body: draft.body, summary: "Outreach-Email an \(lead.name) (\(lead.company)) gesendet")
+                    }
             }
             statusMessage = "Email an \(lead.name) erfolgreich gesendet"
             print("[SendEmail] Erfolgreich gesendet an \(lead.email)")
