@@ -627,5 +627,28 @@ class AppViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Follow-Up Draft Management (gleicher Flow wie erste Email)
+    func updateFollowUpDraft(for lead: Lead, subject: String, body: String) {
+        if let index = leads.firstIndex(where: { $0.id == lead.id }) {
+            leads[index].followUpEmail = OutboundEmail(
+                id: lead.followUpEmail?.id ?? UUID(),
+                subject: subject,
+                body: body,
+                isApproved: true
+            )
+            saveLeads()
+            statusMessage = "Follow-Up Draft fuer \(lead.name) aktualisiert"
+        }
+    }
+
+    func deleteFollowUpDraft(for lead: Lead) {
+        if let index = leads.firstIndex(where: { $0.id == lead.id }) {
+            leads[index].followUpEmail = nil
+            leads[index].status = .emailSent
+            saveLeads()
+            statusMessage = "Follow-Up Draft fuer \(lead.name) geloescht"
+        }
+    }
+
 }
 
