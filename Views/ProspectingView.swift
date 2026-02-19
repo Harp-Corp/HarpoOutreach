@@ -167,7 +167,7 @@ struct LeadRowProspecting: View {
                         Text(lead.email).font(.caption).bold()
                         if lead.emailVerified || lead.isManuallyCreated {
                             HStack(spacing: 2) {
-                                Image(systemName: lead.isManuallyCreated ? "person.badge.checkmark" : "checkmark.seal.fill").foregroundStyle(.green)
+                                Image(systemName: lead.isManuallyCreated ? "person.crop.circle.badge.checkmark" : "checkmark.seal.fill").foregroundStyle(.green)
                                 Text(lead.isManuallyCreated ? "Manuell" : "Verifiziert").font(.caption2).bold().foregroundStyle(.green)
                             }.padding(.horizontal, 6).padding(.vertical, 2).background(Color.green.opacity(0.15)).cornerRadius(4)
                         } else {
