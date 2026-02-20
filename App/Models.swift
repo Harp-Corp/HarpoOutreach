@@ -287,6 +287,8 @@ struct AppSettings: Codable {
     var selectedIndustries: [String]
     var selectedRegions: [String]
     var linkedInAccessToken: String
+    var linkedInClientID: String
+    var linkedInClientSecret: String
     var linkedInOrgId: String
 
     init() {
@@ -299,6 +301,8 @@ struct AppSettings: Codable {
         selectedIndustries = Industry.allCases.map { $0.rawValue }
         selectedRegions = Region.allCases.map { $0.rawValue }
         linkedInAccessToken = ""
+        linkedInClientID = ""
+        linkedInClientSecret = ""
         linkedInOrgId = "42109305"
     }
 }
