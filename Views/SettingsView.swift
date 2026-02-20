@@ -17,7 +17,7 @@ struct SettingsView: View {
                 senderSection
                 industrySection
                 regionSection
-                                    dataManagementSection
+                dataManagementSection
 
                 Button("Einstellungen speichern") {
                     vm.saveSettings()
@@ -47,8 +47,11 @@ struct SettingsView: View {
     private var linkedInSection: some View {
         GroupBox("LinkedIn") {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Access Token:").font(.caption).foregroundStyle(.secondary)
-                SecureField("LinkedIn Access Token", text: $vm.settings.linkedInAccessToken)
+                Text("Client ID:").font(.caption).foregroundStyle(.secondary)
+                TextField("LinkedIn Client ID", text: $vm.settings.linkedInClientID)
+                    .textFieldStyle(.roundedBorder)
+                Text("Client Secret:").font(.caption).foregroundStyle(.secondary)
+                SecureField("LinkedIn Client Secret", text: $vm.settings.linkedInClientSecret)
                     .textFieldStyle(.roundedBorder)
                 Text("Organization ID:").font(.caption).foregroundStyle(.secondary)
                 TextField("z.B. 42109305", text: $vm.settings.linkedInOrgId)
@@ -56,34 +59,37 @@ struct SettingsView: View {
 
                 Divider()
 
+                HStack {
+                    if vm.linkedInAuthService.isAuthenticated {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("Verbunden: \(vm.linkedInAuthService.userName)")
+                        Spacer()
+                        Button("Abmelden") { vm.linkedInAuthService.logout() }
+                    } else {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.red)
+                        Text("Nicht verbunden")
+                        Spacer()
+                        Button("LinkedIn verbinden") {
+                            vm.saveSettings()
+                            vm.linkedInAuthService.startOAuthFlow()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.blue)
+                    }
+                }
+
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("So erhaeltst du einen Access Token:")
+                    Text("Redirect URI fuer LinkedIn App:")
                         .font(.caption).bold()
-                    Text("1. Gehe zu linkedin.com/developers und erstelle eine App")
+                    Text("http://127.0.0.1:8766/callback")
                         .font(.caption).foregroundStyle(.secondary)
-                    Text("2. Beantrage die Berechtigung 'w_organization_social'")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Text("3. Generiere einen Access Token im OAuth Token Tool")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .textSelection(.enabled)
                     Link("LinkedIn Developer Portal",
                          destination: URL(string: "https://www.linkedin.com/developers/apps")!)
                         .font(.caption)
                 }
-
-                // Status Indicator
-                HStack {
-                    if !vm.settings.linkedInAccessToken.isEmpty {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        Text("Token konfiguriert")
-                    } else {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.red)
-                        Text("Kein Token hinterlegt")
-                    }
-                    Spacer()
-                }
-                .font(.caption)
             }
             .padding(8)
         }
