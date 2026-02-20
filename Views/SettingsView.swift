@@ -11,6 +11,7 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 perplexitySection
+                linkedInSection
                 googleSection
                 sheetSection
                 senderSection
@@ -37,6 +38,52 @@ struct SettingsView: View {
                 Link("Key holen: settings.perplexity.ai/api",
                      destination: URL(string: "https://settings.perplexity.ai/api")!)
                     .font(.caption)
+            }
+            .padding(8)
+        }
+    }
+
+    // MARK: - LinkedIn
+    private var linkedInSection: some View {
+        GroupBox("LinkedIn") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Access Token:").font(.caption).foregroundStyle(.secondary)
+                SecureField("LinkedIn Access Token", text: $vm.settings.linkedInAccessToken)
+                    .textFieldStyle(.roundedBorder)
+                Text("Organization ID:").font(.caption).foregroundStyle(.secondary)
+                TextField("z.B. 42109305", text: $vm.settings.linkedInOrgId)
+                    .textFieldStyle(.roundedBorder)
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("So erhaeltst du einen Access Token:")
+                        .font(.caption).bold()
+                    Text("1. Gehe zu linkedin.com/developers und erstelle eine App")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text("2. Beantrage die Berechtigung 'w_organization_social'")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text("3. Generiere einen Access Token im OAuth Token Tool")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Link("LinkedIn Developer Portal",
+                         destination: URL(string: "https://www.linkedin.com/developers/apps")!)
+                        .font(.caption)
+                }
+
+                // Status Indicator
+                HStack {
+                    if !vm.settings.linkedInAccessToken.isEmpty {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("Token konfiguriert")
+                    } else {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.red)
+                        Text("Kein Token hinterlegt")
+                    }
+                    Spacer()
+                }
+                .font(.caption)
             }
             .padding(8)
         }
@@ -159,7 +206,7 @@ struct SettingsView: View {
         )
     }
 
-        // MARK: - Daten-Management
+    // MARK: - Daten-Management
     @State private var purgeConfirmation = false
 
     private var dataManagementSection: some View {
@@ -193,4 +240,3 @@ struct SettingsView: View {
         }
     }
 }
-
