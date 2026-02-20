@@ -250,21 +250,6 @@ struct IntWrapper: Identifiable {
     let value: Int
 }
 
-// MARK: - StatCard
-struct StatCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    var body: some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon).foregroundColor(color)
-            Text(value).font(.title2).bold()
-            Text(title).font(.caption).foregroundStyle(.secondary)
-        }.frame(maxWidth: .infinity)
-    }
-}
-
 // MARK: - Campaign Row
 struct CampaignRow: View {
     let campaign: NewsletterCampaign
