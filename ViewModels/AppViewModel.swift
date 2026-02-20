@@ -12,6 +12,8 @@ class AppViewModel: ObservableObject {
     private lazy var sheetsService = GoogleSheetsService(authService: authService)
     lazy var newsletterService = NewsletterService(gmailService: gmailService, sheetsService: sheetsService)
     let socialPostService = SocialPostService()
+        let linkedInAuthService = LinkedInAuthService()
+    private var linkedInAuthCancellable: AnyCancellable?
     var perplexityService: PerplexityService { pplxService }
 
     // MARK: - Constants
@@ -50,6 +52,10 @@ class AppViewModel: ObservableObject {
         loadLeads()
         loadCompanies()
         configureAuth()
+                configureLinkedInAuth()
+        linkedInAuthCancellable = linkedInAuthService.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }
         authCancellable = authService.objectWillChange.sink { [weak self] _ in
             self?.objectWillChange.send()
         }
@@ -60,12 +66,18 @@ class AppViewModel: ObservableObject {
                             clientSecret: settings.googleClientSecret)
     }
 
+        private func configureLinkedInAuth() {
+        linkedInAuthService.configure(clientID: settings.linkedInClientID,
+                                      clientSecret: settings.linkedInClientSecret)
+    }
+
     // MARK: - Settings
     func saveSettings() {
         if let data = try? JSONEncoder().encode(settings) {
             UserDefaults.standard.set(data, forKey: "harpo_settings")
         }
         configureAuth()
+        configureLinkedInAuth()
         // Sheet automatisch initialisieren wenn Spreadsheet-ID vorhanden
         if !settings.spreadsheetID.isEmpty {
             Task {
