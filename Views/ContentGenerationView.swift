@@ -338,17 +338,22 @@ struct ContentGenerationView: View {
 
     private func publishToLinkedIn() {
         guard var post = generatedSocialPost else { return }
-        guard !viewModel.settings.linkedInAccessToken.isEmpty else {
-            errorMessage = "LinkedIn Access Token fehlt. Bitte in Einstellungen eintragen."
+        guard viewModel.linkedInAuthService.isAuthenticated else {
+            errorMessage = "Nicht bei LinkedIn angemeldet. Bitte in Einstellungen verbinden."
             showError = true
             return
         }
         Task {
             do {
-                post = try await viewModel.socialPostService.publish(
+                let accessToken = try await viewModel.linkedInAuthService.getAccessToken()
+                let postURL = try await viewModel.socialPostService.postToLinkedIn(
                     post: post,
-                    settings: viewModel.settings
+                    accessToken: accessToken,
+                    orgId: viewModel.settings.linkedInOrgId
                 )
+                post.postURL = postURL
+                post.status = .published
+                post.publishedDate = Date()
                 await MainActor.run {
                     viewModel.socialPosts.append(post)
                     generatedSocialPost = post
