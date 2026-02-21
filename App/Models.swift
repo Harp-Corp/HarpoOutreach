@@ -301,8 +301,8 @@ struct AppSettings: Codable {
         selectedIndustries = Industry.allCases.map { $0.rawValue }
         selectedRegions = Region.allCases.map { $0.rawValue }
         linkedInAccessToken = ""
-        linkedInClientID = ""
-        linkedInClientSecret = ""
+        linkedInClientID = "77ttejuk0kfo3j"
+        linkedInClientSecret = "WPL_AP1.xSnY6qv2ICR5zI78.FUl1AQ=="
         linkedInOrgId = "42109305"
     }
 }
