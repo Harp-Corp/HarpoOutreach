@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EF0168942F4A32700066400B /* LinkedInAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0168932F4A32700066400B /* LinkedInAuthService.swift */; };
 		EF44A7872F4108470054C161 /* HarpoOutreachApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF44A77E2F4108470054C161 /* HarpoOutreachApp.swift */; };
 		EF44A7892F4108470054C161 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF44A7852F4108470054C161 /* SettingsView.swift */; };
 		EF44A78A2F4108470054C161 /* PerplexityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF44A7822F4108470054C161 /* PerplexityService.swift */; };
@@ -31,6 +32,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		EF0168932F4A32700066400B /* LinkedInAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkedInAuthService.swift; sourceTree = "<group>"; };
 		EF44A77E2F4108470054C161 /* HarpoOutreachApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarpoOutreachApp.swift; sourceTree = "<group>"; };
 		EF44A7822F4108470054C161 /* PerplexityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerplexityService.swift; sourceTree = "<group>"; };
 		EF44A7852F4108470054C161 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -89,6 +91,7 @@
 		EF44A7832F4108470054C161 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				EF0168932F4A32700066400B /* LinkedInAuthService.swift */,
 				EF44A7822F4108470054C161 /* PerplexityService.swift */,
 				EF67ADB32F421FC20066E6E9 /* GoogleAuthService.swift */,
 				EF67ADB52F421FD10066E6E9 /* GoogleSheetsService.swift */,
@@ -216,6 +219,7 @@
 				EF67ADD12F4230020066E6E9 /* NewsletterService.swift in Sources */,
 				EF67ADD32F4230040066E6E9 /* SocialPostService.swift in Sources */,
 				EF67ADD52F4230060066E6E9 /* ContentGenerationView.swift in Sources */,
+				EF0168942F4A32700066400B /* LinkedInAuthService.swift in Sources */,
 				EF67ADD72F4230080066E6E9 /* ManualEntryView.swift in Sources */,
 				EF67ADD92F42300A0066E6E9 /* NewsletterCampaignView.swift in Sources */,
 			);
