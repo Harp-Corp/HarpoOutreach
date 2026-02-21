@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       file_path:
-        description: 'Pfad zur Datei (z.B. Views/ProspectingView.swift)'
+        description: 'Pfad zur Datei (z.B. Services/LinkedInAuthService.swift)'
         required: true
         type: string
       content_base64:
@@ -20,14 +20,18 @@ on:
 jobs:
   patch:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Write patched file
         run: |
+          mkdir -p "$(dirname "${{ github.event.inputs.file_path }}")"
           echo "${{ github.event.inputs.content_base64 }}" | base64 -d > "${{ github.event.inputs.file_path }}"
           echo "Datei geschrieben: ${{ github.event.inputs.file_path }}"
 
@@ -37,5 +41,10 @@ jobs:
           git config user.email "mf@harpocrates-corp.com"
           git add "${{ github.event.inputs.file_path }}"
           git diff --staged --stat
-          git commit -m "${{ github.event.inputs.commit_message }}"
-          git push origin main
+          if git diff --staged --quiet; then
+            echo "Keine Aenderungen"
+          else
+            git commit -m "${{ github.event.inputs.commit_message }}"
+            git push origin HEAD
+            echo "Pushed to $(git branch --show-current)"
+          fi
