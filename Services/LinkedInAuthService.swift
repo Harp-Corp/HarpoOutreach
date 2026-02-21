@@ -18,8 +18,8 @@ class LinkedInAuthService: ObservableObject {
     private let tokenURL = "https://www.linkedin.com/oauth/v2/accessToken"
     private let redirectURI = "http://127.0.0.1:8766/callback"
 
-    // Scopes fuer Organization Posts
-    private let scopes = "w_member_social w_organization_social r_organization_social rw_organization_admin r_liteprofile"
+    // Scopes: Share on LinkedIn + Sign In with OpenID Connect
+    private let scopes = "openid profile email w_member_social"
 
     // MARK: - Configure
     func configure(clientID: String, clientSecret: String) {
@@ -30,12 +30,10 @@ class LinkedInAuthService: ObservableObject {
 
     // MARK: - Get valid access token
     func getAccessToken() async throws -> String {
-        // 1. Pruefe ob Token noch gueltig
         if let token = accessToken, let expiry = tokenExpiry, expiry > Date() {
             return token
         }
 
-        // 2. Versuche Token zu refreshen
         if let refresh = refreshToken {
             do {
                 let newToken = try await refreshAccessTokenAndReturn(refreshToken: refresh)
@@ -188,7 +186,7 @@ class LinkedInAuthService: ObservableObject {
             throw LinkedInAuthError.tokenParseFailed
         }
 
-        let expiresIn = json["expires_in"] as? Int ?? 5184000 // LinkedIn default 60 Tage
+        let expiresIn = json["expires_in"] as? Int ?? 5184000
         let newRefresh = json["refresh_token"] as? String
 
         await MainActor.run {
@@ -229,23 +227,24 @@ class LinkedInAuthService: ObservableObject {
         print("[LinkedInAuth] Tokens gespeichert, authenticated=true")
     }
 
-    // MARK: - Fetch User Profile
+    // MARK: - Fetch User Profile (OpenID Connect userinfo endpoint)
     private func fetchUserProfile() async {
         guard let token = accessToken else { return }
 
-        var req = URLRequest(url: URL(string: "https://api.linkedin.com/v2/me")!)
+        var req = URLRequest(url: URL(string: "https://api.linkedin.com/v2/userinfo")!)
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         if let (data, _) = try? await URLSession.shared.data(for: req),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            let firstName = (json["localizedFirstName"] as? String) ?? ""
-            let lastName = (json["localizedLastName"] as? String) ?? ""
-            let name = "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
+            let name = (json["name"] as? String) ?? ""
+            let givenName = (json["given_name"] as? String) ?? ""
+            let familyName = (json["family_name"] as? String) ?? ""
+            let displayName = name.isEmpty ? "\(givenName) \(familyName)".trimmingCharacters(in: .whitespaces) : name
 
             await MainActor.run {
-                self.userName = name.isEmpty ? "LinkedIn verbunden" : name
+                self.userName = displayName.isEmpty ? "LinkedIn verbunden" : displayName
             }
-            print("[LinkedInAuth] User: \(name)")
+            print("[LinkedInAuth] User: \(displayName)")
         }
     }
 
@@ -285,11 +284,10 @@ class LinkedInAuthService: ObservableObject {
         }
 
         if accessToken != nil && !(accessToken?.isEmpty ?? true) {
-            // Pruefe ob Token noch gueltig
             if let expiry = tokenExpiry, expiry > Date() {
                 isAuthenticated = true
             } else if refreshToken != nil && !(refreshToken?.isEmpty ?? true) {
-                isAuthenticated = true // Kann refreshed werden
+                isAuthenticated = true
             }
         }
 
