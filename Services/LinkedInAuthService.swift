@@ -5,26 +5,26 @@ import AppKit
 class LinkedInAuthService: ObservableObject {
     @Published var isAuthenticated = false
     @Published var userName = ""
-    
+
     private var accessToken: String?
     private var refreshToken: String?
     private var tokenExpiry: Date?
-    
+
     private var clientID: String = ""
     private var clientSecret: String = ""
-    
+
     private let authURL = "https://www.linkedin.com/oauth/v2/authorization"
     private let tokenURL = "https://www.linkedin.com/oauth/v2/accessToken"
     private let redirectURI = "http://127.0.0.1:8766/callback"
     private let scopes = "openid profile email w_member_social"
-    
+
     // MARK: - Configure
     func configure(clientID: String, clientSecret: String) {
         self.clientID = clientID
         self.clientSecret = clientSecret
         loadTokens()
     }
-    
+
     // MARK: - Get valid access token
     func getAccessToken() async throws -> String {
         if let token = accessToken, let expiry = tokenExpiry, expiry > Date(), !token.isEmpty {
@@ -45,14 +45,14 @@ class LinkedInAuthService: ObservableObject {
         }
         throw LinkedInAuthError.notAuthenticated
     }
-    
+
     // MARK: - Start OAuth Flow
     func startOAuthFlow() {
         guard !clientID.isEmpty, !clientSecret.isEmpty else {
             print("[LinkedInAuth] Client ID/Secret nicht konfiguriert")
             return
         }
-        
+
         var components = URLComponents(string: authURL)!
         components.queryItems = [
             URLQueryItem(name: "response_type", value: "code"),
@@ -61,57 +61,53 @@ class LinkedInAuthService: ObservableObject {
             URLQueryItem(name: "scope", value: scopes),
             URLQueryItem(name: "state", value: UUID().uuidString)
         ]
-        
+
         startLocalServer()
-        
+
         if let url = components.url {
             NSWorkspace.shared.open(url)
         }
     }
-    
-    // MARK: - Local HTTP Server (FIXED: Socket-Timing + Error-Handling)
+
+    // MARK: - Local HTTP Server
     private func startLocalServer() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            
+
             let server = self.createSocket(port: 8766)
             guard server >= 0 else {
                 print("[LinkedInAuth] Server konnte nicht gestartet werden")
                 return
             }
-            
+
             let client = accept(server, nil, nil)
             guard client >= 0 else { close(server); return }
-            
+
             var buffer = [UInt8](repeating: 0, count: 4096)
             let bytesRead = read(client, &buffer, buffer.count)
             guard bytesRead > 0 else { close(client); close(server); return }
-            
+
             let request = String(bytes: buffer[0..<bytesRead], encoding: .utf8) ?? ""
-            
+
             if let code = self.extractCode(from: request) {
                 let html = """
                 HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n\
                 <html><body style="font-family:-apple-system,sans-serif;text-align:center;padding:60px;">\
-                <h2>LinkedIn Authentifizierung...</h2>\
-                <p>Token wird ausgetauscht. Fenster schliesst automatisch.</p>\
-                <script>setTimeout(function(){window.close()},4000);</script>\
+                <h2>LinkedIn Authentifizierung erfolgreich!</h2>\
+                <p>Du kannst dieses Fenster schliessen.</p>\
                 </body></html>
                 """
                 write(client, html, html.utf8.count)
-                
-                // FIX: Sockets SOFORT schliessen, BEVOR der Task startet
                 close(client)
                 close(server)
-                
-                // FIX: Starke self-Referenz + echtes Error-Handling
+
                 let authService = self
                 Task {
                     do {
                         try await authService.exchangeCodeForTokens(code: code)
-                        print("[LinkedInAuth] ✅ Auth komplett, isAuthenticated=\(authService.isAuthenticated)")
+                        print("[LinkedInAuth] Auth komplett, isAuthenticated=\(authService.isAuthenticated)")
                     } catch {
-                        print("[LinkedInAuth] ❌ Token-Exchange FEHLER: \(error.localizedDescription)")
+                        print("[LinkedInAuth] Token-Exchange FEHLER: \(error.localizedDescription)")
                         await MainActor.run {
                             authService.isAuthenticated = false
                         }
@@ -128,7 +124,7 @@ class LinkedInAuthService: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Socket Helper
     private func createSocket(port: UInt16) -> Int32 {
         let sock = socket(AF_INET, SOCK_STREAM, 0)
@@ -148,7 +144,7 @@ class LinkedInAuthService: ObservableObject {
         guard listen(sock, 1) >= 0 else { close(sock); return -1 }
         return sock
     }
-    
+
     private func extractCode(from request: String) -> String? {
         guard let line = request.split(separator: "\r\n").first,
               let path = line.split(separator: " ").dropFirst().first,
@@ -157,10 +153,11 @@ class LinkedInAuthService: ObservableObject {
         else { return nil }
         return code
     }
-    
+
     // MARK: - Exchange Code for Tokens
     private func exchangeCodeForTokens(code: String) async throws {
-        print("[LinkedInAuth] Token-Exchange gestartet...")
+        print("[LinkedInAuth] Token-Exchange gestartet mit Code: \(code.prefix(10))...")
+        print("[LinkedInAuth] ClientID: \(clientID.prefix(8))... Secret-Laenge: \(clientSecret.count)")
         let params = [
             "grant_type": "authorization_code",
             "code": code,
@@ -172,7 +169,7 @@ class LinkedInAuthService: ObservableObject {
         try await processTokenResponse(tokenData)
         await fetchUserProfile()
     }
-    
+
     // MARK: - Refresh Token
     private func refreshAccessTokenAndReturn(refreshToken: String) async throws -> String {
         let params = [
@@ -202,7 +199,7 @@ class LinkedInAuthService: ObservableObject {
         }
         return newAccess
     }
-    
+
     // MARK: - Process Token Response
     private func processTokenResponse(_ data: Data) async throws {
         if let raw = String(data: data, encoding: .utf8) {
@@ -213,11 +210,11 @@ class LinkedInAuthService: ObservableObject {
         }
         if let error = json["error"] as? String {
             let desc = json["error_description"] as? String ?? error
-            print("[LinkedInAuth] ❌ API Error: \(desc)")
+            print("[LinkedInAuth] API Error: \(desc)")
             throw LinkedInAuthError.tokenError(desc)
         }
         guard let newAccess = json["access_token"] as? String, !newAccess.isEmpty else {
-            print("[LinkedInAuth] ❌ Kein access_token in Response")
+            print("[LinkedInAuth] Kein access_token in Response")
             throw LinkedInAuthError.tokenParseFailed
         }
         let expiresIn = json["expires_in"] as? Int ?? 5184000
@@ -229,9 +226,9 @@ class LinkedInAuthService: ObservableObject {
             self.isAuthenticated = true
             self.saveTokens()
         }
-        print("[LinkedInAuth] ✅ Token gespeichert, expires_in=\(expiresIn)s")
+        print("[LinkedInAuth] Token gespeichert, expires_in=\(expiresIn)s")
     }
-    
+
     // MARK: - Fetch User Profile
     private func fetchUserProfile() async {
         guard let token = accessToken, !token.isEmpty else { return }
@@ -252,23 +249,31 @@ class LinkedInAuthService: ObservableObject {
             }
         }
     }
-    
-    // MARK: - HTTP Helper
+
+    // MARK: - HTTP Helper (FIX: korrektes form-urlencoded Encoding)
+    private func formURLEncode(_ string: String) -> String {
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        return string.addingPercentEncoding(withAllowedCharacters: allowed) ?? string
+    }
+
     private func postForm(url: String, params: [String: String]) async throws -> Data {
         var request = URLRequest(url: URL(string: url)!)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        let body = params.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? $0.value)" }.joined(separator: "&")
+        // FIX: formURLEncode encoded = + & korrekt (urlQueryAllowed laesst = durch!)
+        let body = params.map { "\(formURLEncode($0.key))=\(formURLEncode($0.value))" }.joined(separator: "&")
+        print("[LinkedInAuth] POST body: \(body.prefix(200))")
         request.httpBody = body.data(using: .utf8)
         let (data, response) = try await URLSession.shared.data(for: request)
         if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            print("[LinkedInAuth] ❌ HTTP \(http.statusCode): \(body.prefix(300))")
+            let respBody = String(data: data, encoding: .utf8) ?? ""
+            print("[LinkedInAuth] HTTP \(http.statusCode): \(respBody.prefix(300))")
             throw LinkedInAuthError.tokenError("HTTP \(http.statusCode)")
         }
         return data
     }
-    
+
     // MARK: - Token Persistence
     private func saveTokens() {
         let dict: [String: String] = [
@@ -281,7 +286,7 @@ class LinkedInAuthService: ObservableObject {
             UserDefaults.standard.synchronize()
         }
     }
-    
+
     private func loadTokens() {
         guard let data = UserDefaults.standard.data(forKey: "linkedin_tokens"),
               let dict = try? JSONDecoder().decode([String: String].self, from: data) else {
@@ -290,22 +295,20 @@ class LinkedInAuthService: ObservableObject {
         }
         accessToken = dict["access_token"]
         refreshToken = dict["refresh_token"]
-        if let exp = dict["expiry"], let ts = Double(exp) {
-            tokenExpiry = Date(timeIntervalSince1970: ts)
-        }
+        if let exp = dict["expiry"], let ts = Double(exp) { tokenExpiry = Date(timeIntervalSince1970: ts) }
         let hasAccess = accessToken != nil && !(accessToken?.isEmpty ?? true)
         let hasRefresh = refreshToken != nil && !(refreshToken?.isEmpty ?? true)
         let notExpired = tokenExpiry.map { $0 > Date() } ?? false
         isAuthenticated = (hasAccess && notExpired) || hasRefresh
         print("[LinkedInAuth] loadTokens: authenticated=\(isAuthenticated), hasAccess=\(hasAccess), notExpired=\(notExpired)")
     }
-    
+
     func logout() {
         accessToken = nil; refreshToken = nil; tokenExpiry = nil
         isAuthenticated = false; userName = ""
         UserDefaults.standard.removeObject(forKey: "linkedin_tokens")
     }
-    
+
     // MARK: - Errors
     enum LinkedInAuthError: LocalizedError {
         case notAuthenticated, tokenExpired, tokenParseFailed, tokenError(String)
