@@ -87,6 +87,7 @@ class LinkedInAuthService: ObservableObject {
                 print("[LinkedInAuth] Server konnte nicht gestartet werden")
                 return
             }
+
             defer { close(server) }
 
             let client = accept(server, nil, nil)
@@ -99,7 +100,9 @@ class LinkedInAuthService: ObservableObject {
 
             let request = String(bytes: buffer[0..<bytesRead], encoding: .utf8) ?? ""
 
-            let successResponse = """HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\r\n<html><body style="font-family:system-ui;text-align:center;padding:60px"><h1>LinkedIn Authentifizierung erfolgreich!</h1><p>Du kannst dieses Fenster schliessen.</p></body></html>"""
+            let successBody = "<html><body><h1>LinkedIn Authentifizierung erfolgreich!</h1><p>Du kannst dieses Fenster schliessen.</p></body></html>"
+            let successResponse = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\r\n" + successBody
+
             let _ = successResponse.withCString { ptr in
                 write(client, ptr, strlen(ptr))
             }
@@ -132,6 +135,7 @@ class LinkedInAuthService: ObservableObject {
 
         guard bindResult >= 0 else { close(sock); return -1 }
         guard listen(sock, 1) >= 0 else { close(sock); return -1 }
+
         return sock
     }
 
@@ -139,8 +143,9 @@ class LinkedInAuthService: ObservableObject {
         guard let line = request.split(separator: "\r\n").first,
               let path = line.split(separator: " ").dropFirst().first,
               let components = URLComponents(string: String(path)),
-              let code = components.queryItems?.first(where: { $0.name == "code" })?.value
-        else { return nil }
+              let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
+            return nil
+        }
         return code
     }
 
@@ -189,9 +194,7 @@ class LinkedInAuthService: ObservableObject {
         await MainActor.run {
             self.accessToken = newAccess
             self.tokenExpiry = Date().addingTimeInterval(TimeInterval(expiresIn - 60))
-            if let r = newRefresh {
-                self.refreshToken = r
-            }
+            if let r = newRefresh { self.refreshToken = r }
             self.isAuthenticated = true
             self.saveTokens()
         }
@@ -218,9 +221,7 @@ class LinkedInAuthService: ObservableObject {
         await MainActor.run {
             self.accessToken = newAccess
             self.tokenExpiry = Date().addingTimeInterval(TimeInterval(expiresIn - 60))
-            if let r = newRefresh {
-                self.refreshToken = r
-            }
+            if let r = newRefresh { self.refreshToken = r }
             self.isAuthenticated = true
             self.saveTokens()
         }
@@ -240,6 +241,7 @@ class LinkedInAuthService: ObservableObject {
             let firstName = (json["localizedFirstName"] as? String) ?? ""
             let lastName = (json["localizedLastName"] as? String) ?? ""
             let name = "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
+
             await MainActor.run {
                 self.userName = name.isEmpty ? "LinkedIn verbunden" : name
             }
@@ -253,9 +255,7 @@ class LinkedInAuthService: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-        let body = params.map {
-            "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? $0.value)"
-        }.joined(separator: "&")
+        let body = params.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? $0.value)" }.joined(separator: "&")
         request.httpBody = body.data(using: .utf8)
 
         let (data, _) = try await URLSession.shared.data(for: request)
@@ -276,8 +276,7 @@ class LinkedInAuthService: ObservableObject {
 
     private func loadTokens() {
         guard let data = UserDefaults.standard.data(forKey: "linkedin_tokens"),
-              let dict = try? JSONDecoder().decode([String: String].self, from: data)
-        else { return }
+              let dict = try? JSONDecoder().decode([String: String].self, from: data) else { return }
 
         accessToken = dict["access_token"]
         refreshToken = dict["refresh_token"]
@@ -316,14 +315,10 @@ class LinkedInAuthService: ObservableObject {
 
         var errorDescription: String? {
             switch self {
-            case .notAuthenticated:
-                return "Nicht bei LinkedIn angemeldet. Bitte LinkedIn verbinden."
-            case .tokenExpired:
-                return "LinkedIn Token abgelaufen. Bitte erneut verbinden."
-            case .tokenParseFailed:
-                return "LinkedIn Token-Antwort konnte nicht gelesen werden."
-            case .tokenError(let e):
-                return "LinkedIn Auth Fehler: \(e)"
+            case .notAuthenticated: return "Nicht bei LinkedIn angemeldet. Bitte LinkedIn verbinden."
+            case .tokenExpired: return "LinkedIn Token abgelaufen. Bitte erneut verbinden."
+            case .tokenParseFailed: return "LinkedIn Token-Antwort konnte nicht gelesen werden."
+            case .tokenError(let e): return "LinkedIn Auth Fehler: \(e)"
             }
         }
     }
