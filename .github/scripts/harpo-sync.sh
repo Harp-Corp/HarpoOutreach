@@ -1,6 +1,6 @@
 #!/bin/bash
 # harpo-sync: Robuster GitHub-Sync (GitHub ist IMMER fuehrend)
-# Version 3.8 - Branch-Switch Fix fuer shallow clones
+# Version 4.0 - Pipeline-Update: Incremental Build, Remote Trigger Support
 
 # Farben fuer Output
 RED='\033[0;31m'
@@ -15,12 +15,31 @@ REPO_URL="https://github.com/Harp-Corp/HarpoOutreach.git"
 FETCH_TIMEOUT=60
 TARGET_BRANCH="HarpoOutreachNewsletter"
 
+# CLI Flags
+CLEAN_BUILD=false
+SKIP_BUILD=false
+SKIP_XCODE=false
+for arg in "$@"; do
+  case $arg in
+    --clean)    CLEAN_BUILD=true ;;
+    --no-build) SKIP_BUILD=true ;;
+    --no-xcode) SKIP_XCODE=true ;;
+    --help|-h)
+      echo "harpo-sync [options]"
+      echo "  --clean     Clean Build (statt incremental)"
+      echo "  --no-build  Nur sync, kein Build"
+      echo "  --no-xcode  Xcode nicht oeffnen"
+      echo "  --help      Diese Hilfe"
+      exit 0 ;;
+  esac
+done
+
 # ANTI-HANG: Verhindert dass git auf Passwort-Eingabe wartet
 export GIT_TERMINAL_PROMPT=0
 export GIT_SSH_COMMAND="ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
 # Self-Update
-SCRIPT_VERSION="3.8"
+SCRIPT_VERSION="4.0"
 RAW_URL="https://raw.githubusercontent.com/Harp-Corp/HarpoOutreach/HarpoOutreachNewsletter/.github/scripts/harpo-sync.sh"
 INSTALLED_SCRIPT="/usr/local/bin/harpo-sync"
 
@@ -45,18 +64,19 @@ self_update() {
 self_update "$@"
 
 # Hilfsfunktionen
-TOTAL_STEPS=6
-step() { echo -e "\n${BLUE}[$1/$TOTAL_STEPS]${NC} $2"; }
+if $SKIP_BUILD; then TOTAL_STEPS=5; elif $SKIP_XCODE; then TOTAL_STEPS=5; else TOTAL_STEPS=6; fi
+STEP_NUM=0
+step() { STEP_NUM=$((STEP_NUM + 1)); echo -e "\n${BLUE}[$STEP_NUM/$TOTAL_STEPS]${NC} $1"; }
 ok()   { echo -e "  ${GREEN}OK${NC} $1"; }
 warn() { echo -e "  ${YELLOW}WARN${NC} $1"; }
 fail() { echo -e "  ${RED}FEHLER${NC} $1"; }
 
-# Spinner mit Timeout - killt Prozess nach timeout_sec
+# Spinner mit Timeout
 spinner_with_timeout() {
   local pid=$1
   local msg=$2
   local timeout_sec=${3:-60}
-  local chars='|/-\'
+  local chars='|/-\\'
   local i=0
   local start=$SECONDS
   while kill -0 "$pid" 2>/dev/null; do
@@ -75,7 +95,7 @@ spinner_with_timeout() {
   return 0
 }
 
-# Fresh Clone - loescht altes Repo und klont neu (Fallback)
+# Fresh Clone
 fresh_clone() {
   warn "Loesche altes Repo und klone neu..."
   cd "$HOME" || exit 1
@@ -98,7 +118,7 @@ echo "=========================================="
 BUILD_START=$SECONDS
 
 # --- Schritt 1: Xcode beenden ---
-step 1 "Xcode beenden"
+step "Xcode beenden"
 if pgrep -x "Xcode" > /dev/null 2>&1; then
   killall Xcode 2>/dev/null
   sleep 1
@@ -108,7 +128,7 @@ else
 fi
 
 # --- Schritt 2: Projektverzeichnis pruefen ---
-step 2 "Projektverzeichnis pruefen"
+step "Projektverzeichnis pruefen"
 if [ ! -d "$PROJECT_DIR" ]; then
   fail "Verzeichnis nicht gefunden: $PROJECT_DIR"
   echo "  Klone Repository neu..."
@@ -118,7 +138,7 @@ cd "$PROJECT_DIR" || { fail "cd fehlgeschlagen"; exit 1; }
 ok "$PROJECT_DIR"
 
 # --- Schritt 3: DerivedData loeschen ---
-step 3 "Xcode DerivedData loeschen"
+step "Xcode DerivedData loeschen"
 DERIVED="$HOME/Library/Developer/Xcode/DerivedData"
 if [ -d "$DERIVED" ]; then
   find "$DERIVED" -mindepth 1 -maxdepth 1 -name "HarpoOutreach-*" -exec rm -rf {} + 2>/dev/null
@@ -128,17 +148,14 @@ else
 fi
 
 # --- Schritt 4: Git Synchronisierung ---
-step 4 "Git Synchronisierung (GitHub -> Lokal)"
+step "Git Synchronisierung (GitHub -> Lokal)"
 
-# Git Timeout-Konfiguration
 git config --local http.lowSpeedLimit 1000
 git config --local http.lowSpeedTime 10
 
-# Pruefen ob wir auf dem richtigen Branch sind
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 if [ "$CURRENT_BRANCH" != "$TARGET_BRANCH" ]; then
   warn "Falscher Branch: $CURRENT_BRANCH (erwartet: $TARGET_BRANCH)"
-  warn "Repo wird neu geklont mit korrektem Branch..."
   if fresh_clone; then
     cd "$PROJECT_DIR" || { fail "cd fehlgeschlagen"; exit 1; }
     ok "Fresh Clone auf $TARGET_BRANCH erfolgreich"
@@ -152,7 +169,6 @@ else
   git clean -fd 2>/dev/null
   ok "Lokale Aenderungen verworfen"
 
-  # Fetch mit echtem Timeout
   echo "  Hole Aenderungen von GitHub..."
   git fetch origin "$TARGET_BRANCH" --depth=1 --no-tags 2>&1 &
   FETCH_PID=$!
@@ -181,7 +197,6 @@ else
         ok "Fresh Clone erfolgreich"
       else
         fail "Auch Fresh Clone fehlgeschlagen"
-        echo "  Pruefe deine Internetverbindung und versuche es erneut."
         exit 1
       fi
     fi
@@ -192,61 +207,77 @@ fi
 
 ok "Lokal = GitHub (origin/$TARGET_BRANCH)"
 
-echo -e "  ${GREEN}Aktueller Commit:${NC}"
-git log -1 --oneline --decorate
+# Letzte Commits anzeigen
 echo ""
-git log -3 --oneline --format="  %h %s" 2>/dev/null
+echo -e "  ${GREEN}${BOLD}Letzte Commits:${NC}"
+git log -5 --oneline --format="  %C(yellow)%h%C(reset) %s %C(blue)(%cr)%C(reset)" 2>/dev/null
+echo ""
 
 # --- Schritt 5: Xcode oeffnen ---
-step 5 "Xcode Projekt oeffnen"
-if [ -f "$PROJECT_DIR/HarpoOutreach.xcodeproj/project.pbxproj" ]; then
-  open "$PROJECT_DIR/HarpoOutreach.xcodeproj"
-  ok "Xcode Projekt geoeffnet"
-else
-  fail "project.pbxproj nicht gefunden!"
-  exit 1
+if ! $SKIP_XCODE; then
+  step "Xcode Projekt oeffnen"
+  if [ -f "$PROJECT_DIR/HarpoOutreach.xcodeproj/project.pbxproj" ]; then
+    open "$PROJECT_DIR/HarpoOutreach.xcodeproj"
+    ok "Xcode Projekt geoeffnet"
+  else
+    fail "project.pbxproj nicht gefunden!"
+    exit 1
+  fi
 fi
 
-# --- Schritt 6: Build (Vordergrund mit Live-Status) ---
-step 6 "Clean Build"
-sleep 2
-BUILD_LOG="/tmp/harpo-build.log"
-echo "  Kompiliere..."
+# --- Schritt 6: Build ---
+if ! $SKIP_BUILD; then
+  if $CLEAN_BUILD; then
+    step "Clean Build"
+    BUILD_ACTION="clean build"
+  else
+    step "Incremental Build"
+    BUILD_ACTION="build"
+  fi
+  sleep 2
+  BUILD_LOG="/tmp/harpo-build.log"
+  > "$BUILD_LOG"
+  echo "  Kompiliere..."
 
-xcodebuild -project "$PROJECT_DIR/HarpoOutreach.xcodeproj" \
-  -scheme HarpoOutreach \
-  -configuration Debug \
-  -destination 'platform=macOS' \
-  clean build 2>&1 | while IFS= read -r line; do
-  echo "$line" >> "$BUILD_LOG"
-  case "$line" in
-    *": error:"*)
-      echo -e "  ${RED}ERROR${NC} $line"
-      ;;
-    *": warning:"*)
-      echo -e "  ${YELLOW}WARN${NC} $(echo "$line" | sed 's/.*warning: //')"
-      ;;
-    *"Build Succeeded"*)
-      echo -e "  ${GREEN}${BOLD}BUILD SUCCEEDED${NC}"
-      ;;
-    *"BUILD FAILED"*|*"Build Failed"*)
-      echo -e "  ${RED}${BOLD}BUILD FAILED${NC}"
-      ;;
-    *"Compiling "*|*"CompileSwift"*)
-      printf "\r  ${BLUE}Kompiliere${NC} $(echo "$line" | grep -oE '[^ /]+\.swift' | tail -1) "
-      ;;
-    *"Linking "*|*"Ld "*)
-      printf "\r  ${BLUE}Linke${NC} HarpoOutreach \n"
-      ;;
-  esac
-done
+  xcodebuild -project "$PROJECT_DIR/HarpoOutreach.xcodeproj" \
+    -scheme HarpoOutreach \
+    -configuration Debug \
+    -destination 'platform=macOS' \
+    $BUILD_ACTION 2>&1 | while IFS= read -r line; do
+    echo "$line" >> "$BUILD_LOG"
+    case "$line" in
+      *": error:"*)
+        echo -e "  ${RED}ERROR${NC} $line"
+        ;;
+      *": warning:"*)
+        echo -e "  ${YELLOW}WARN${NC} $(echo "$line" | sed 's/.*warning: //')"
+        ;;
+      *"Build Succeeded"*)
+        echo -e "  ${GREEN}${BOLD}BUILD SUCCEEDED${NC}"
+        ;;
+      *"BUILD FAILED"*|*"Build Failed"*)
+        echo -e "  ${RED}${BOLD}BUILD FAILED${NC}"
+        ;;
+      *"Compiling "*|*"CompileSwift"*)
+        printf "\r  ${BLUE}Kompiliere${NC} $(echo "$line" | grep -oE '[^ /]+\.swift' | tail -1) "
+        ;;
+      *"Linking "*|*"Ld "*)
+        printf "\r  ${BLUE}Linke${NC} HarpoOutreach \n"
+        ;;
+    esac
+  done
 
-BUILD_EXIT=${PIPESTATUS[0]}
+  BUILD_EXIT=${PIPESTATUS[0]}
+fi
+
 BUILD_DURATION=$((SECONDS - BUILD_START))
 
 echo ""
 echo -e "${BOLD}==========================================${NC}"
-if [ ${BUILD_EXIT:-1} -eq 0 ]; then
+if $SKIP_BUILD; then
+  echo -e "${GREEN}${BOLD}  SYNC FERTIG (${BUILD_DURATION}s)${NC}"
+  echo -e "${GREEN}  Xcode ist bereit - Build manuell starten.${NC}"
+elif [ ${BUILD_EXIT:-1} -eq 0 ]; then
   echo -e "${GREEN}${BOLD}  FERTIG - Build erfolgreich! (${BUILD_DURATION}s)${NC}"
   echo -e "${GREEN}  Xcode ist bereit - du kannst loslegen.${NC}"
   osascript -e 'display notification "Build erfolgreich! Xcode ist bereit." with title "HarpoOutreach" sound name "Glass"' 2>/dev/null

@@ -1,0 +1,55 @@
+name: Harpo Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Aktion (sync-script = Script updaten, notify = nur Notification)'
+        required: true
+        default: 'sync-script'
+        type: choice
+        options:
+          - sync-script
+          - notify
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify harpo-sync script
+        run: |
+          echo "=== harpo-sync Pipeline Status ==="
+          echo ""
+          
+          # Script vorhanden?
+          if [ -f ".github/scripts/harpo-sync.sh" ]; then
+            VERSION=$(grep '^SCRIPT_VERSION=' .github/scripts/harpo-sync.sh | head -1 | cut -d'"' -f2)
+            echo "harpo-sync.sh: OK (v$VERSION)"
+          else
+            echo "ERROR: harpo-sync.sh nicht gefunden!"
+            exit 1
+          fi
+          
+          # Workflows pruefen
+          for wf in apply-patches patch harpo-sync; do
+            if [ -f ".github/workflows/${wf}.yml" ]; then
+              echo "${wf}.yml: OK"
+            else
+              echo "${wf}.yml: FEHLT"
+            fi
+          done
+          
+          # Script syntax check
+          bash -n .github/scripts/harpo-sync.sh && echo "Syntax: OK" || echo "Syntax: FEHLER"
+          
+          echo ""
+          echo "=== Letzte Commits ==="
+          git log -5 --oneline
