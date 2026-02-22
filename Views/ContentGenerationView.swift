@@ -340,22 +340,26 @@ struct ContentGenerationView: View {
     private func publishToLinkedIn() {
         guard let post = generatedSocialPost else { return }
         
-        // Build LinkedIn share URL with post content
+        // Build full post text with hashtags
         let content = post.content
         let hashtags = post.hashtags.map { "#\($0)" }.joined(separator: " ")
         let fullText = content + "\n\n" + hashtags
         
-        // Manually percent-encode the text to avoid URI malformed errors
-        // LinkedIn's server-side decodeURIComponent can choke on certain encodings
-        let allowedChars = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-._~"))
-        guard let encodedText = fullText.addingPercentEncoding(withAllowedCharacters: allowedChars) else { return }
+        // Copy post text to clipboard so user can paste it on Company Page
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(fullText, forType: .string)
         
-        // Build URL string directly with manually encoded parameters
-        let urlString = "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fharpocrates-comply.reg&text=\(encodedText)"
-        
-        if let shareURL = URL(string: urlString) {
-            NSWorkspace.shared.open(shareURL)
+        // Open Harpocrates Company Page admin view for posting as company
+        // linkedin.com/company/harpocrates/admin/ opens the admin panel
+        // where user can create a new post AS the company page
+        if let companyURL = URL(string: "https://www.linkedin.com/company/harpocrates/admin/page-posts/published/") {
+            NSWorkspace.shared.open(companyURL)
         }
+        
+        // Inform user that text is in clipboard
+        errorMessage = "Post-Text wurde in die Zwischenablage kopiert. Erstelle einen neuen Post auf der Harpocrates Company Page und fuege den Text ein (Cmd+V)."
+        showError = true
     }
 
     private func saveSocialPostDraft() {
