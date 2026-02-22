@@ -546,7 +546,7 @@ class PerplexityService {
         guard let data = json.data(using: .utf8),
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             // Fallback: Content + Footer
-                              return SocialPost(platform: platform, content: Self.ensureFooter(content))
+                              return SocialPost(platform: platform, content: content)
         }
         
         // Kompletten Post zusammenbauen: Content (ohne doppelte Hashtags) + Hashtags + Footer
@@ -558,7 +558,7 @@ class PerplexityService {
         if !hashtagLine.isEmpty {
             fullContent += "\n\n" + hashtagLine
         }
-                fullContent = fullContent.trimmingCharacters(in: .whitespacesAndNewlines) + Self.companyFooter
+                fullContent = fullContent.trimmingCharacters(in: .whitespacesAndNewlines)
         
         return SocialPost(
             platform: platform,
