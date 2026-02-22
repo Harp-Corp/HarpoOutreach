@@ -420,36 +420,24 @@ struct NewsletterCampaign: Identifiable, Codable, Hashable {
 // MARK: - Content Topic (fuer KI-generierte Inhalte)
 enum ContentTopic: String, Codable, CaseIterable, Identifiable {
     case regulatoryUpdate = "Regulatory Update"
-    case complianceBestPractices = "Compliance Best Practices"
-    case industryTrends = "Industry Trends"
-    case productUpdate = "Product Update"
-    case caseStudy = "Case Study"
     case thoughtLeadership = "Thought Leadership"
-    case eventAnnouncement = "Event Announcement"
+    case productUpdate = "Product Update"
 
     var id: String { rawValue }
 
     var description: String {
         switch self {
-        case .regulatoryUpdate: return "Neueste regulatorische Aenderungen und deren Auswirkungen"
-        case .complianceBestPractices: return "Bewaehrte Methoden fuer Compliance-Management"
-        case .industryTrends: return "Aktuelle Branchentrends und Marktentwicklungen"
-        case .productUpdate: return "Neuigkeiten zu Harpocrates Produkten und Features"
-        case .caseStudy: return "Erfolgsgeschichten und Anwendungsbeispiele"
-        case .thoughtLeadership: return "Expertenmeinungen und strategische Einblicke"
-        case .eventAnnouncement: return "Veranstaltungen, Webinare und Konferenzen"
+        case .regulatoryUpdate: return "Aktuelle Gesetzesaenderungen, neue Regulierungen und deren Auswirkungen auf Unternehmen - mit klarem Handlungsaufruf"
+        case .thoughtLeadership: return "Strategische Compliance-Themen die Entscheider bewegen - warum Automatisierung durch Harpocrates COMPLY den Unterschied macht"
+        case .productUpdate: return "Neuerungen im Harpocrates Produktportfolio - COMPLY Features, Integrationen und Kundenerfolge"
         }
     }
 
     var promptPrefix: String {
         switch self {
-        case .regulatoryUpdate: return "Write about recent regulatory changes in"
-        case .complianceBestPractices: return "Share compliance best practices for"
-        case .industryTrends: return "Analyze current industry trends in"
-        case .productUpdate: return "Announce product updates for compliance automation in"
-        case .caseStudy: return "Present a case study about compliance automation in"
-        case .thoughtLeadership: return "Provide expert insights on compliance challenges in"
-        case .eventAnnouncement: return "Announce an upcoming compliance event for"
+        case .regulatoryUpdate: return "Write about a specific current regulatory change (e.g. DORA, EU AI Act, NIS2, MiCA, CSRD) with concrete compliance deadlines, penalties for non-compliance, and why decision-makers must act NOW. Reference Harpocrates COMPLY as the solution to automate compliance with this regulation. Target audience: C-Level and Heads of Compliance in"
+        case .thoughtLeadership: return "Write a thought-provoking post about a compliance challenge that keeps decision-makers up at night. Include hard data on compliance costs, risks of manual processes, and how automation fundamentally changes the game. Position Harpocrates COMPLY as the answer to simplify compliance. Make it a clear call-to-action for"
+        case .productUpdate: return "Write about a specific Harpocrates COMPLY product capability (regulatory change tracking, automated obligation mapping, AI-powered control frameworks, cross-border compliance intelligence, or audit trail automation). Show concrete ROI and time savings. Make decision-makers want to book a demo. Target industries:"
         }
     }
 }
