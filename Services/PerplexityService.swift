@@ -4,6 +4,9 @@ class PerplexityService {
     private let apiURL = "https://api.perplexity.ai/chat/completions"
     private let model = "sonar-pro"
     
+    // Standard-Footer fuer alle generierten Inhalte (LinkedIn, Newsletter, etc.)
+    static let companyFooter = "\n\n\u{1F517} www.harpocrates-corp.com | \u{1F4E7} info@harpocrates-corp.com"
+    
     // MARK: - Generic API Call
     private func callAPI(systemPrompt: String, userPrompt: String, apiKey: String, maxTokens: Int = 4000) async throws -> String {
         let requestBody = PerplexityRequest(
@@ -145,7 +148,7 @@ class PerplexityService {
                 let moreResults = parseJSON(content2)
                 for candidate in moreResults {
                     let name = candidate["name"] ?? ""
-                    if !name.isEmpty &amp;&amp; !allCandidates.contains(where: { normalizeName($0["name"] ?? "") == normalizeName(name) }) {
+                    if !name.isEmpty && !allCandidates.contains(where: { normalizeName($0["name"] ?? "") == normalizeName(name) }) {
                         allCandidates.append(candidate)
                     }
                 }
@@ -199,7 +202,7 @@ class PerplexityService {
     // Hilfsfunktion: Email bereinigen
     private func cleanEmail(_ email: String) -> String {
         let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.contains("@") &amp;&amp; trimmed.contains(".") {
+        if trimmed.contains("@") && trimmed.contains(".") {
             return trimmed.lowercased()
         }
         return ""
@@ -354,7 +357,7 @@ class PerplexityService {
                     ), at: 0)
                 }
                 if let alts = dict["alternative_emails"] as? [String] {
-                    for alt in alts where alt.contains("@") &amp;&amp; !alt.isEmpty {
+                    for alt in alts where alt.contains("@") && !alt.isEmpty {
                         let cleanAlt = alt.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
                         if !allEmails.contains(where: { $0.email == cleanAlt }) {
                             allEmails.append((email: cleanAlt, source: "Alternative", confidence: "low"))
@@ -378,13 +381,13 @@ class PerplexityService {
         let uniqueEmails = Dictionary(grouping: allEmails, by: { $0.email })
         
         let best = allEmails.first(where: { $0.confidence == "high" })
-            ?? allEmails.first(where: { $0.confidence == "medium" &amp;&amp; (uniqueEmails[$0.email]?.count ?? 0) > 1 })
+            ?? allEmails.first(where: { $0.confidence == "medium" && (uniqueEmails[$0.email]?.count ?? 0) > 1 })
             ?? allEmails.first(where: { $0.confidence == "medium" })
             ?? allEmails.first
         
         let finalEmail = best?.email ?? lead.email
         let isVerified = best?.confidence == "high"
-            || (best != nil &amp;&amp; (uniqueEmails[best!.email]?.count ?? 0) > 1)
+            || (best != nil && (uniqueEmails[best!.email]?.count ?? 0) > 1)
                     || best?.confidence == "medium"
         
         let summaryParts = [
@@ -515,12 +518,14 @@ class PerplexityService {
         let json = cleanJSON(content)
         guard let data = json.data(using: .utf8),
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return SocialPost(platform: platform, content: content)
+            // Fallback: Footer an rohen Content anhaengen
+            return SocialPost(platform: platform, content: content + Self.companyFooter)
         }
         let hashtags = (dict["hashtags"] as? [String]) ?? []
+        let postContent = (dict["content"] as? String ?? content) + Self.companyFooter
         return SocialPost(
             platform: platform,
-            content: dict["content"] as? String ?? content,
+            content: postContent,
             hashtags: hashtags
         )
     }
