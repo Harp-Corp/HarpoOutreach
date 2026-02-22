@@ -220,35 +220,22 @@ struct NewsletterCampaignView: View {
         }
     }
 
-    private func publishLinkedInPost(at index: Int) {
+private func publishLinkedInPost(at index: Int) {
         guard index < viewModel.socialPosts.count else { return }
-        guard viewModel.linkedInAuthService.isAuthenticated else {
-            publishError = "Nicht bei LinkedIn angemeldet. Bitte in Einstellungen verbinden."
-            showPublishError = true
-            return
-        }
         let post = viewModel.socialPosts[index]
-        Task {
-            do {
-                let accessToken = try await viewModel.linkedInAuthService.getAccessToken()
-                        let postURL = try await viewModel.socialPostService.postToLinkedIn(
-                            post: post,
-                            accessToken: accessToken,
-                            personId: viewModel.linkedInAuthService.getPersonId() ?? ""
-                        )
-                        var updated = post
-                        updated.postURL = postURL
-                        updated.status = .published
-                        updated.publishedDate = Date()
-                await MainActor.run {
-                    viewModel.socialPosts[index] = updated
-                }
-            } catch {
-                await MainActor.run {
-                    publishError = error.localizedDescription
-                    showPublishError = true
-                }
-            }
+
+        // Text zusammenbauen: Inhalt + Hashtags
+        let hashtags = post.hashtags.map { "#\($0)" }.joined(separator: " ")
+        let fullText = post.hashtags.isEmpty ? post.content : "\(post.content)\n\n\(hashtags)"
+
+        // LinkedIn Share-URL oeffnen: Browser zeigt den Post-Dialog
+        var components = URLComponents(string: "https://www.linkedin.com/shareArticle")
+        components?.queryItems = [
+            URLQueryItem(name: "mini", value: "true"),
+            URLQueryItem(name: "summary", value: fullText)
+        ]
+        if let url = components?.url {
+            NSWorkspace.shared.open(url)
         }
     }
 }
