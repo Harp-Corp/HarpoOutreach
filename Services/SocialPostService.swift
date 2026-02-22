@@ -5,13 +5,13 @@ class SocialPostService {
     // MARK: - LinkedIn API
     private let linkedInAPIURL = "https://api.linkedin.com/v2"
 
-    // MARK: - Post to LinkedIn (Organization Post)
-    func postToLinkedIn(post: SocialPost, accessToken: String, orgId: String) async throws -> String {
+    // MARK: - Post to LinkedIn (FIX: Person Post statt Organization)
+    func postToLinkedIn(post: SocialPost, accessToken: String, personId: String) async throws -> String {
         guard !accessToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw SocialPostError.notConfigured(platform: "LinkedIn - Access Token fehlt. Bitte in Einstellungen eintragen.")
         }
-        guard !orgId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw SocialPostError.notConfigured(platform: "LinkedIn - Organization ID fehlt. Bitte in Einstellungen eintragen.")
+        guard !personId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw SocialPostError.notConfigured(platform: "LinkedIn - Person ID fehlt. Bitte LinkedIn neu verbinden.")
         }
 
         let url = URL(string: "\(linkedInAPIURL)/ugcPosts")!
@@ -23,8 +23,9 @@ class SocialPostService {
 
         let contentWithHashtags = post.content + "\n\n" + post.hashtags.map { "#\($0)" }.joined(separator: " ")
 
+        // FIX: urn:li:person statt urn:li:organization (w_member_social Scope)
         let body: [String: Any] = [
-            "author": "urn:li:organization:\(orgId)",
+            "author": "urn:li:person:\(personId)",
             "lifecycleState": "PUBLISHED",
             "specificContent": [
                 "com.linkedin.ugc.ShareContent": [
@@ -41,7 +42,7 @@ class SocialPostService {
 
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        print("[LinkedIn] Posting mit Token: \(accessToken.prefix(8))... OrgId: \(orgId)")
+        print("[LinkedIn] Posting mit Token: \(accessToken.prefix(8))... PersonId: \(personId)")
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
@@ -62,31 +63,6 @@ class SocialPostService {
             return "https://www.linkedin.com/feed/update/\(postId)"
         }
         return ""
-    }
-
-    // MARK: - Publish Social Post
-    func publish(post: SocialPost, settings: AppSettings) async throws -> SocialPost {
-        var updatedPost = post
-
-        guard !settings.linkedInAccessToken.isEmpty else {
-            throw SocialPostError.notConfigured(platform: "LinkedIn - Access Token fehlt")
-        }
-
-        do {
-            let postURL = try await postToLinkedIn(
-                post: post,
-                accessToken: settings.linkedInAccessToken,
-                orgId: settings.linkedInOrgId
-            )
-            updatedPost.postURL = postURL
-            updatedPost.status = .published
-            updatedPost.publishedDate = Date()
-        } catch {
-            updatedPost.status = .failed
-            throw error
-        }
-
-        return updatedPost
     }
 }
 
