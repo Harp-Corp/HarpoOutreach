@@ -230,7 +230,16 @@ struct NewsletterCampaignView: View {
         let post = viewModel.socialPosts[index]
         Task {
             do {
-                let accessToken = try await viewModel.linkedInAuthService.getAccessToken()                 let postURL = try await viewModel.socialPostService.postToLinkedIn(                     post: post,                     accessToken: accessToken,                     personId: viewModel.linkedInAuthService.getPersonId() ?? ""                 )                 var updated = post                 updated.postURL = postURL                 updated.status = .published                 updated.publishedDate = Date()
+                let accessToken = try await viewModel.linkedInAuthService.getAccessToken()
+                        let postURL = try await viewModel.socialPostService.postToLinkedIn(
+                            post: post,
+                            accessToken: accessToken,
+                            personId: viewModel.linkedInAuthService.getPersonId() ?? ""
+                        )
+                        var updated = post
+                        updated.postURL = postURL
+                        updated.status = .published
+                        updated.publishedDate = Date()
                 await MainActor.run {
                     viewModel.socialPosts[index] = updated
                 }
