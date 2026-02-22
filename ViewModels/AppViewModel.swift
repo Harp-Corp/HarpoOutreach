@@ -688,12 +688,14 @@ class AppViewModel: ObservableObject {
         isLoading = true
         currentStep = "Generiere \(platform.rawValue) Post..."
         do {
-            let post = try await pplxService.generateSocialPost(
+            var post = try await pplxService.generateSocialPost(
                 topic: topic,
                 platform: platform,
                 industries: industries.isEmpty ? settings.selectedIndustries : industries,
                 existingPosts: socialPosts,
                 apiKey: settings.perplexityAPIKey)
+                                // Safety net: Footer MUSS immer dabei sein
+                                post.content = PerplexityService.ensureFooter(post.content)
             socialPosts.insert(post, at: 0)
             saveSocialPosts()
             currentStep = "Post erstellt"
