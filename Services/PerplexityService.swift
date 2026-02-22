@@ -558,7 +558,7 @@ class PerplexityService {
         if !hashtagLine.isEmpty {
             fullContent += "\n\n" + hashtagLine
         }
-        fullContent = Self.ensureFooter(fullContent)
+                fullContent = fullContent.trimmingCharacters(in: .whitespacesAndNewlines) + Self.companyFooter
         
         return SocialPost(
             platform: platform,
