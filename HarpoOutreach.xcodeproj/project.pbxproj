@@ -23,6 +23,7 @@
 		EF67ADCA2F4220800066E6E9 /* SheetLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADC92F42207F0066E6E9 /* SheetLogView.swift */; };
 		EF67ADCC2F4223800066E6E9 /* ContactListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADCB2F42237A0066E6E9 /* ContactListView.swift */; };
 		EF67ADCD2F4227140066E6E9 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADBA2F4220060066E6E9 /* AppViewModel.swift */; };
+		EF67ADCE2F4228000066E6E9 /* SocialPostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADCF2F4228010066E6E9 /* SocialPostView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,6 +44,7 @@
 		EF67ADC72F4220730066E6E9 /* InboxFollowUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxFollowUpView.swift; sourceTree = "<group>"; };
 		EF67ADC92F42207F0066E6E9 /* SheetLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetLogView.swift; sourceTree = "<group>"; };
 		EF67ADCB2F42237A0066E6E9 /* ContactListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactListView.swift; sourceTree = "<group>"; };
+		EF67ADCF2F4228010066E6E9 /* SocialPostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialPostView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +101,7 @@
 				EF67ADBD2F4220330066E6E9 /* DashboardView.swift */,
 				EF67ADBB2F4220160066E6E9 /* MainTabView.swift */,
 				EF44A7852F4108470054C161 /* SettingsView.swift */,
+				EF67ADCF2F4228010066E6E9 /* SocialPostView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -198,6 +201,7 @@
 				EF67ADAF2F410B8C0066E6E9 /* Models.swift in Sources */,
 				EF44A78A2F4108470054C161 /* PerplexityService.swift in Sources */,
 				EF67ADC42F4220590066E6E9 /* EmailDraftView.swift in Sources */,
+				EF67ADCE2F4228000066E6E9 /* SocialPostView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -324,100 +328,3 @@
 			};
 			name = Release;
 		};
-		EF44A7302F40DCF10054C161 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8B9265Y22Q;
-				ENABLE_APP_SANDBOX = NO;
-				ENABLE_HARDENED_RUNTIME = NO;
-				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = HarpoOutreach;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = MF.HarpoOutreach;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		EF44A7312F40DCF10054C161 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8B9265Y22Q;
-				ENABLE_APP_SANDBOX = NO;
-				ENABLE_HARDENED_RUNTIME = NO;
-				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = HarpoOutreach;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = MF.HarpoOutreach;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
-/* End XCBuildConfiguration section */
-
-/* Begin XCConfigurationList section */
-		EF44A71F2F40DCEF0054C161 /* Build configuration list for PBXProject "HarpoOutreach" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				EF44A72D2F40DCF10054C161 /* Debug */,
-				EF44A72E2F40DCF10054C161 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		EF44A72F2F40DCF10054C161 /* Build configuration list for PBXNativeTarget "HarpoOutreach" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				EF44A7302F40DCF10054C161 /* Debug */,
-				EF44A7312F40DCF10054C161 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-/* End XCConfigurationList section */
-	};
-	rootObject = EF44A71C2F40DCEF0054C161 /* Project object */;
-}
