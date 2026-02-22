@@ -13,6 +13,8 @@ struct ContentGenerationView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var selectedTab = 0
+    @State private var showDuplicateWarning = false
+    @State private var duplicateWarningText = ""
 
     // Editing states
     @State private var editingPostContent = ""
@@ -57,6 +59,14 @@ struct ContentGenerationView: View {
             Button("OK") { }
         } message: {
             Text(errorMessage)
+        }
+        .alert("Duplikat-Warnung", isPresented: $showDuplicateWarning) {
+            Button("Trotzdem posten", role: .destructive) {
+                doPublishToLinkedIn()
+            }
+            Button("Abbrechen", role: .cancel) { }
+        } message: {
+            Text(duplicateWarningText)
         }
     }
 
@@ -249,7 +259,7 @@ struct ContentGenerationView: View {
                         .padding(8)
                     }
 
-                    // Action Buttons
+                    // Action Buttons - prominent
                     HStack(spacing: 12) {
                         Button(action: saveSocialPostDraft) {
                             HStack {
@@ -269,6 +279,41 @@ struct ContentGenerationView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.blue)
+                    }
+                    .padding(.top, 4)
+                }
+
+                // Bisherige Posts (Duplikat-Check)
+                if !viewModel.socialPosts.isEmpty {
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "clock.arrow.circlepath")
+                                Text("Bisherige Posts (\(viewModel.socialPosts.count))")
+                                    .font(.headline)
+                            }
+                            Divider()
+                            ForEach(viewModel.socialPosts.suffix(5)) { oldPost in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(String(oldPost.content.prefix(120)) + (oldPost.content.count > 120 ? "..." : ""))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    HStack {
+                                        Text(oldPost.createdDate.formatted(date: .abbreviated, time: .omitted))
+                                            .font(.caption2)
+                                            .foregroundStyle(.tertiary)
+                                        if oldPost.status == .published {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(.green)
+                                                .font(.caption2)
+                                        }
+                                    }
+                                }
+                                .padding(.vertical, 2)
+                                Divider()
+                            }
+                        }
+                        .padding(8)
                     }
                 }
             }
@@ -337,34 +382,84 @@ struct ContentGenerationView: View {
         viewModel.campaigns.append(campaign)
     }
 
+    // Check for duplicate content against existing posts
+    private func checkDuplicate(post: SocialPost) -> String? {
+        let newWords = Set(
+            post.content.lowercased()
+                .components(separatedBy: .whitespacesAndNewlines)
+                .filter { $0.count > 5 }
+        )
+        guard newWords.count > 5 else { return nil }
+        for existing in viewModel.socialPosts {
+            let existingWords = Set(
+                existing.content.lowercased()
+                    .components(separatedBy: .whitespacesAndNewlines)
+                    .filter { $0.count > 5 }
+            )
+            let overlap = newWords.intersection(existingWords)
+            let similarity = Double(overlap.count) / Double(newWords.count)
+            if similarity > 0.5 {
+                let dateStr = existing.createdDate.formatted(date: .abbreviated, time: .omitted)
+                return "Aehnlicher Post bereits am \(dateStr) erstellt (\(Int(similarity * 100))% Uebereinstimmung). Inhalt pruefen, um Duplikate zu vermeiden."
+            }
+        }
+        return nil
+    }
+
     private func publishToLinkedIn() {
         guard let post = generatedSocialPost else { return }
-        
-        // Build full post text with hashtags
+        if let warning = checkDuplicate(post: post) {
+            duplicateWarningText = warning
+            showDuplicateWarning = true
+        } else {
+            doPublishToLinkedIn()
+        }
+    }
+
+    private func doPublishToLinkedIn() {
+        guard let post = generatedSocialPost else { return }
         let content = post.content
         let hashtags = post.hashtags.map { "#\($0)" }.joined(separator: " ")
-        let fullText = content + "\n\n" + hashtags
-        
-        // Copy post text to clipboard so user can paste it on Company Page
+        let fullText = hashtags.isEmpty ? content : content + "\n\n" + hashtags
+
+        // Copy post text to clipboard
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(fullText, forType: .string)
-        
-        // Open Harpocrates Company Page admin view for posting as company
-        // linkedin.com/company/harpocrates/admin/ opens the admin panel
-        // where user can create a new post AS the company page
+
+        // Mark as published in drafts
+        var savedPost = post
+        savedPost = SocialPost(
+            id: post.id,
+            platform: post.platform,
+            content: post.content,
+            hashtags: post.hashtags,
+            status: .published,
+            createdDate: post.createdDate,
+            publishedDate: Date()
+        )
+        // Update in viewModel if exists, else append
+        if let idx = viewModel.socialPosts.firstIndex(where: { $0.id == post.id }) {
+            viewModel.socialPosts[idx] = savedPost
+        } else {
+            viewModel.socialPosts.append(savedPost)
+        }
+        generatedSocialPost = savedPost
+
+        // Open Harpocrates Company Page Admin for posting as company
         if let companyURL = URL(string: "https://www.linkedin.com/company/harpocrates/admin/page-posts/published/") {
             NSWorkspace.shared.open(companyURL)
         }
-        
-        // Inform user that text is in clipboard
-        errorMessage = "Post-Text wurde in die Zwischenablage kopiert. Erstelle einen neuen Post auf der Harpocrates Company Page und fuege den Text ein (Cmd+V)."
+
+        errorMessage = "Post-Text wurde in die Zwischenablage kopiert.\nLinkedIn Company Page geoeffnet - neuen Post erstellen und Text einf\u{FC}gen (Cmd+V)."
         showError = true
     }
 
     private func saveSocialPostDraft() {
         guard let post = generatedSocialPost else { return }
-        viewModel.socialPosts.append(post)
+        if !viewModel.socialPosts.contains(where: { $0.id == post.id }) {
+            viewModel.socialPosts.append(post)
+        }
     }
 }
 
