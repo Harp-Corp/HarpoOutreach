@@ -299,3 +299,53 @@ struct AppSettings: Codable {
         selectedRegions = Region.allCases.map { $0.rawValue }
     }
 }
+
+
+// MARK: - Social Media Content
+enum SocialPlatform: String, CaseIterable, Identifiable, Codable {
+    case linkedin = "LinkedIn"
+    case twitter = "Twitter/X"
+    
+    var id: String { rawValue }
+}
+
+enum ContentTopic: String, CaseIterable, Identifiable, Codable {
+    case regulatoryUpdate = "Regulatory Update"
+    case complianceTip = "Compliance Tip"
+    case industryInsight = "Industry Insight"
+    case productFeature = "Product Feature"
+    case thoughtLeadership = "Thought Leadership"
+    case caseStudy = "Case Study"
+    
+    var id: String { rawValue }
+    
+    var promptPrefix: String {
+        switch self {
+        case .regulatoryUpdate: return "Aktuelle regulatorische Entwicklung in"
+        case .complianceTip: return "Praxistipp fuer Compliance-Teams in"
+        case .industryInsight: return "Brancheneinblick und Trends in"
+        case .productFeature: return "Harpocrates comply.reg Feature fuer"
+        case .thoughtLeadership: return "Expertenmeinung zu Compliance in"
+        case .caseStudy: return "Praxisbeispiel Compliance-Herausforderung in"
+        }
+    }
+}
+
+struct SocialPost: Identifiable, Codable, Hashable {
+    let id: UUID
+    var platform: SocialPlatform
+    var content: String
+    var hashtags: [String]
+    var createdDate: Date
+    var isPublished: Bool
+    
+    init(id: UUID = UUID(), platform: SocialPlatform = .linkedin, content: String,
+         hashtags: [String] = [], createdDate: Date = Date(), isPublished: Bool = false) {
+        self.id = id
+        self.platform = platform
+        self.content = content
+        self.hashtags = hashtags
+        self.createdDate = createdDate
+        self.isPublished = isPublished
+    }
+}
