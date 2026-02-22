@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct ContentGenerationView: View {
     @ObservedObject var viewModel: AppViewModel
@@ -336,34 +337,23 @@ struct ContentGenerationView: View {
         viewModel.campaigns.append(campaign)
     }
 
-    private func publishToLinkedIn() {
-        guard var post = generatedSocialPost else { return }
-        guard viewModel.linkedInAuthService.isAuthenticated else {
-            errorMessage = "Nicht bei LinkedIn angemeldet. Bitte in Einstellungen verbinden."
-            showError = true
-            return
-        }
-        Task {
-            do {
-                let accessToken = try await viewModel.linkedInAuthService.getAccessToken()
-                let postURL = try await viewModel.socialPostService.postToLinkedIn(
-                    post: post,
-                    accessToken: accessToken,
-                    personId: viewModel.linkedInAuthService.getPersonId() ?? ""
-                )
-                post.postURL = postURL
-                post.status = .published
-                post.publishedDate = Date()
-                await MainActor.run {
-                    viewModel.socialPosts.append(post)
-                    generatedSocialPost = post
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    showError = true
-                }
-            }
+        private func publishToLinkedIn() {
+        guard let post = generatedSocialPost else { return }
+        
+        // Build LinkedIn share URL with post content
+        let content = post.content
+        let hashtags = post.hashtags.map { "#\($0)" }.joined(separator: " ")
+        let fullText = content + "\n\n" + hashtags
+        
+        // Use LinkedIn shareArticle URL for browser-based sharing
+        var components = URLComponents(string: "https://www.linkedin.com/sharing/share-offsite/")!
+        components.queryItems = [
+            URLQueryItem(name: "url", value: "https://harpocrates-comply.reg"),
+            URLQueryItem(name: "text", value: fullText)
+        ]
+        
+        if let shareURL = components.url {
+            NSWorkspace.shared.open(shareURL)
         }
     }
 
