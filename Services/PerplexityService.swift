@@ -519,6 +519,7 @@ class PerplexityService {
         3. KEINE HALLUZINATIONEN: Nur belegbare Fakten verwenden. Bei Unsicherheit: keine spezifische Zahl.
         4. COMPLY.REG RELEVANZ: Post muss auf Probleme eingehen die comply.reg loest.
         5. KEIN DUPLICATE: Thema und Hook muessen sich von bereits geposteten Inhalten unterscheiden.
+                    6. FOOTER: JEDER Post MUSS am Ende diese Fusszeile enthalten: \n\n🔗 www.harpocrates-corp.com | 📧 info@harpocrates-corp.com
 
         Return JSON: {"content": "...", "hashtags": [...]}
         """
@@ -546,7 +547,7 @@ class PerplexityService {
         guard let data = json.data(using: .utf8),
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             // Fallback: Content + Footer
-                              return SocialPost(platform: platform, content: content)
+                              return SocialPost(platform: platform, content: Self.ensureFooter(content))
         }
         
         // Kompletten Post zusammenbauen: Content (ohne doppelte Hashtags) + Hashtags + Footer
@@ -558,7 +559,7 @@ class PerplexityService {
         if !hashtagLine.isEmpty {
             fullContent += "\n\n" + hashtagLine
         }
-                fullContent = fullContent.trimmingCharacters(in: .whitespacesAndNewlines)
+                fullContent = fullContent.trimmingCharacters(in: .whitespacesAndNewlines) + Self.companyFooter
         
         return SocialPost(
             platform: platform,
