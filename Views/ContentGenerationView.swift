@@ -337,7 +337,7 @@ struct ContentGenerationView: View {
         viewModel.campaigns.append(campaign)
     }
 
-        private func publishToLinkedIn() {
+    private func publishToLinkedIn() {
         guard let post = generatedSocialPost else { return }
         
         // Build LinkedIn share URL with post content
@@ -345,14 +345,15 @@ struct ContentGenerationView: View {
         let hashtags = post.hashtags.map { "#\($0)" }.joined(separator: " ")
         let fullText = content + "\n\n" + hashtags
         
-        // Use LinkedIn shareArticle URL for browser-based sharing
-        var components = URLComponents(string: "https://www.linkedin.com/sharing/share-offsite/")!
-        components.queryItems = [
-            URLQueryItem(name: "url", value: "https://harpocrates-comply.reg"),
-            URLQueryItem(name: "text", value: fullText)
-        ]
+        // Manually percent-encode the text to avoid URI malformed errors
+        // LinkedIn's server-side decodeURIComponent can choke on certain encodings
+        let allowedChars = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-._~"))
+        guard let encodedText = fullText.addingPercentEncoding(withAllowedCharacters: allowedChars) else { return }
         
-        if let shareURL = components.url {
+        // Build URL string directly with manually encoded parameters
+        let urlString = "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fharpocrates-comply.reg&text=\(encodedText)"
+        
+        if let shareURL = URL(string: urlString) {
             NSWorkspace.shared.open(shareURL)
         }
     }
