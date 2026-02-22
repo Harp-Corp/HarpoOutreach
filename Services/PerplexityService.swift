@@ -505,6 +505,9 @@ class PerplexityService {
         - End with a clear call-to-action related to Harpocrates Solutions GmbH Compliance-Loesungen
         - Professional but approachable tone
         - Include a brief "Regulatory Radar" section with 2-3 bullet points on upcoming regulatory changes
+                - ALL numbers, statistics, and data points MUST include their source reference (e.g. "Quelle: EBA Report 2024")
+        - Do NOT hallucinate or invent any facts. Use only real, verifiable data from your web search.
+        - Focus exclusively on compliance, RegTech, FinTech, and regulatory topics relevant to Harpocrates comply.reg
         
         Return ONLY valid JSON with: subject, htmlBody, plainText
         """
@@ -524,17 +527,26 @@ class PerplexityService {
     // MARK: - 8) Social Post generieren
     func generateSocialPost(topic: ContentTopic, platform: SocialPlatform, industries: [String], apiKey: String) async throws -> SocialPost {
         let system = """
-        You are a social media content expert for Harpocrates Solutions GmbH, a RegTech company.
-        Write engaging social media posts that drive engagement and position the company as a compliance thought leader.
-        
+        You are a social media content expert for Harpocrates Solutions GmbH (comply.reg), a RegTech company specializing in automated regulatory compliance monitoring.
+        Write engaging LinkedIn posts focused EXCLUSIVELY on: regulatory compliance, RegTech, FinTech, compliance automation, GDPR, DORA, EU AI Act, MiCA, AML/KYC, ISO 27001, BaFin regulations, and related topics.
+
+        CRITICAL CONTENT RULES:
+        - Every post MUST contain at least 2-3 specific numbers, data points, or facts from verifiable sources
+        - Every number or statistic MUST include its source in parentheses, e.g. "(Quelle: EBA Report 2024)" or "(Source: Deloitte RegTech Survey 2024)"
+        - DO NOT hallucinate or invent any numbers, statistics, or facts
+        - Only use real, verifiable data from official sources (EU Commission, BaFin, EBA, ECB, Big4 reports, Gartner, etc.)
+        - Content must be directly relevant to compliance professionals using Harpocrates comply.reg
+        - Position Harpocrates as thought leader without being salesy
+
         Return a JSON object with:
-        - content: The post text (LinkedIn: max 3000 chars, Twitter: max 280 chars)
-        - hashtags: Array of relevant hashtags (5-8 for LinkedIn, 3-5 for Twitter)
-        
+        - content: The post text (LinkedIn: max 3000 chars)
+        - hashtags: Array of 5-8 relevant hashtags (e.g. RegTech, Compliance, DORA, GDPR, FinTech)
+        - sources: Array of source references used for facts/numbers in the post
+
         STYLE GUIDELINES:
         - LinkedIn: Professional, insightful, use line breaks for readability, include a hook in the first line
-        - Twitter: Concise, punchy, include a clear value proposition
-        - Both: Include relevant emoji sparingly, ask engaging questions, provide actionable insights
+        - Include relevant emoji sparingly, ask engaging questions, provide actionable insights
+        - Always end with a question to drive engagement
         """
         let industryContext = industries.isEmpty ? "various industries" : industries.joined(separator: ", ")
         let user = """
@@ -544,7 +556,11 @@ class PerplexityService {
         Platform: \(platform.rawValue)
         Company: Harpocrates Solutions GmbH - Automated Compliance Monitoring
         
-        Return ONLY valid JSON with: content, hashtags
+        IMPORTANT: Include at least 2-3 real statistics or data points with their sources.
+        Example: "67% of financial institutions report..." (Quelle: EBA Annual Report 2024)
+        Do NOT invent numbers. Use real, verifiable data from your web search.
+        
+        Return ONLY valid JSON with: content, hashtags, sources
         """
         let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey, maxTokens: 2000)
         let json = cleanJSON(content)
