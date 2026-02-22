@@ -349,7 +349,7 @@ struct ContentGenerationView: View {
                 let postURL = try await viewModel.socialPostService.postToLinkedIn(
                     post: post,
                     accessToken: accessToken,
-                    orgId: viewModel.settings.linkedInOrgId
+                    personId: viewModel.linkedInAuthService.getPersonId() ?? ""
                 )
                 post.postURL = postURL
                 post.status = .published
