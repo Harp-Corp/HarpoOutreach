@@ -536,7 +536,7 @@ class PerplexityService {
         CRITICAL CONTENT RULES:
         - Every post MUST contain at least 2-3 specific numbers, data points, or facts from verifiable sources
         - Every number or statistic MUST include its source in parentheses, e.g. "(Quelle: EBA Report 2024)" or "(Source: Deloitte RegTech Survey 2024)"
-        - DO NOT hallucinate or invent any numbers, statistics, or facts
+        - DO NOT hallucinate or invent any numbers, statistics, or facts - DO NOT use markdown formatting: no **, no *, no #, no _. Plain text only - DO NOT use emojis or emoticons of any kind - All currency values MUST be in EUR. Convert USD/GBP to approximate EUR - Focus EXCLUSIVELY on EU/European market: EU regulations, DACH region, European institutions
         - Only use real, verifiable data from official sources (EU Commission, BaFin, EBA, ECB, Big4 reports, Gartner, etc.)
         - Content must be directly relevant to compliance professionals using Harpocrates comply.reg
         - Position Harpocrates as thought leader without being salesy
@@ -557,9 +557,9 @@ class PerplexityService {
         - sources: Array of source references used for facts/numbers in the post
 
         STYLE GUIDELINES:
-        - LinkedIn: Professional, insightful, use line breaks for readability, include a hook in the first line
-        - Include relevant emoji sparingly, ask engaging questions, provide actionable insights
-        - Always end with a question to drive engagement
+        - LinkedIn: Professional, direct, use line breaks for readability, strong hook in the first line. NO markdown formatting (no **, no *, no #). Use plain text only. For emphasis use CAPS sparingly
+        - NO emojis - never use emojis or emoticons. Ask a sharp, direct question at the end. Provide actionable insights with specific data
+        - Always end with a concise, sharp question to drive engagement. CURRENCY: always use EUR. Convert USD/GBP to EUR if needed. GEOGRAPHY: focus exclusively on EU/DACH/European market context, EU regulations (DORA, EU AI Act, NIS2, MiCA, CSRD, GDPR, MiFID II, Basel IV, AMLD6)
         """
         let industryContext = industries.isEmpty ? "various industries" : industries.joined(separator: ", ")
         let user = """
@@ -584,13 +584,15 @@ class PerplexityService {
         let hashtags = (dict["hashtags"] as? [String]) ?? []
         return SocialPost(
             platform: platform,
-            content: dict["content"] as? String ?? content,
+            content: stripMarkdown(dict["content"] as? String ?? content),
             hashtags: hashtags
         )
     }
     // MARK: - JSON Helpers
 
-    private func stripCitations(_ text: String) -> String {
+    // MARK: - Markdown Stripper (LinkedIn safety net)     private func stripMarkdown(_ text: String) -> String {         var result = text         // Remove bold/italic markers: ** and *         result = result.replacingOccurrences(of: "**", with: "")         result = result.replacingOccurrences(of: "__", with: "")         // Remove heading markers at start of lines         let lines = result.components(separatedBy: "
+")         result = lines.map { line in             var l = line             while l.hasPrefix("#") { l = String(l.dropFirst()) }             return l.trimmingCharacters(in: .init(charactersIn: " "))         }.joined(separator: "
+")         // Remove remaining single * used for emphasis (but NOT inside source refs)         if let regex = try? NSRegularExpression(pattern: "(?<!\()\*(?!\))") {             let range = NSRange(result.startIndex..., in: result)             result = regex.stringByReplacingMatches(in: result, range: range, withTemplate: "")         }         return result.trimmingCharacters(in: .whitespacesAndNewlines)     }      private func stripCitations(_ text: String) -> String {
         var result = text
         let pattern = "\\s*\\[\\d+(,\\s*\\d+)*\\]"
         if let regex = try? NSRegularExpression(pattern: pattern) {
