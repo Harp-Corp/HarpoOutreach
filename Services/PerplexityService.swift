@@ -508,6 +508,9 @@ class PerplexityService {
                 - ALL numbers, statistics, and data points MUST include their source reference (e.g. "Quelle: EBA Report 2024")
         - Do NOT hallucinate or invent any facts. Use only real, verifiable data from your web search.
         - Focus exclusively on compliance, RegTech, FinTech, and regulatory topics relevant to Harpocrates comply.reg
+                - ENTSCHEIDER-FOKUS: Jeder Abschnitt muss klare Handlungsempfehlungen fuer C-Level und Compliance-Verantwortliche enthalten
+        - Frame Compliance als Wettbewerbsvorteil, nicht als Kostenfaktor - Harpocrates COMPLY als Loesung positionieren
+        - Nutze Dringlichkeit: Regulatorische Deadlines, Strafhoehen, Wettbewerbsdruck
         
         Return ONLY valid JSON with: subject, htmlBody, plainText
         """
@@ -537,6 +540,16 @@ class PerplexityService {
         - Only use real, verifiable data from official sources (EU Commission, BaFin, EBA, ECB, Big4 reports, Gartner, etc.)
         - Content must be directly relevant to compliance professionals using Harpocrates comply.reg
         - Position Harpocrates as thought leader without being salesy
+        
+        ENTSCHEIDER-FOKUS (CRITICAL):
+        - Every post MUST contain a clear, bold statement that motivates C-Level executives and Heads of Compliance to take action
+        - Frame compliance not as cost but as competitive advantage - Harpocrates COMPLY enables this
+        - Use urgency: regulatory deadlines, penalty amounts, competitive pressure
+        - End every post with a direct question or call-to-action that drives engagement and positions Harpocrates as the solution
+        - The 3 content categories are:
+          1. Regulatory Update: Specific law/regulation changes with deadlines and penalties - "Act now or risk X"
+          2. Thought Leadership: Why manual compliance is broken and how automation through COMPLY fixes it - backed by data
+          3. Product Update: Concrete COMPLY capabilities with ROI numbers - make them want a demo
 
         Return a JSON object with:
         - content: The post text (LinkedIn: max 3000 chars)
