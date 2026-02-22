@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct NewsletterCampaignView: View {
     @ObservedObject var viewModel: AppViewModel
@@ -79,17 +80,25 @@ struct NewsletterCampaignView: View {
                         ContentUnavailableView("Keine Posts", systemImage: "link", description: Text("Erstelle Posts im Content Studio"))
                     } else {
                         ForEach(Array(viewModel.socialPosts.enumerated()), id: \.element.id) { index, post in
+                            HStack(alignment: .top) {
                             SocialPostRow(post: post)
-                                .contextMenu {
-                                    if post.status == .draft {
-                                        Button("Auf LinkedIn posten") {
-                                            publishLinkedInPost(at: index)
-                                        }
-                                    }
-                                    Button("Loeschen", role: .destructive) {
-                                        viewModel.socialPosts.remove(at: index)
-                                    }
+                            Spacer()
+                            if post.status == .draft || post.status == .approved {
+                                Button {
+                                    publishLinkedInPost(at: index)
+                                } label: {
+                                    Label("Auf LinkedIn teilen", systemImage: "square.and.arrow.up")
+                                        .font(.caption)
                                 }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.blue)
+                            }
+                        }
+                        .contextMenu {
+                            Button("Loeschen", role: .destructive) {
+                                viewModel.socialPosts.remove(at: index)
+                            }
+                        }
                         }
                     }
                 }
