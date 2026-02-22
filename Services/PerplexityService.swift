@@ -518,14 +518,24 @@ class PerplexityService {
         let json = cleanJSON(content)
         guard let data = json.data(using: .utf8),
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            // Fallback: Footer an rohen Content anhaengen
+            // Fallback: Content + Footer
             return SocialPost(platform: platform, content: content + Self.companyFooter)
         }
+        
+        // Kompletten Post zusammenbauen: Content + Hashtags + Footer (in dieser Reihenfolge)
+        let rawContent = dict["content"] as? String ?? content
         let hashtags = (dict["hashtags"] as? [String]) ?? []
-        let postContent = (dict["content"] as? String ?? content) + Self.companyFooter
+        let hashtagLine = hashtags.map { $0.hasPrefix("#") ? $0 : "#\($0)" }.joined(separator: " ")
+        
+        var fullContent = rawContent
+        if !hashtagLine.isEmpty {
+            fullContent += "\n\n" + hashtagLine
+        }
+        fullContent += Self.companyFooter
+        
         return SocialPost(
             platform: platform,
-            content: postContent,
+            content: fullContent,
             hashtags: hashtags
         )
     }
