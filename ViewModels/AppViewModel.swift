@@ -20,6 +20,7 @@ class AppViewModel: ObservableObject {
     @Published var leads: [Lead] = []
     @Published var replies: [GmailService.GmailMessage] = []
     @Published var sheetData: [[String]] = []
+        @Published var socialPosts: [SocialPost] = []
 
     @Published var isLoading = false
     @Published var statusMessage = ""
@@ -28,6 +29,7 @@ class AppViewModel: ObservableObject {
 
     private let saveURL: URL
     private let companiesSaveURL: URL
+        private let socialPostsSaveURL: URL
     private var currentTask: Task<Void, Never>?
 
     // MARK: - Init
@@ -41,9 +43,11 @@ class AppViewModel: ObservableObject {
             withIntermediateDirectories: true)
         self.saveURL = appDir.appendingPathComponent("leads.json")
         self.companiesSaveURL = appDir.appendingPathComponent("companies.json")
+                self.socialPostsSaveURL = appDir.appendingPathComponent("socialPosts.json")
         loadSettings()
         loadLeads()
         loadCompanies()
+                loadSocialPosts()
         configureAuth()
         authCancellable = authService.objectWillChange.sink { [weak self] _ in
             self?.objectWillChange.send()
@@ -673,5 +677,61 @@ class AppViewModel: ObservableObject {
         let removedLeads = beforeLeads - leads.count
         let removedCompanies = beforeCompanies - companies.count
         statusMessage = "Bereinigt: \(removedLeads) Leads und \(removedCompanies) Unternehmen geloescht. Behalten: \(leads.count) Leads, \(companies.count) Unternehmen."
+    }
+
+    // MARK: - Social Post Generation
+    func generateSocialPost(topic: ContentTopic, platform: SocialPlatform = .linkedin, industries: [String] = []) async {
+        guard !settings.perplexityAPIKey.isEmpty else {
+            errorMessage = "Perplexity API Key fehlt."
+            return
+        }
+        isLoading = true
+        currentStep = "Generiere \(platform.rawValue) Post..."
+        do {
+            let post = try await pplxService.generateSocialPost(
+                topic: topic,
+                platform: platform,
+                industries: industries.isEmpty ? settings.selectedIndustries : industries,
+                existingPosts: socialPosts,
+                apiKey: settings.perplexityAPIKey)
+            socialPosts.insert(post, at: 0)
+            saveSocialPosts()
+            currentStep = "Post erstellt"
+        } catch {
+            errorMessage = "Post-Generierung fehlgeschlagen: \(error.localizedDescription)"
+        }
+        isLoading = false
+    }
+
+    func deleteSocialPost(_ postID: UUID) {
+        socialPosts.removeAll { $0.id == postID }
+        saveSocialPosts()
+    }
+
+    func updateSocialPost(_ post: SocialPost) {
+        if let idx = socialPosts.firstIndex(where: { $0.id == post.id }) {
+            socialPosts[idx] = post
+            saveSocialPosts()
+        }
+    }
+
+    func copyPostToClipboard(_ post: SocialPost) {
+        #if canImport(AppKit)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(post.content, forType: .string)
+        statusMessage = "Post in Zwischenablage kopiert"
+        #endif
+    }
+
+    private func saveSocialPosts() {
+        if let data = try? JSONEncoder().encode(socialPosts) {
+            try? data.write(to: socialPostsSaveURL)
+        }
+    }
+
+    private func loadSocialPosts() {
+        guard let data = try? Data(contentsOf: socialPostsSaveURL),
+              let saved = try? JSONDecoder().decode([SocialPost].self, from: data) else { return }
+        socialPosts = saved
     }
 }
