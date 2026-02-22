@@ -9,6 +9,7 @@ class LinkedInAuthService: ObservableObject {
     private var accessToken: String?
     private var refreshToken: String?
     private var tokenExpiry: Date?
+    private var personId: String?
 
     private var clientID: String = ""
     private var clientSecret: String = ""
@@ -25,7 +26,7 @@ class LinkedInAuthService: ObservableObject {
         loadTokens()
     }
 
-    // MARK: - Get valid access token
+    // MARK: - Public Accessors
     func getAccessToken() async throws -> String {
         if let token = accessToken, let expiry = tokenExpiry, expiry > Date(), !token.isEmpty {
             return token
@@ -46,13 +47,16 @@ class LinkedInAuthService: ObservableObject {
         throw LinkedInAuthError.notAuthenticated
     }
 
+    func getPersonId() -> String? {
+        return personId
+    }
+
     // MARK: - Start OAuth Flow
     func startOAuthFlow() {
         guard !clientID.isEmpty, !clientSecret.isEmpty else {
             print("[LinkedInAuth] Client ID/Secret nicht konfiguriert")
             return
         }
-
         var components = URLComponents(string: authURL)!
         components.queryItems = [
             URLQueryItem(name: "response_type", value: "code"),
@@ -61,9 +65,7 @@ class LinkedInAuthService: ObservableObject {
             URLQueryItem(name: "scope", value: scopes),
             URLQueryItem(name: "state", value: UUID().uuidString)
         ]
-
         startLocalServer()
-
         if let url = components.url {
             NSWorkspace.shared.open(url)
         }
@@ -73,22 +75,17 @@ class LinkedInAuthService: ObservableObject {
     private func startLocalServer() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-
             let server = self.createSocket(port: 8766)
             guard server >= 0 else {
                 print("[LinkedInAuth] Server konnte nicht gestartet werden")
                 return
             }
-
             let client = accept(server, nil, nil)
             guard client >= 0 else { close(server); return }
-
             var buffer = [UInt8](repeating: 0, count: 4096)
             let bytesRead = read(client, &buffer, buffer.count)
             guard bytesRead > 0 else { close(client); close(server); return }
-
             let request = String(bytes: buffer[0..<bytesRead], encoding: .utf8) ?? ""
-
             if let code = self.extractCode(from: request) {
                 let html = """
                 HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n\
@@ -100,7 +97,6 @@ class LinkedInAuthService: ObservableObject {
                 write(client, html, html.utf8.count)
                 close(client)
                 close(server)
-
                 let authService = self
                 Task {
                     do {
@@ -229,7 +225,7 @@ class LinkedInAuthService: ObservableObject {
         print("[LinkedInAuth] Token gespeichert, expires_in=\(expiresIn)s")
     }
 
-    // MARK: - Fetch User Profile
+    // MARK: - Fetch User Profile (FIX: extract sub as personId)
     private func fetchUserProfile() async {
         guard let token = accessToken, !token.isEmpty else { return }
         var req = URLRequest(url: URL(string: "https://api.linkedin.com/v2/userinfo")!)
@@ -239,18 +235,22 @@ class LinkedInAuthService: ObservableObject {
                 print("[LinkedInAuth] UserInfo HTTP \(http.statusCode)")
             }
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                let sub = json["sub"] as? String
                 let name = (json["name"] as? String) ?? ""
                 let given = (json["given_name"] as? String) ?? ""
                 let family = (json["family_name"] as? String) ?? ""
                 let display = name.isEmpty ? "\(given) \(family)".trimmingCharacters(in: .whitespaces) : name
+                print("[LinkedInAuth] PersonId (sub): \(sub ?? "nil"), Name: \(display)")
                 await MainActor.run {
+                    self.personId = sub
                     self.userName = display.isEmpty ? "LinkedIn verbunden" : display
+                    self.saveTokens()
                 }
             }
         }
     }
 
-    // MARK: - HTTP Helper (FIX: korrektes form-urlencoded Encoding)
+    // MARK: - HTTP Helper (korrektes form-urlencoded Encoding)
     private func formURLEncode(_ string: String) -> String {
         var allowed = CharacterSet.alphanumerics
         allowed.insert(charactersIn: "-._~")
@@ -261,7 +261,6 @@ class LinkedInAuthService: ObservableObject {
         var request = URLRequest(url: URL(string: url)!)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        // FIX: formURLEncode encoded = + & korrekt (urlQueryAllowed laesst = durch!)
         let body = params.map { "\(formURLEncode($0.key))=\(formURLEncode($0.value))" }.joined(separator: "&")
         print("[LinkedInAuth] POST body: \(body.prefix(200))")
         request.httpBody = body.data(using: .utf8)
@@ -274,12 +273,13 @@ class LinkedInAuthService: ObservableObject {
         return data
     }
 
-    // MARK: - Token Persistence
+    // MARK: - Token Persistence (inkl. personId)
     private func saveTokens() {
         let dict: [String: String] = [
             "access_token": accessToken ?? "",
             "refresh_token": refreshToken ?? "",
-            "expiry": (tokenExpiry ?? Date()).timeIntervalSince1970.description
+            "expiry": (tokenExpiry ?? Date()).timeIntervalSince1970.description,
+            "person_id": personId ?? ""
         ]
         if let data = try? JSONEncoder().encode(dict) {
             UserDefaults.standard.set(data, forKey: "linkedin_tokens")
@@ -295,16 +295,17 @@ class LinkedInAuthService: ObservableObject {
         }
         accessToken = dict["access_token"]
         refreshToken = dict["refresh_token"]
+        personId = dict["person_id"]
         if let exp = dict["expiry"], let ts = Double(exp) { tokenExpiry = Date(timeIntervalSince1970: ts) }
         let hasAccess = accessToken != nil && !(accessToken?.isEmpty ?? true)
         let hasRefresh = refreshToken != nil && !(refreshToken?.isEmpty ?? true)
         let notExpired = tokenExpiry.map { $0 > Date() } ?? false
         isAuthenticated = (hasAccess && notExpired) || hasRefresh
-        print("[LinkedInAuth] loadTokens: authenticated=\(isAuthenticated), hasAccess=\(hasAccess), notExpired=\(notExpired)")
+        print("[LinkedInAuth] loadTokens: authenticated=\(isAuthenticated), hasAccess=\(hasAccess), notExpired=\(notExpired), personId=\(personId ?? "nil")")
     }
 
     func logout() {
-        accessToken = nil; refreshToken = nil; tokenExpiry = nil
+        accessToken = nil; refreshToken = nil; tokenExpiry = nil; personId = nil
         isAuthenticated = false; userName = ""
         UserDefaults.standard.removeObject(forKey: "linkedin_tokens")
     }
