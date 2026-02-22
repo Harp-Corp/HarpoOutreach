@@ -222,15 +222,15 @@ struct NewsletterCampaignView: View {
 
     private func publishLinkedInPost(at index: Int) {
         guard index < viewModel.socialPosts.count else { return }
-        guard !viewModel.settings.linkedInAccessToken.isEmpty else {
-            publishError = "LinkedIn Access Token fehlt. Bitte in Einstellungen eintragen."
+        guard viewModel.linkedInAuthService.isAuthenticated else {
+            publishError = "Nicht bei LinkedIn angemeldet. Bitte in Einstellungen verbinden."
             showPublishError = true
             return
         }
         let post = viewModel.socialPosts[index]
         Task {
             do {
-                let updated = try await viewModel.socialPostService.publish(post: post, settings: viewModel.settings)
+                let accessToken = try await viewModel.linkedInAuthService.getAccessToken()                 let postURL = try await viewModel.socialPostService.postToLinkedIn(                     post: post,                     accessToken: accessToken,                     personId: viewModel.linkedInAuthService.getPersonId() ?? ""                 )                 var updated = post                 updated.postURL = postURL                 updated.status = .published                 updated.publishedDate = Date()
                 await MainActor.run {
                     viewModel.socialPosts[index] = updated
                 }
