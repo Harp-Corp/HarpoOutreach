@@ -7,12 +7,31 @@ class PerplexityService {
     // Standard-Footer fuer alle generierten Inhalte (LinkedIn, Newsletter, etc.)
     static let companyFooter = "\n\n\u{1F517} www.harpocrates-corp.com | \u{1F4E7} info@harpocrates-corp.com"
 
-        // Stellt sicher, dass der Footer IMMER am Ende des Contents steht
+    // Stellt sicher, dass der Footer IMMER am Ende des Contents steht
+    // Entfernt existierenden Footer und haengt ihn frisch an
     static func ensureFooter(_ content: String) -> String {
-        if content.contains("harpocrates-corp.com") {
-            return content
+        var clean = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Entferne existierenden Footer falls vorhanden (egal ob teilweise oder komplett)
+        if let range = clean.range(of: "\u{1F517} www.harpocrates-corp.com") {
+            clean = String(clean[clean.startIndex..<range.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        return content.trimmingCharacters(in: .whitespacesAndNewlines) + companyFooter
+        return clean + companyFooter
+    }
+    
+    // Entfernt Hashtag-Zeilen am Ende des Contents (verhindert Dopplungen)
+    static func stripTrailingHashtags(_ content: String) -> String {
+        let lines = content.components(separatedBy: "\n")
+        var result: [String] = []
+        var foundNonHashtag = false
+        for line in lines.reversed() {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty && !foundNonHashtag { continue }
+            if trimmed.hasPrefix("#") && !foundNonHashtag { continue }
+            foundNonHashtag = true
+            result.insert(line, at: 0)
+        }
+        return result.joined(separator: "\n")
     }
     
     // MARK: - Generic API Call
@@ -530,12 +549,12 @@ class PerplexityService {
                               return SocialPost(platform: platform, content: Self.ensureFooter(content))
         }
         
-        // Kompletten Post zusammenbauen: Content + Hashtags + Footer (in dieser Reihenfolge)
+        // Kompletten Post zusammenbauen: Content (ohne doppelte Hashtags) + Hashtags + Footer
         let rawContent = dict["content"] as? String ?? content
         let hashtags = (dict["hashtags"] as? [String]) ?? []
         let hashtagLine = hashtags.map { $0.hasPrefix("#") ? $0 : "#\($0)" }.joined(separator: " ")
         
-        var fullContent = rawContent
+        var fullContent = Self.stripTrailingHashtags(rawContent)
         if !hashtagLine.isEmpty {
             fullContent += "\n\n" + hashtagLine
         }
