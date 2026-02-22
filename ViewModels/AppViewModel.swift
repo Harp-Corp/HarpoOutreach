@@ -695,7 +695,7 @@ class AppViewModel: ObservableObject {
                 existingPosts: socialPosts,
                 apiKey: settings.perplexityAPIKey)
                                 // Safety net: Footer MUSS immer dabei sein
-                                post.content = PerplexityService.ensureFooter(post.content)
+                                                post.content = post.content.trimmingCharacters(in: .whitespacesAndNewlines) + PerplexityService.companyFooter
             socialPosts.insert(post, at: 0)
             saveSocialPosts()
             currentStep = "Post erstellt"
