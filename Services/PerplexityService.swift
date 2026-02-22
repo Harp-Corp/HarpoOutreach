@@ -61,7 +61,14 @@ class PerplexityService {
         """
         let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey, maxTokens: 8000)
         return parseJSON(content).map { d in
-            Company(name: d["name"] ?? "Unknown", industry: d["industry"] ?? industry.rawValue, region: d["region"] ?? region.rawValue, website: d["website"] ?? "", linkedInURL: d["linkedInURL"] ?? "", description: d["description"] ?? "")
+            Company(
+                name: d["name"] ?? "Unknown",
+                industry: d["industry"] ?? industry.rawValue,
+                region: d["region"] ?? region.rawValue,
+                website: d["website"] ?? "",
+                linkedInURL: d["linkedInURL"] ?? "",
+                description: d["description"] ?? ""
+            )
         }
     }
     
@@ -138,7 +145,7 @@ class PerplexityService {
                 let moreResults = parseJSON(content2)
                 for candidate in moreResults {
                     let name = candidate["name"] ?? ""
-                    if !name.isEmpty && !allCandidates.contains(where: { normalizeName($0["name"] ?? "") == normalizeName(name) }) {
+                    if !name.isEmpty &amp;&amp; !allCandidates.contains(where: { normalizeName($0["name"] ?? "") == normalizeName(name) }) {
                         allCandidates.append(candidate)
                     }
                 }
@@ -192,7 +199,7 @@ class PerplexityService {
     // Hilfsfunktion: Email bereinigen
     private func cleanEmail(_ email: String) -> String {
         let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.contains("@") && trimmed.contains(".") {
+        if trimmed.contains("@") &amp;&amp; trimmed.contains(".") {
             return trimmed.lowercased()
         }
         return ""
@@ -347,7 +354,7 @@ class PerplexityService {
                     ), at: 0)
                 }
                 if let alts = dict["alternative_emails"] as? [String] {
-                    for alt in alts where alt.contains("@") && !alt.isEmpty {
+                    for alt in alts where alt.contains("@") &amp;&amp; !alt.isEmpty {
                         let cleanAlt = alt.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
                         if !allEmails.contains(where: { $0.email == cleanAlt }) {
                             allEmails.append((email: cleanAlt, source: "Alternative", confidence: "low"))
@@ -371,13 +378,13 @@ class PerplexityService {
         let uniqueEmails = Dictionary(grouping: allEmails, by: { $0.email })
         
         let best = allEmails.first(where: { $0.confidence == "high" })
-            ?? allEmails.first(where: { $0.confidence == "medium" && (uniqueEmails[$0.email]?.count ?? 0) > 1 })
+            ?? allEmails.first(where: { $0.confidence == "medium" &amp;&amp; (uniqueEmails[$0.email]?.count ?? 0) > 1 })
             ?? allEmails.first(where: { $0.confidence == "medium" })
             ?? allEmails.first
         
         let finalEmail = best?.email ?? lead.email
         let isVerified = best?.confidence == "high"
-            || (best != nil && (uniqueEmails[best!.email]?.count ?? 0) > 1)
+            || (best != nil &amp;&amp; (uniqueEmails[best!.email]?.count ?? 0) > 1)
                     || best?.confidence == "medium"
         
         let summaryParts = [
@@ -421,7 +428,7 @@ class PerplexityService {
         return OutboundEmail(subject: dict["subject"] as? String ?? "Compliance Solutions for \(lead.company)", body: stripCitations(rawBody))
     }
     
-// MARK: - 6) Follow-up Email erstellen (mit Konversationshistorie)
+    // MARK: - 6) Follow-up Email erstellen (mit Konversationshistorie)
     func draftFollowUp(lead: Lead, originalEmail: String, followUpEmail: String = "", replyReceived: String = "", senderName: String, apiKey: String) async throws -> OutboundEmail {
         let system = """
         You write professional follow-up emails for B2B outreach. You have access to the full conversation history.
@@ -461,6 +468,61 @@ class PerplexityService {
         }
         let rawBody2 = dict["body"] as? String ?? content
         return OutboundEmail(subject: dict["subject"] as? String ?? "Following up - \(lead.company)", body: stripCitations(rawBody2))
+    }
+    
+    // MARK: - 8) Social Post generieren (comply.reg-fokussiert + Quellen + Duplicate-Check)
+    func generateSocialPost(topic: ContentTopic, platform: SocialPlatform, industries: [String], existingPosts: [SocialPost] = [], apiKey: String) async throws -> SocialPost {
+        // Bereits gepostete Inhalte als Kontext (Duplicate-Prevention)
+        let existingTitles = existingPosts.prefix(10).map { String($0.content.prefix(80)) }.joined(separator: "\n- ")
+        let dupeContext = existingPosts.isEmpty ? "" : "\n\nBEREITS GEPOSTETE INHALTE (NICHT WIEDERHOLEN):\n- " + existingTitles
+
+        let system = """
+        Du bist Social-Media-Experte fuer Harpocrates Corp und das Produkt comply.reg.
+        comply.reg ist eine RegTech SaaS-Plattform fuer automatisiertes Compliance-Monitoring,
+        Regulatory Change Management und Risikobewertung fuer Fintech, Banken und regulierte Unternehmen.
+
+        PFLICHTREGELN fuer jeden Post:
+        1. FAKTEN & ZAHLEN: Jeder Post MUSS mindestens 1-2 konkrete Zahlen, Statistiken oder Daten enthalten
+           (z.B. Bussgelder bis 10 Mio EUR, 72h-Meldepflicht, DORA gilt ab 17.01.2025)
+        2. QUELLENANGABE: Zahlen und Fakten MUESSEN mit Quelle zitiert werden
+           Format: (Quelle: EBA, BaFin, EZB, ESMA, EU-Amtsblatt, etc.)
+        3. KEINE HALLUZINATIONEN: Nur belegbare Fakten verwenden. Bei Unsicherheit: keine spezifische Zahl.
+        4. COMPLY.REG RELEVANZ: Post muss auf Probleme eingehen die comply.reg loest.
+        5. KEIN DUPLICATE: Thema und Hook muessen sich von bereits geposteten Inhalten unterscheiden.
+
+        Return JSON: {"content": "...", "hashtags": [...]}
+        """
+
+        let industryContext = industries.isEmpty ? "Finanzdienstleistungen, RegTech, Compliance" : industries.joined(separator: ", ")
+        let user = """
+        Schreibe einen \(platform.rawValue)-Post fuer Harpocrates Corp / comply.reg.
+        Thema: \(topic.rawValue) - \(topic.promptPrefix) \(industryContext)
+
+        ANFORDERUNGEN:
+        - Hook in Zeile 1 (Zahl oder provokante These)
+        - Mindestens 1 konkrete Zahl/Statistik mit Quelle in Klammern
+        - Bezug zu DORA, NIS2, DSGVO, MiCA, EU AI Act, CSRD oder aktuellen EU-Regularien
+        - Frage oder CTA am Ende
+        - comply.reg natuerlich erwaehnen (kein Hard-Sell)
+        - LinkedIn: 150-250 Woerter, Zeilenumbrueche fuer Lesbarkeit\(dupeContext)
+
+        Hashtags: 5-7 aus: #DORA #NIS2 #DSGVO #RegTech #Compliance #FinTech #RegulatoryCompliance #comply #RiskManagement #AML #BaFin #EBA
+
+        Return ONLY valid JSON: {"content": "...", "hashtags": [...]}
+        """
+
+        let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey, maxTokens: 2000)
+        let json = cleanJSON(content)
+        guard let data = json.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return SocialPost(platform: platform, content: content)
+        }
+        let hashtags = (dict["hashtags"] as? [String]) ?? []
+        return SocialPost(
+            platform: platform,
+            content: dict["content"] as? String ?? content,
+            hashtags: hashtags
+        )
     }
     
     // MARK: - JSON Helpers
