@@ -6,6 +6,14 @@ class PerplexityService {
     
     // Standard-Footer fuer alle generierten Inhalte (LinkedIn, Newsletter, etc.)
     static let companyFooter = "\n\n\u{1F517} www.harpocrates-corp.com | \u{1F4E7} info@harpocrates-corp.com"
+
+        // Stellt sicher, dass der Footer IMMER am Ende des Contents steht
+    static func ensureFooter(_ content: String) -> String {
+        if content.contains("harpocrates-corp.com") {
+            return content
+        }
+        return content.trimmingCharacters(in: .whitespacesAndNewlines) + companyFooter
+    }
     
     // MARK: - Generic API Call
     private func callAPI(systemPrompt: String, userPrompt: String, apiKey: String, maxTokens: Int = 4000) async throws -> String {
@@ -519,7 +527,7 @@ class PerplexityService {
         guard let data = json.data(using: .utf8),
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             // Fallback: Content + Footer
-            return SocialPost(platform: platform, content: content + Self.companyFooter)
+                              return SocialPost(platform: platform, content: Self.ensureFooter(content))
         }
         
         // Kompletten Post zusammenbauen: Content + Hashtags + Footer (in dieser Reihenfolge)
@@ -531,7 +539,7 @@ class PerplexityService {
         if !hashtagLine.isEmpty {
             fullContent += "\n\n" + hashtagLine
         }
-        fullContent += Self.companyFooter
+        fullContent = Self.ensureFooter(fullContent)
         
         return SocialPost(
             platform: platform,
