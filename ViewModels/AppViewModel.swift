@@ -222,6 +222,31 @@ class AppViewModel: ObservableObject {
     var statsReplied: Int { leads.filter { !$0.replyReceived.isEmpty }.count }
     var statsFollowUp: Int { leads.filter { $0.dateFollowUpSent != nil }.count }
 
+    // MARK: - Social Post Statistiken
+    var statsSocialPostsTotal: Int { socialPosts.count }
+    var statsSocialPostsLinkedIn: Int { socialPosts.filter { $0.platform == .linkedin }.count }
+    var statsSocialPostsTwitter: Int { socialPosts.filter { $0.platform == .twitter }.count }
+    var statsSocialPostsPublished: Int { socialPosts.filter { $0.isPublished }.count }
+    var statsSocialPostsThisWeek: Int {
+        let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        return socialPosts.filter { $0.createdDate >= weekAgo }.count
+    }
+
+    // MARK: - Campaign Statistiken
+    var statsCompanies: Int { companies.count }
+    var statsDraftsReady: Int { leads.filter { $0.draftedEmail != nil && $0.dateEmailSent == nil }.count }
+    var statsApproved: Int { leads.filter { $0.draftedEmail?.isApproved == true && $0.dateEmailSent == nil }.count }
+    var statsConversionRate: Double {
+        guard statsSent > 0 else { return 0 }
+        return Double(statsReplied) / Double(statsSent) * 100
+    }
+    var statsFollowUpsPending: Int { leads.filter { $0.followUpEmail != nil && $0.dateFollowUpSent == nil }.count }
+    var statsIndustryCounts: [(industry: String, count: Int)] {
+        let grouped = Dictionary(grouping: companies, by: { $0.industry })
+        return grouped.map { (industry: $0.key, count: $0.value.count) }
+            .sorted { $0.count > $1.count }
+    }
+
     // MARK: - Persistenz
     private func saveLeads() {
         if let data = try? JSONEncoder().encode(leads) { try? data.write(to: saveURL) }
