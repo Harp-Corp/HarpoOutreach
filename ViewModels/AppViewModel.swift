@@ -714,7 +714,9 @@ class AppViewModel: ObservableObject {
 
     func updateSocialPost(_ post: SocialPost) {
         if let idx = socialPosts.firstIndex(where: { $0.id == post.id }) {
-            socialPosts[idx] = post
+                        var fixedPost = post
+            fixedPost.content = SocialPost.ensureFooter(post.content)
+            socialPosts[idx] = fixedPost
             saveSocialPosts()
         }
     }
