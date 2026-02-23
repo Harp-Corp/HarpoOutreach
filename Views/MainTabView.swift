@@ -21,10 +21,12 @@ struct MainTabView: View {
                     .tag(5)
                 Label("Google Sheet", systemImage: "tablecells")
                     .tag(6)
-                                Label("Social Posts", systemImage: "text.bubble")
+                            Label("Social Posts", systemImage: "text.bubble")
                     .tag(7)
+                Label("Pipeline", systemImage: "list.bullet.rectangle")
+                    .tag(8)
                 Label("Einstellungen", systemImage: "gear")
-                                        .tag(8)
+                    .tag(9)
             }
             .listStyle(.sidebar)
             .frame(minWidth: 200)
@@ -38,8 +40,9 @@ struct MainTabView: View {
                 case 4: OutboxView(vm: vm)
                 case 5: InboxFollowUpView(vm: vm)
                 case 6: SheetLogView(vm: vm)
-                                    case 7: SocialPostView().environmentObject(vm)
-                                case 8: SettingsView(vm: vm)
+                            case 7: SocialPostView().environmentObject(vm)
+                case 8: OutreachPipelineView(vm: vm)
+                case 9: SettingsView(vm: vm)
                 default: DashboardView(vm: vm)
                 }
             }
