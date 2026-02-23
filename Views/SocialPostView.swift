@@ -170,11 +170,8 @@ struct SocialPostView: View {
                 Spacer()
                 Button("Speichern") {
                     var updated = post
-                    // Ensure footer is present
-                    if !editContent.contains("harpocrates-corp.com") {
-                        editContent += PerplexityService.companyFooter
-                    }
-                    updated.content = editContent
+                                        // Footer enforcement via SocialPost Model
+                    updated.content = SocialPost.ensureFooter(editContent)
                     vm.updateSocialPost(updated)
                     editingPost = nil
                 }
