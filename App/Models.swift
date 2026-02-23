@@ -84,7 +84,7 @@ enum Industry: String, CaseIterable, Identifiable, Codable {
         case .Q_healthcare: return "healthcare, pharma, medical devices, biotech, hospitals, Gesundheitswesen, Medizintechnik"
         case .K_financialServices: return "banking, insurance, asset management, fintech, Finanzdienstleistungen, Versicherungen"
         case .D_energy: return "energy, utilities, renewables, solar, wind, Energieversorgung, Stadtwerke"
-        case .C_manufacturing: return "manufacturing, industrial, automotive, chemicals, Maschinenbau, Fertigung"
+        case .C_manufacturing: return "manufacturing, industrial, automotive, automotive suppliers, Automobilzulieferer, OEM, Tier 1, Tier 2, chemicals, Maschinenbau, Fertigung, Fahrzeugbau, Automobilindustrie"
         case .J_infoComm: return "software, IT services, telecommunications, data processing, cloud computing"
         case .H_transport: return "logistics, transport, shipping, freight, warehousing, supply chain"
         case .M_professional: return "consulting, legal, accounting, engineering, R&D, Beratung, Wirtschaftspruefung"
@@ -130,6 +130,44 @@ enum Region: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+// MARK: - Unternehmensgroesse
+enum CompanySize: String, CaseIterable, Identifiable, Codable {
+    case small = "0-200 Mitarbeiter"
+    case medium = "201-5.000 Mitarbeiter"
+    case large = "5.001-500.000 Mitarbeiter"
+
+    var id: String { rawValue }
+
+    var shortName: String {
+        switch self {
+        case .small: return "Klein (0-200)"
+        case .medium: return "Mittel (201-5K)"
+        case .large: return "Gross (5K-500K)"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .small: return "building.2"
+        case .medium: return "building.2.fill"
+        case .large: return "building.columns.fill"
+        }
+    }
+
+    var range: ClosedRange<Int> {
+        switch self {
+        case .small: return 0...200
+        case .medium: return 201...5000
+        case .large: return 5001...500000
+        }
+    }
+
+    /// Prueft ob eine Mitarbeiterzahl in diesen Groessenbereich faellt
+    func matches(employeeCount: Int) -> Bool {
+        return range.contains(employeeCount)
+    }
+}
+
 // MARK: - Unternehmen
 struct Company: Identifiable, Codable, Hashable {
     let id: UUID
@@ -142,10 +180,12 @@ struct Company: Identifiable, Codable, Hashable {
     var size: String
     var country: String
     var naceCode: String  // z.B. "K64.1" oder "C26.5"
+    var employeeCount: Int
 
     init(id: UUID = UUID(), name: String, industry: String, region: String,
          website: String = "", linkedInURL: String = "", description: String = "",
-         size: String = "", country: String = "", naceCode: String = "") {
+         size: String = "", country: String = "", naceCode: String = "",
+         employeeCount: Int = 0) {
         self.id = id
         self.name = name
         self.industry = industry
@@ -156,6 +196,7 @@ struct Company: Identifiable, Codable, Hashable {
         self.size = size
         self.country = country
         self.naceCode = naceCode
+        self.employeeCount = employeeCount
     }
 }
 
@@ -287,6 +328,7 @@ struct AppSettings: Codable {
     var senderName: String
     var selectedIndustries: [String]
     var selectedRegions: [String]
+    var selectedCompanySizes: [String]
 
     init() {
         perplexityAPIKey = ""
@@ -297,6 +339,7 @@ struct AppSettings: Codable {
         senderName = "Martin Foerster"
         selectedIndustries = Industry.allCases.map { $0.rawValue }
         selectedRegions = Region.allCases.map { $0.rawValue }
+        selectedCompanySizes = CompanySize.allCases.map { $0.rawValue }
     }
 }
 
@@ -390,5 +433,33 @@ struct SocialPost: Identifiable, Codable, Hashable {
         self.hashtags = try container.decode([String].self, forKey: .hashtags)
         self.createdDate = try container.decode(Date.self, forKey: .createdDate)
         self.isPublished = try container.decode(Bool.self, forKey: .isPublished)
+    }
+}
+
+// MARK: - Company Search Filters
+extension Array where Element == Company {
+    /// Filtert Unternehmen heraus, die bereits gespeicherte Leads haben
+    func excludingExistingLeads(_ leads: [Lead]) -> [Company] {
+        let existingCompanyNames = Set(leads.map { $0.company.lowercased().trimmingCharacters(in: .whitespaces) })
+        return self.filter { company in
+            !existingCompanyNames.contains(company.name.lowercased().trimmingCharacters(in: .whitespaces))
+        }
+    }
+
+    /// Filtert Unternehmen nach ausgewaehlten Groessenkategorien
+    func filterBySize(selectedSizes: [CompanySize]) -> [Company] {
+        guard !selectedSizes.isEmpty else { return self }
+        return self.filter { company in
+            selectedSizes.contains { size in
+                size.matches(employeeCount: company.employeeCount)
+            }
+        }
+    }
+
+    /// Kombinierter Filter: Groesse + bestehende Leads ausschliessen
+    func applySearchFilters(selectedSizes: [CompanySize], existingLeads: [Lead]) -> [Company] {
+        return self
+            .filterBySize(selectedSizes: selectedSizes)
+            .excludingExistingLeads(existingLeads)
     }
 }
