@@ -338,14 +338,50 @@ struct SocialPost: Identifiable, Codable, Hashable {
     var hashtags: [String]
     var createdDate: Date
     var isPublished: Bool
-    
+
+    // PFLICHT-Footer fuer ALLE Social Posts
+    static let companyFooter = "\n\n\u{1F517} www.harpocrates-corp.com | \u{1F4E7} info@harpocrates-corp.com"
+
+    // Stellt sicher, dass der Footer IMMER am Ende des Contents steht
+    static func ensureFooter(_ text: String) -> String {
+        var clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Entferne existierenden Footer falls vorhanden
+        if let range = clean.range(of: "\u{1F517} www.harpocrates-corp.com") {
+            clean = String(clean[clean.startIndex..<range.lowerBound])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if let range = clean.range(of: "harpocrates-corp.com | ") {
+            clean = String(clean[clean.startIndex..<range.lowerBound])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return clean + companyFooter
+    }
+
     init(id: UUID = UUID(), platform: SocialPlatform = .linkedin, content: String,
          hashtags: [String] = [], createdDate: Date = Date(), isPublished: Bool = false) {
         self.id = id
         self.platform = platform
-        self.content = content
+        // FOOTER ENFORCEMENT: Immer Footer anhaengen
+        self.content = SocialPost.ensureFooter(content)
         self.hashtags = hashtags
         self.createdDate = createdDate
         self.isPublished = isPublished
+    }
+
+    // Custom Codable: Footer auch beim Laden von Disk erzwingen
+    enum CodingKeys: String, CodingKey {
+        case id, platform, content, hashtags, createdDate, isPublished
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.platform = try container.decode(SocialPlatform.self, forKey: .platform)
+        let rawContent = try container.decode(String.self, forKey: .content)
+        // FOOTER ENFORCEMENT: Auch beim Laden von JSON/Disk
+        self.content = SocialPost.ensureFooter(rawContent)
+        self.hashtags = try container.decode([String].self, forKey: .hashtags)
+        self.createdDate = try container.decode(Date.self, forKey: .createdDate)
+        self.isPublished = try container.decode(Bool.self, forKey: .isPublished)
     }
 }
