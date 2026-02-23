@@ -16,7 +16,8 @@ struct SettingsView: View {
                 senderSection
                 industrySection
                 regionSection
-                                    dataManagementSection
+                companySizeSection
+                            dataManagementSection
 
                 Button("Einstellungen speichern") {
                     vm.saveSettings()
@@ -129,6 +130,22 @@ struct SettingsView: View {
         }
     }
 
+    // NEW: CompanySize filter section
+    private var companySizeSection: some View {
+        GroupBox("Unternehmensgroesse") {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Unternehmen nach Groesse filtern")
+                    .font(.caption).foregroundStyle(.secondary)
+                ForEach(CompanySize.allCases) { size in
+                    Toggle(isOn: companySizeBinding(size)) {
+                        Label(size.rawValue, systemImage: size.icon)
+                    }
+                }
+            }
+            .padding(8)
+        }
+    }
+
     private func industryBinding(_ industry: Industry) -> Binding<Bool> {
         Binding(
             get: { vm.settings.selectedIndustries.contains(industry.rawValue) },
@@ -159,7 +176,23 @@ struct SettingsView: View {
         )
     }
 
-        // MARK: - Daten-Management
+    // NEW: CompanySize binding
+    private func companySizeBinding(_ size: CompanySize) -> Binding<Bool> {
+        Binding(
+            get: { vm.settings.selectedCompanySizes.contains(size.rawValue) },
+            set: { isOn in
+                if isOn {
+                    if !vm.settings.selectedCompanySizes.contains(size.rawValue) {
+                        vm.settings.selectedCompanySizes.append(size.rawValue)
+                    }
+                } else {
+                    vm.settings.selectedCompanySizes.removeAll { $0 == size.rawValue }
+                }
+            }
+        )
+    }
+
+    // MARK: - Daten-Management
     @State private var purgeConfirmation = false
 
     private var dataManagementSection: some View {
@@ -193,4 +226,3 @@ struct SettingsView: View {
         }
     }
 }
-
