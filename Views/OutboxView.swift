@@ -47,6 +47,31 @@ struct OutboxView: View {
                 }
             }
             .padding(24)
+            
+            // Pipeline Buttons
+            HStack(spacing: 12) {
+                Button(action: { vm.approveAllEmails() }) {
+                    Label("Alle freigeben", systemImage: "checkmark.seal.fill")
+                }
+                .buttonStyle(.bordered)
+                .disabled(vm.isLoading)
+
+                Button(action: { Task { await vm.sendAllApproved() } }) {
+                    Label("Alle senden", systemImage: "paperplane.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(vm.isLoading || approvedEmails.isEmpty)
+
+                Button(action: { Task { await vm.checkForReplies() } }) {
+                    Label("Antworten pruefen", systemImage: "envelope.open.fill")
+                }
+                .buttonStyle(.bordered)
+                .disabled(vm.isLoading)
+
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 8)
 
             if vm.isLoading {
                 HStack {
