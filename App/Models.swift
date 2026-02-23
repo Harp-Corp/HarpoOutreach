@@ -333,11 +333,11 @@ struct AppSettings: Codable {
     var selectedCompanySizes: [String]
 
     init() {
-        perplexityAPIKey = "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"
-        googleClientID = "321117608826-6ta6m1vdrf3sm7qf8ckf89r7uc0vc7m5.apps.googleusercontent.com"
-        googleClientSecret = "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"
-        linkedInClientID = "77ttejuk0kfo3j"
-        linkedInClientSecret = "WPL_AP1.xSnY6qv2ICR5zI78.FUl1AQ=="
+        perplexityAPIKey = ""
+        googleClientID = ""
+        googleClientSecret = ""
+        linkedInClientID = ""
+        linkedInClientSecret = ""
         spreadsheetID = ""
         senderEmail = "mf@harpocrates-corp.com"
         senderName = "Martin Foerster"
