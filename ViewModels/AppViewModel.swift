@@ -695,7 +695,7 @@ class AppViewModel: ObservableObject {
                 existingPosts: socialPosts,
                 apiKey: settings.perplexityAPIKey)
                                 // Safety net: Footer MUSS immer dabei sein
-                                                post.content = PerplexityService.ensureFooter(post.content)
+                                                                            post.content = SocialPost.ensureFooter(post.content)
                                                                 print("[Footer] ensureFooter applied. Ends with: \(post.content.suffix(100))")
             socialPosts.insert(post, at: 0)
             saveSocialPosts()
@@ -721,7 +721,7 @@ class AppViewModel: ObservableObject {
     func copyPostToClipboard(_ post: SocialPost) {
         #if canImport(AppKit)
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(post.content, forType: .string)
+                NSPasteboard.general.setString(SocialPost.ensureFooter(post.content), forType: .string)
         statusMessage = "Post in Zwischenablage kopiert"
         #endif
     }
