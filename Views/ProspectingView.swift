@@ -25,9 +25,10 @@ struct ProspectingView: View {
     }
 }
 
-// MARK: - Header with Industry Filter
+// MARK: - Header with Industry Filter + CompanySize Filter
 struct ProspectingHeaderView: View {
     @ObservedObject var vm: AppViewModel
+
     var body: some View {
         VStack(spacing: 12) {
             HStack {
@@ -38,7 +39,8 @@ struct ProspectingHeaderView: View {
                 Spacer()
                 if vm.isLoading { ProgressView(); Text(vm.currentStep).font(.caption).foregroundStyle(.secondary) }
             }
-            // NEW: Industry filter tabs
+
+            // Industry filter tabs
             HStack(spacing: 8) {
                 Button(action: { vm.selectedIndustryFilter = nil }) {
                     Text("All Industries")
@@ -48,6 +50,7 @@ struct ProspectingHeaderView: View {
                 .foregroundColor(vm.selectedIndustryFilter == nil ? .white : .primary)
                 .cornerRadius(8)
                 .buttonStyle(.plain)
+
                 ForEach(Industry.allCases) { industry in
                     Button(action: { vm.selectedIndustryFilter = industry }) {
                         HStack(spacing: 4) {
@@ -59,6 +62,31 @@ struct ProspectingHeaderView: View {
                     .background(vm.selectedIndustryFilter == industry ? Color.accentColor : Color.gray.opacity(0.2))
                     .foregroundColor(vm.selectedIndustryFilter == industry ? .white : .primary)
                     .cornerRadius(8)
+                    .buttonStyle(.plain)
+                }
+            }
+
+            // NEW: CompanySize filter chips
+            HStack(spacing: 8) {
+                Text("Groesse:").font(.caption).foregroundStyle(.secondary)
+                ForEach(CompanySize.allCases) { size in
+                    let isSelected = vm.settings.selectedCompanySizes.contains(size.rawValue)
+                    Button(action: {
+                        if isSelected {
+                            vm.settings.selectedCompanySizes.removeAll { $0 == size.rawValue }
+                        } else {
+                            vm.settings.selectedCompanySizes.append(size.rawValue)
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: size.icon).font(.caption2)
+                            Text(size.shortName).font(.caption)
+                        }
+                    }
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(isSelected ? Color.purple.opacity(0.8) : Color.gray.opacity(0.2))
+                    .foregroundColor(isSelected ? .white : .primary)
+                    .cornerRadius(6)
                     .buttonStyle(.plain)
                 }
             }
@@ -93,11 +121,14 @@ struct ProspectingCompanyList: View {
                 } label: { Label("Companies", systemImage: "plus") }
                 .buttonStyle(.borderedProminent).disabled(vm.isLoading)
             }
+
             if vm.isLoading { Button("Cancel", role: .cancel) { vm.cancelOperation() }.buttonStyle(.bordered) }
+
             if !vm.errorMessage.isEmpty {
                 HStack { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red); Text(vm.errorMessage).font(.caption).foregroundStyle(.red) }
                 .padding(8).background(Color.red.opacity(0.1)).cornerRadius(8)
             }
+
             if vm.companies.isEmpty {
                 VStack { Spacer(); Image(systemName: "building.2").font(.system(size: 48)).foregroundStyle(.secondary); Text("No companies yet").font(.headline).foregroundStyle(.secondary); Spacer() }.frame(maxWidth: .infinity)
             } else {
@@ -115,6 +146,7 @@ struct ProspectingCompanyList: View {
 // MARK: - Contact List (Right) - PER-SEARCH RESULTS
 struct ProspectingContactList: View {
     @ObservedObject var vm: AppViewModel
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -122,10 +154,12 @@ struct ProspectingContactList: View {
                 Spacer()
                 Text("\(vm.currentSearchContacts.count) found this search").foregroundStyle(.secondary)
             }
+
             HStack(spacing: 8) {
                 Button("Search all companies") { Task { await vm.findContactsForAll() } }.disabled(vm.companies.isEmpty || vm.isLoading)
                 Button("Verify all emails") { Task { await vm.verifyAllEmails() } }.disabled(vm.leads.isEmpty || vm.isLoading).buttonStyle(.borderedProminent).tint(.orange)
             }
+
             if vm.currentSearchContacts.isEmpty {
                 VStack { Spacer(); Image(systemName: "person.2").font(.system(size: 48)).foregroundStyle(.secondary); Text("No contacts from current search").font(.headline).foregroundStyle(.secondary); Text("All found contacts are automatically added to Contacts tab").font(.caption).foregroundStyle(.tertiary); Spacer() }.frame(maxWidth: .infinity)
             } else {
@@ -140,9 +174,10 @@ struct ProspectingContactList: View {
     }
 }
 
-// MARK: - Company Row
+// MARK: - Company Row (with employeeCount)
 struct CompanyRow: View {
     let company: Company; let hasContacts: Bool; let onFindContacts: () -> Void; let onAddManual: () -> Void
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
@@ -150,6 +185,13 @@ struct CompanyRow: View {
                 HStack(spacing: 8) {
                     Text(company.industry).font(.caption).padding(.horizontal, 6).padding(.vertical, 2).background(.blue.opacity(0.1)).cornerRadius(4)
                     Text(company.region).font(.caption).padding(.horizontal, 6).padding(.vertical, 2).background(.green.opacity(0.1)).cornerRadius(4)
+                    if company.employeeCount > 0 {
+                        HStack(spacing: 2) {
+                            Image(systemName: "person.3.fill").font(.caption2)
+                            Text("\(company.employeeCount) MA").font(.caption)
+                        }
+                        .padding(.horizontal, 6).padding(.vertical, 2).background(.purple.opacity(0.1)).cornerRadius(4)
+                    }
                 }
                 if !company.website.isEmpty { Text(company.website).font(.caption2).foregroundStyle(.secondary) }
             }
@@ -165,6 +207,7 @@ struct CompanyRow: View {
 // MARK: - Lead Row
 struct LeadRowProspecting: View {
     let lead: Lead; let onVerify: () -> Void
+
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
@@ -203,6 +246,7 @@ struct ManualCompanyEntryView: View {
     @State private var region = Region.dach
     @State private var website = ""
     @State private var companyDescription = ""
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -240,6 +284,7 @@ struct ManualContactEntryView: View {
     @State private var email = ""
     @State private var linkedIn = ""
     @State private var responsibility = ""
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
