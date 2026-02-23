@@ -100,7 +100,8 @@ struct SocialPostView: View {
             }
 
             // Content
-            Text(post.content)
+                        // DISPLAY: Footer wird auch im View-Layer garantiert
+            Text(SocialPost.ensureFooter(post.content))
                 .font(.body)
                 .textSelection(.enabled)
                 .lineLimit(nil)
