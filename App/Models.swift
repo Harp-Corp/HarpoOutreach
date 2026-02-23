@@ -340,13 +340,13 @@ struct SocialPost: Identifiable, Codable, Hashable {
     var isPublished: Bool
 
     // PFLICHT-Footer fuer ALLE Social Posts
-    static let companyFooter = "\n\n\u{1F517} www.harpocrates-corp.com | \u{1F4E7} info@harpocrates-corp.com"
+    static let companyFooter = "\n\n🔗 www.harpocrates-corp.com | 📧 info@harpocrates-corp.com"
 
     // Stellt sicher, dass der Footer IMMER am Ende des Contents steht
     static func ensureFooter(_ text: String) -> String {
         var clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
         // Entferne existierenden Footer falls vorhanden
-        if let range = clean.range(of: "\u{1F517} www.harpocrates-corp.com") {
+        if let range = clean.range(of: "🔗 www.harpocrates-corp.com") {
             clean = String(clean[clean.startIndex..<range.lowerBound])
                     .trimmingCharacters(in: .whitespacesAndNewlines)
         }
