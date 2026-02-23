@@ -10,7 +10,9 @@ struct DashboardView: View {
                 DashboardHeaderView(vm: vm)
                 DashboardStatusBanner(vm: vm)
                 DashboardKPIGrid(vm: vm)
-                DashboardPipelineView(leads: vm.leads)
+                DashboardCampaignView(vm: vm)
+                DashboardSocialPostsView(vm: vm)
+                DashboardPipelineView(vm: vm)
                 DashboardRecentView(leads: vm.leads)
             }
             .padding(24)
@@ -75,37 +77,166 @@ struct DashboardStatusBanner: View {
         }
     }
 }
-
-// MARK: - KPI Grid
+// MARK: - KPI Grid (Email Pipeline)
 struct DashboardKPIGrid: View {
     @ObservedObject var vm: AppViewModel
 
     var body: some View {
-        LazyVGrid(columns: [
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible())
-        ], spacing: 16) {
-            StatCard(title: "Identifiziert", value: "\(vm.statsIdentified)", icon: "person.badge.plus", color: .gray)
-            StatCard(title: "Verifiziert", value: "\(vm.statsVerified)", icon: "checkmark.shield", color: .orange)
-            StatCard(title: "Gesendet", value: "\(vm.statsSent)", icon: "paperplane", color: .blue)
-            StatCard(title: "Antworten", value: "\(vm.statsReplied)", icon: "envelope.open", color: .green)
-            StatCard(title: "Follow-Ups", value: "\(vm.statsFollowUp)", icon: "arrow.uturn.forward", color: .purple)
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Email Pipeline")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 16) {
+                StatCard(title: "Identifiziert", value: "\(vm.statsIdentified)", icon: "person.badge.plus", color: .gray)
+                StatCard(title: "Verifiziert", value: "\(vm.statsVerified)", icon: "checkmark.shield", color: .orange)
+                StatCard(title: "Gesendet", value: "\(vm.statsSent)", icon: "paperplane", color: .blue)
+                StatCard(title: "Antworten", value: "\(vm.statsReplied)", icon: "envelope.open", color: .green)
+                StatCard(title: "Follow-Ups", value: "\(vm.statsFollowUp)", icon: "arrow.uturn.forward", color: .purple)
+            }
         }
     }
 }
 
-// MARK: - Pipeline by Industry
+// MARK: - Campaign Stats
+struct DashboardCampaignView: View {
+    @ObservedObject var vm: AppViewModel
+
+    var body: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Image(systemName: "megaphone.fill")
+                        .foregroundStyle(.indigo)
+                    Text("Campaigns")
+                        .font(.headline)
+                    Spacer()
+                    let rate = vm.statsConversionRate
+                    Text(String(format: "%.1f%% Conversion", rate))
+                        .font(.caption.bold())
+                        .foregroundStyle(rate > 10 ? .green : rate > 5 ? .orange : .secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background((rate > 10 ? Color.green : rate > 5 ? Color.orange : Color.gray).opacity(0.12))
+                        .cornerRadius(6)
+                }
+                LazyVGrid(columns: [
+                    GridItem(.flexible()),
+                    GridItem(.flexible()),
+                    GridItem(.flexible()),
+                    GridItem(.flexible())
+                ], spacing: 12) {
+                    StatCard(title: "Unternehmen", value: "\(vm.statsCompanies)", icon: "building.2", color: .indigo)
+                    StatCard(title: "Drafts bereit", value: "\(vm.statsDraftsReady)", icon: "doc.text", color: .cyan)
+                    StatCard(title: "Freigegeben", value: "\(vm.statsApproved)", icon: "checkmark.circle", color: .green)
+                    StatCard(title: "Follow-Up offen", value: "\(vm.statsFollowUpsPending)", icon: "clock.arrow.2.circlepath", color: .orange)
+                }
+                if !vm.statsIndustryCounts.isEmpty {
+                    Divider()
+                    Text("Unternehmen nach Branche")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    let maxCount = vm.statsIndustryCounts.first?.count ?? 1
+                    ForEach(vm.statsIndustryCounts.prefix(4), id: \.industry) { entry in
+                        HStack(spacing: 8) {
+                            Text(entry.industry)
+                                .font(.caption)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            ProgressView(value: Double(entry.count), total: Double(maxCount))
+                                .frame(width: 120)
+                            Text("\(entry.count)")
+                                .font(.caption.bold())
+                                .frame(width: 28, alignment: .trailing)
+                        }
+                    }
+                }
+            }
+            .padding(4)
+        }
+    }
+}
+
+// MARK: - Social Posts Stats
+struct DashboardSocialPostsView: View {
+    @ObservedObject var vm: AppViewModel
+
+    var body: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Image(systemName: "text.bubble.fill")
+                        .foregroundStyle(.blue)
+                    Text("LinkedIn Posts")
+                        .font(.headline)
+                    Spacer()
+                    if vm.statsSocialPostsThisWeek > 0 {
+                        Text("\(vm.statsSocialPostsThisWeek) diese Woche")
+                            .font(.caption.bold())
+                            .foregroundStyle(.blue)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(6)
+                    }
+                }
+                LazyVGrid(columns: [
+                    GridItem(.flexible()),
+                    GridItem(.flexible()),
+                    GridItem(.flexible()),
+                    GridItem(.flexible())
+                ], spacing: 12) {
+                    StatCard(title: "Posts gesamt", value: "\(vm.statsSocialPostsTotal)", icon: "doc.richtext", color: .blue)
+                    StatCard(title: "LinkedIn", value: "\(vm.statsSocialPostsLinkedIn)", icon: "link", color: .indigo)
+                    StatCard(title: "Twitter/X", value: "\(vm.statsSocialPostsTwitter)", icon: "bird", color: .cyan)
+                    StatCard(title: "Veroeffentlicht", value: "\(vm.statsSocialPostsPublished)", icon: "checkmark.seal", color: .green)
+                }
+                if !vm.socialPosts.isEmpty {
+                    Divider()
+                    Text("Letzte Posts")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    ForEach(vm.socialPosts.prefix(3)) { post in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: post.platform == .linkedin ? "link" : "bird")
+                                .foregroundStyle(.blue)
+                                .frame(width: 16)
+                            Text(post.content.components(separatedBy: "\n").first ?? "")
+                                .font(.caption)
+                                .lineLimit(2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text(post.createdDate, style: .date)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                } else {
+                    Text("Noch keine Posts. Generiere deinen ersten LinkedIn Post.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 4)
+                }
+            }
+            .padding(4)
+        }
+    }
+}
+
+// MARK: - Pipeline by Industry (fixed)
 struct DashboardPipelineView: View {
-    let leads: [Lead]
+    @ObservedObject var vm: AppViewModel
 
     var body: some View {
         GroupBox("Pipeline nach Industrie") {
             VStack(spacing: 8) {
                 ForEach(Industry.allCases) { industry in
-                    DashboardIndustryRow(industry: industry, leads: leads)
+                    DashboardIndustryRow(industry: industry, leads: vm.leads)
                 }
             }
             .padding(8)
@@ -113,23 +244,27 @@ struct DashboardPipelineView: View {
     }
 }
 
-// MARK: - Industry Row
+// MARK: - Industry Row (fixed)
 struct DashboardIndustryRow: View {
     let industry: Industry
     let leads: [Lead]
 
     var body: some View {
-        let count = leads.count
-        let total = max(Double(count), 1)
-        let matched = leads.filter { _ in false }.count
-
+        let matched = leads.filter { lead in
+            lead.company.lowercased().contains(industry.shortName.lowercased())
+            || industry.searchTerms.lowercased()
+                .components(separatedBy: ", ")
+                .contains { term in lead.company.lowercased().contains(term) }
+        }
+        let total = max(leads.count, 1)
         HStack {
-            Label(industry.rawValue, systemImage: industry.icon)
-                .frame(width: 180, alignment: .leading)
-            ProgressView(value: Double(matched), total: total)
-            Text("\(matched)")
-                .font(.caption).bold()
-                .frame(width: 30)
+            Label(industry.shortName, systemImage: industry.icon)
+                .font(.caption)
+                .frame(width: 160, alignment: .leading)
+            ProgressView(value: Double(matched.count), total: Double(total))
+            Text("\(matched.count)")
+                .font(.caption.bold())
+                .frame(width: 28, alignment: .trailing)
         }
     }
 }
@@ -210,6 +345,7 @@ struct StatCard: View {
             Text(title)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(16)
