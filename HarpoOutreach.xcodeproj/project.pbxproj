@@ -24,6 +24,8 @@
 		EF67ADCC2F4223800066E6E9 /* ContactListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADCB2F42237A0066E6E9 /* ContactListView.swift */; };
 		EF67ADCD2F4227140066E6E9 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADBA2F4220060066E6E9 /* AppViewModel.swift */; };
 		EF67ADCE2F4228000066E6E9 /* SocialPostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADCF2F4228010066E6E9 /* SocialPostView.swift */; };
+		EF67ADD12F4228210066E6E9 /* OutreachPipelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADD02F4228200066E6E9 /* OutreachPipelineView.swift */; };
+		EF67ADD32F4228310066E6E9 /* ManualEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADD22F4228300066E6E9 /* ManualEntryView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,6 +47,8 @@
 		EF67ADC92F42207F0066E6E9 /* SheetLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetLogView.swift; sourceTree = "<group>"; };
 		EF67ADCB2F42237A0066E6E9 /* ContactListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactListView.swift; sourceTree = "<group>"; };
 		EF67ADCF2F4228010066E6E9 /* SocialPostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialPostView.swift; sourceTree = "<group>"; };
+		EF67ADD02F4228200066E6E9 /* OutreachPipelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutreachPipelineView.swift; sourceTree = "<group>"; };
+		EF67ADD22F4228300066E6E9 /* ManualEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualEntryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,7 +71,7 @@
 				EF44A7862F4108470054C161 /* Views */,
 				EF67ADB92F421FF00066E6E9 /* ViewModels */,
 			);
-			sourceTree = "<group>";
+			sourceTree = "<absolute>";
 		};
 		EF44A77F2F4108470054C161 /* App */ = {
 			isa = PBXGroup;
@@ -102,6 +106,8 @@
 				EF67ADBB2F4220160066E6E9 /* MainTabView.swift */,
 				EF44A7852F4108470054C161 /* SettingsView.swift */,
 				EF67ADCF2F4228010066E6E9 /* SocialPostView.swift */,
+				EF67ADD02F4228200066E6E9 /* OutreachPipelineView.swift */,
+				EF67ADD22F4228300066E6E9 /* ManualEntryView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -202,6 +208,8 @@
 				EF44A78A2F4108470054C161 /* PerplexityService.swift in Sources */,
 				EF67ADC42F4220590066E6E9 /* EmailDraftView.swift in Sources */,
 				EF67ADCE2F4228000066E6E9 /* SocialPostView.swift in Sources */,
+				EF67ADD12F4228210066E6E9 /* OutreachPipelineView.swift in Sources */,
+				EF67ADD32F4228310066E6E9 /* ManualEntryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
