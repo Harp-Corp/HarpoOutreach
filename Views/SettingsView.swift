@@ -12,12 +12,13 @@ struct SettingsView: View {
 
                 perplexitySection
                 googleSection
+                linkedInSection
                 sheetSection
                 senderSection
                 industrySection
                 regionSection
                 companySizeSection
-                            dataManagementSection
+                                dataManagementSection
 
                 Button("Einstellungen speichern") {
                     vm.saveSettings()
@@ -75,13 +76,30 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - LinkedIn Credentials
+    private var linkedInSection: some View {
+        GroupBox("LinkedIn") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Client ID:").font(.caption).foregroundStyle(.secondary)
+                TextField("LinkedIn Client ID", text: $vm.settings.linkedInClientID)
+                    .textFieldStyle(.roundedBorder)
+                Text("Client Secret:").font(.caption).foregroundStyle(.secondary)
+                SecureField("LinkedIn Client Secret", text: $vm.settings.linkedInClientSecret)
+                    .textFieldStyle(.roundedBorder)
+                Link("LinkedIn Developer Portal",
+                     destination: URL(string: "https://www.linkedin.com/developers/apps")!)
+                    .font(.caption)
+            }
+            .padding(8)
+        }
+    }
+
     private var sheetSection: some View {
         GroupBox("Google Sheet") {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Spreadsheet ID (aus der Sheet-URL):")
                     .font(.caption).foregroundStyle(.secondary)
-                TextField("1ABcDeFgHiJkLmNoPqRsTuVwXyZ...",
-                          text: $vm.settings.spreadsheetID)
+                TextField("1ABcDeFgHiJkLmNoPqRsTuVwXyZ...", text: $vm.settings.spreadsheetID)
                     .textFieldStyle(.roundedBorder)
                 Button("Sheet initialisieren (Header schreiben)") {
                     Task { await vm.initializeSheet() }
