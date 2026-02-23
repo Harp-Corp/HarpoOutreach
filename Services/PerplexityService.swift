@@ -5,13 +5,18 @@ class PerplexityService {
     private let model = "sonar-pro"
     
     // Standard-Footer fuer alle generierten Inhalte (LinkedIn, Newsletter, etc.)
-    static let companyFooter = "\n\n www.harpocrates-corp.com | 📧 info@harpocrates-corp.com"
+    static let companyFooter = "\n\n🔗 www.harpocrates-corp.com | 📧 info@harpocrates-corp.com"
 
     // Stellt sicher, dass der Footer IMMER am Ende des Contents steht
     // Entfernt existierenden Footer und haengt ihn frisch an
     static func ensureFooter(_ content: String) -> String {
         var clean = content.trimmingCharacters(in: .whitespacesAndNewlines)
         // Entferne existierenden Footer falls vorhanden (egal ob teilweise oder komplett)
+                if let range = clean.range(of: "🔗 www.harpocrates-corp.com") {
+            clean = String(clean[clean.startIndex..<range.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+                // Fallback: auch altes Format ohne Emoji entfernen
         if let range = clean.range(of: " www.harpocrates-corp.com") {
             clean = String(clean[clean.startIndex..<range.lowerBound])
                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -519,7 +524,7 @@ class PerplexityService {
         3. KEINE HALLUZINATIONEN: Nur belegbare Fakten verwenden. Bei Unsicherheit: keine spezifische Zahl.
         4. COMPLY.REG RELEVANZ: Post muss auf Probleme eingehen die comply.reg loest.
         5. KEIN DUPLICATE: Thema und Hook muessen sich von bereits geposteten Inhalten unterscheiden.
-                    6. FOOTER: JEDER Post MUSS am Ende diese Fusszeile enthalten: \n\n🔗 www.harpocrates-corp.com | 📧 info@harpocrates-corp.com
+                        6. FOOTER: Der Footer wird AUTOMATISCH angefuegt. KEINEN Footer im Post-Content generieren!
 
         Return JSON: {"content": "...", "hashtags": [...]}
         """
@@ -559,7 +564,7 @@ class PerplexityService {
         if !hashtagLine.isEmpty {
             fullContent += "\n\n" + hashtagLine
         }
-                fullContent = fullContent.trimmingCharacters(in: .whitespacesAndNewlines) + Self.companyFooter
+                        fullContent = Self.ensureFooter(fullContent)
         
         return SocialPost(
             platform: platform,
