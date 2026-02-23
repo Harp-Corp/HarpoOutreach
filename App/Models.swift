@@ -179,7 +179,7 @@ struct Company: Identifiable, Codable, Hashable {
     var description: String
     var size: String
     var country: String
-    var naceCode: String  // z.B. "K64.1" oder "C26.5"
+    var naceCode: String // z.B. "K64.1" oder "C26.5"
     var employeeCount: Int
 
     init(id: UUID = UUID(), name: String, industry: String, region: String,
@@ -323,6 +323,8 @@ struct AppSettings: Codable {
     var perplexityAPIKey: String
     var googleClientID: String
     var googleClientSecret: String
+    var linkedInClientID: String
+    var linkedInClientSecret: String
     var spreadsheetID: String
     var senderEmail: String
     var senderName: String
@@ -331,9 +333,11 @@ struct AppSettings: Codable {
     var selectedCompanySizes: [String]
 
     init() {
-        perplexityAPIKey = ""
-        googleClientID = ""
+        perplexityAPIKey = "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"
+        googleClientID = "321117608826-6ta6m1vdrf3sm7qf8ckf89r7uc0vc7m5.apps.googleusercontent.com"
         googleClientSecret = ""
+        linkedInClientID = "77ttejuk0kfo3j"
+        linkedInClientSecret = "WPL_AP1.xSnY6qv2ICR5zI78.FUl1AQ=="
         spreadsheetID = ""
         senderEmail = "mf@harpocrates-corp.com"
         senderName = "Martin Foerster"
@@ -343,12 +347,11 @@ struct AppSettings: Codable {
     }
 }
 
-
 // MARK: - Social Media Content
 enum SocialPlatform: String, CaseIterable, Identifiable, Codable {
     case linkedin = "LinkedIn"
     case twitter = "Twitter/X"
-    
+
     var id: String { rawValue }
 }
 
@@ -359,9 +362,9 @@ enum ContentTopic: String, CaseIterable, Identifiable, Codable {
     case productFeature = "Product Feature"
     case thoughtLeadership = "Thought Leadership"
     case caseStudy = "Case Study"
-    
+
     var id: String { rawValue }
-    
+
     var promptPrefix: String {
         switch self {
         case .regulatoryUpdate: return "Aktuelle regulatorische Entwicklung in"
@@ -377,7 +380,7 @@ enum ContentTopic: String, CaseIterable, Identifiable, Codable {
 struct SocialPost: Identifiable, Codable, Hashable {
     let id: UUID
     var platform: SocialPlatform
-        var content: String {
+    var content: String {
         didSet {
             // BULLETPROOF: Footer wird bei JEDER Aenderung von content erzwungen
             if !content.hasSuffix("info@harpocrates-corp.com") {
@@ -390,19 +393,19 @@ struct SocialPost: Identifiable, Codable, Hashable {
     var isPublished: Bool
 
     // PFLICHT-Footer fuer ALLE Social Posts
-    static let companyFooter = "\n\n🔗 www.harpocrates-corp.com | 📧 info@harpocrates-corp.com"
+    static let companyFooter = "\n\n\u{1F517} www.harpocrates-corp.com | \u{1F4E7} info@harpocrates-corp.com"
 
     // Stellt sicher, dass der Footer IMMER am Ende des Contents steht
     static func ensureFooter(_ text: String) -> String {
         var clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
         // Entferne existierenden Footer falls vorhanden
-        if let range = clean.range(of: "🔗 www.harpocrates-corp.com") {
+        if let range = clean.range(of: "\u{1F517} www.harpocrates-corp.com") {
             clean = String(clean[clean.startIndex..<range.lowerBound])
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
         }
         if let range = clean.range(of: "harpocrates-corp.com | ") {
             clean = String(clean[clean.startIndex..<range.lowerBound])
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
         }
         return clean + companyFooter
     }
