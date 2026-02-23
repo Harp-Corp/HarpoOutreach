@@ -193,3 +193,78 @@ struct LeadRowProspecting: View {
         }.padding(.vertical, 4)
     }
 }
+
+// MARK: - Manual Company Entry
+struct ManualCompanyEntryView: View {
+    @ObservedObject var vm: AppViewModel
+    @Environment(\.dismiss) var dismiss
+    @State private var companyName = ""
+    @State private var industry = Industry.Q_healthcare
+    @State private var region = Region.dach
+    @State private var website = ""
+    @State private var companyDescription = ""
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Add Company").font(.title2).bold()
+                Spacer()
+                Button("Cancel") { dismiss() }.keyboardShortcut(.escape).buttonStyle(.bordered)
+                Button("Add") {
+                    let company = Company(name: companyName, industry: industry.rawValue, region: region.rawValue, website: website, description: companyDescription)
+                    vm.addCompanyManually(company); dismiss()
+                }.buttonStyle(.borderedProminent).disabled(companyName.isEmpty).keyboardShortcut(.return)
+            }.padding(24)
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 6) { Text("Company Name *").font(.headline); TextField("e.g. Siemens AG", text: $companyName).textFieldStyle(.roundedBorder) }
+                    HStack(spacing: 24) {
+                        VStack(alignment: .leading, spacing: 6) { Text("Industry *").font(.headline); Picker("Industry", selection: $industry) { ForEach(Industry.allCases) { ind in Text(ind.rawValue).tag(ind) } }.pickerStyle(.menu).frame(maxWidth: .infinity, alignment: .leading) }
+                        VStack(alignment: .leading, spacing: 6) { Text("Region *").font(.headline); Picker("Region", selection: $region) { ForEach(Region.allCases) { reg in Text(reg.rawValue).tag(reg) } }.pickerStyle(.menu).frame(maxWidth: .infinity, alignment: .leading) }
+                    }
+                    VStack(alignment: .leading, spacing: 6) { Text("Website").font(.headline); TextField("https://www.example.com", text: $website).textFieldStyle(.roundedBorder) }
+                    VStack(alignment: .leading, spacing: 6) { Text("Description").font(.headline); TextEditor(text: $companyDescription).frame(minHeight: 80).border(Color.gray.opacity(0.3)) }
+                }.padding(24)
+            }
+        }.frame(width: 700, height: 550)
+    }
+}
+
+// MARK: - Manual Contact Entry
+struct ManualContactEntryView: View {
+    @ObservedObject var vm: AppViewModel
+    let company: Company
+    @Environment(\.dismiss) var dismiss
+    @State private var contactName = ""
+    @State private var title = ""
+    @State private var email = ""
+    @State private var linkedIn = ""
+    @State private var responsibility = ""
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) { Text("Add Contact").font(.title2).bold(); Text("Company: \(company.name)").font(.subheadline).foregroundStyle(.secondary) }
+                Spacer()
+                Button("Cancel") { dismiss() }.keyboardShortcut(.escape).buttonStyle(.bordered)
+                Button("Add") {
+                    let lead = Lead(name: contactName, title: title, company: company.name, email: email, emailVerified: true, linkedInURL: linkedIn, responsibility: responsibility, status: .identified, source: "Manual entry", isManuallyCreated: true)
+                    vm.addLeadManually(lead); dismiss()
+                }.buttonStyle(.borderedProminent).disabled(contactName.isEmpty).keyboardShortcut(.return)
+            }.padding(24)
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 6) { Text("Name *").font(.headline); TextField("Full name", text: $contactName).textFieldStyle(.roundedBorder) }
+                    VStack(alignment: .leading, spacing: 6) { Text("Title / Position").font(.headline); TextField("e.g. Chief Compliance Officer", text: $title).textFieldStyle(.roundedBorder) }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Email").font(.headline); TextField("name@company.com", text: $email).textFieldStyle(.roundedBorder)
+                        HStack(spacing: 4) { Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.caption); Text("Manual contacts skip email verification").font(.caption).foregroundStyle(.green) }
+                    }
+                    Divider()
+                    VStack(alignment: .leading, spacing: 6) { Text("LinkedIn URL (optional)").font(.headline); TextField("https://linkedin.com/in/...", text: $linkedIn).textFieldStyle(.roundedBorder) }
+                    VStack(alignment: .leading, spacing: 6) { Text("Responsibility (optional)").font(.headline); TextEditor(text: $responsibility).frame(minHeight: 100).border(Color.gray.opacity(0.3)) }
+                }.padding(24)
+            }
+        }.frame(minWidth: 700, idealWidth: 800, minHeight: 600, idealHeight: 700)
+    }
+}
