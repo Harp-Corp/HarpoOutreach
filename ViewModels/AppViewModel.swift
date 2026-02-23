@@ -48,6 +48,7 @@ class AppViewModel: ObservableObject {
         loadLeads()
         loadCompanies()
                 loadSocialPosts()
+                migrateSocialPostFooters()
         configureAuth()
         authCancellable = authService.objectWillChange.sink { [weak self] _ in
             self?.objectWillChange.send()
@@ -738,3 +739,121 @@ class AppViewModel: ObservableObject {
         socialPosts = saved
     }
 }
+
+    // MARK: - Social Post Footer Migration
+    private func migrateSocialPostFooters() {
+        var changed = false
+        for i in socialPosts.indices {
+            let fixed = SocialPost.ensureFooter(socialPosts[i].content)
+            if fixed != socialPosts[i].content {
+                socialPosts[i].content = fixed
+                changed = true
+            }
+        }
+        if changed {
+            saveSocialPosts()
+            print("[Footer] Bestehende Posts migriert")
+        }
+    }
+
+    // MARK: - Email Pipeline
+    func approveAllEmails() {
+        var count = 0
+        for i in leads.indices {
+            if leads[i].draftedEmail != nil && leads[i].draftedEmail?.isApproved == false {
+                leads[i].draftedEmail?.isApproved = true
+                leads[i].status = .emailApproved
+                count += 1
+            }
+        }
+        saveLeads()
+        statusMessage = "\(count) Emails freigegeben"
+    }
+
+    func sendAllApproved() async {
+        let approved = leads.filter { $0.draftedEmail?.isApproved == true && $0.dateEmailSent == nil }
+        guard !approved.isEmpty else {
+            statusMessage = "Keine freigegebenen Emails zum Senden."
+            return
+        }
+        guard authService.isAuthenticated else {
+            errorMessage = "Nicht bei Google angemeldet. Bitte unter Einstellungen mit Google anmelden."
+            return
+        }
+        isLoading = true
+        var sentCount = 0
+        var failCount = 0
+        for lead in approved {
+            currentStep = "Sende Email \(sentCount + 1)/\(approved.count) an \(lead.name)..."
+            do {
+                guard let draft = lead.draftedEmail else { continue }
+                _ = try await gmailService.sendEmail(
+                    to: lead.email, from: Self.senderEmail,
+                    subject: draft.subject, body: draft.body)
+                if let idx = leads.firstIndex(where: { $0.id == lead.id }) {
+                    leads[idx].status = .emailSent
+                    leads[idx].dateEmailSent = Date()
+                    leads[idx].draftedEmail?.sentDate = Date()
+                    saveLeads()
+                    if !settings.spreadsheetID.isEmpty {
+                        try? await sheetsService.logEmailEvent(
+                            spreadsheetID: settings.spreadsheetID,
+                            lead: leads[idx], emailType: "Erstversand",
+                            subject: draft.subject, body: draft.body,
+                            summary: "Outreach-Email an \(lead.name) (\(lead.company)) gesendet")
+                    }
+                }
+                sentCount += 1
+                try await Task.sleep(nanoseconds: 1_000_000_000)
+            } catch {
+                failCount += 1
+                print("[SendAll] Fehler bei \(lead.name): \(error.localizedDescription)")
+            }
+        }
+        isLoading = false
+        currentStep = ""
+        statusMessage = "\(sentCount) Emails gesendet" + (failCount > 0 ? ", \(failCount) fehlgeschlagen" : "")
+    }
+
+    func sendAllFollowUps() async {
+        let ready = leads.filter { $0.followUpEmail?.isApproved == true && $0.dateFollowUpSent == nil }
+        guard !ready.isEmpty else {
+            statusMessage = "Keine freigegebenen Follow-Ups zum Senden."
+            return
+        }
+        guard authService.isAuthenticated else {
+            errorMessage = "Nicht bei Google angemeldet."
+            return
+        }
+        isLoading = true
+        var sentCount = 0
+        for lead in ready {
+            currentStep = "Sende Follow-Up \(sentCount + 1)/\(ready.count) an \(lead.name)..."
+            do {
+                guard let followUp = lead.followUpEmail else { continue }
+                _ = try await gmailService.sendEmail(
+                    to: lead.email, from: Self.senderEmail,
+                    subject: followUp.subject, body: followUp.body)
+                if let idx = leads.firstIndex(where: { $0.id == lead.id }) {
+                    leads[idx].dateFollowUpSent = Date()
+                    leads[idx].followUpEmail?.sentDate = Date()
+                    leads[idx].status = .followUpSent
+                    saveLeads()
+                    if !settings.spreadsheetID.isEmpty {
+                        try? await sheetsService.logEmailEvent(
+                            spreadsheetID: settings.spreadsheetID,
+                            lead: leads[idx], emailType: "Follow-Up",
+                            subject: followUp.subject, body: followUp.body,
+                            summary: "Follow-Up an \(lead.name) (\(lead.company)) gesendet")
+                    }
+                }
+                sentCount += 1
+                try await Task.sleep(nanoseconds: 1_000_000_000)
+            } catch {
+                print("[SendAll] Follow-Up Fehler bei \(lead.name): \(error.localizedDescription)")
+            }
+        }
+        isLoading = false
+        currentStep = ""
+        statusMessage = "\(sentCount) Follow-Ups gesendet"
+    }
