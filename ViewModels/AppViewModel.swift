@@ -90,7 +90,7 @@ class AppViewModel: ObservableObject {
                 } catch { errorMessage = "Error \(industry.rawValue)/\(region.rawValue): \(error.localizedDescription)" }
             }
         }
-        currentStep = "\(companies.count) companies found"; saveCompanies(); isLoading = false
+        currentStep = "\(companies.count) companies found"; let selectedSizes = CompanySize.allCases.filter { settings.selectedCompanySizes.contains($0.rawValue) }; companies = companies.applySearchFilters(selectedSizes: selectedSizes, existingLeads: leads); currentStep = "\(companies.count) companies after filtering"; saveCompanies(); isLoading = false
     }
 
     // MARK: - 2) Kontakte finden - per-search + auto-add to Kontakte
