@@ -334,7 +334,14 @@ enum ContentTopic: String, CaseIterable, Identifiable, Codable {
 struct SocialPost: Identifiable, Codable, Hashable {
     let id: UUID
     var platform: SocialPlatform
-    var content: String
+        var content: String {
+        didSet {
+            // BULLETPROOF: Footer wird bei JEDER Aenderung von content erzwungen
+            if !content.hasSuffix("info@harpocrates-corp.com") {
+                content = SocialPost.ensureFooter(content)
+            }
+        }
+    }
     var hashtags: [String]
     var createdDate: Date
     var isPublished: Bool
