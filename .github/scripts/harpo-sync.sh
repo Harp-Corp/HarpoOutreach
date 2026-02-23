@@ -1,6 +1,6 @@
 #!/bin/bash
 # harpo-sync: Robuster GitHub-Sync (GitHub ist IMMER fuehrend)
-# Version 3.8 - Branch-Switch Fix fuer shallow clones
+# Version 4.0 - Branch auf main umgestellt (alle Fixes auf main)
 
 # Farben fuer Output
 RED='\033[0;31m'
@@ -13,15 +13,15 @@ NC='\033[0m'
 PROJECT_DIR="$HOME/SpecialProjects/HarpoOutreach"
 REPO_URL="https://github.com/Harp-Corp/HarpoOutreach.git"
 FETCH_TIMEOUT=60
-TARGET_BRANCH="HarpoOutreachNewsletter"
+TARGET_BRANCH="main"
 
 # ANTI-HANG: Verhindert dass git auf Passwort-Eingabe wartet
 export GIT_TERMINAL_PROMPT=0
 export GIT_SSH_COMMAND="ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
 # Self-Update
-SCRIPT_VERSION="3.8"
-RAW_URL="https://raw.githubusercontent.com/Harp-Corp/HarpoOutreach/HarpoOutreachNewsletter/.github/scripts/harpo-sync.sh"
+SCRIPT_VERSION="4.0"
+RAW_URL="https://raw.githubusercontent.com/Harp-Corp/HarpoOutreach/main/.github/scripts/harpo-sync.sh"
 INSTALLED_SCRIPT="/usr/local/bin/harpo-sync"
 
 self_update() {
