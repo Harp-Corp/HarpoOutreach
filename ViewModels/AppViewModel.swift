@@ -738,7 +738,6 @@ class AppViewModel: ObservableObject {
               let saved = try? JSONDecoder().decode([SocialPost].self, from: data) else { return }
         socialPosts = saved
     }
-}
 
     // MARK: - Social Post Footer Migration
     private func migrateSocialPostFooters() {
@@ -857,3 +856,4 @@ class AppViewModel: ObservableObject {
         currentStep = ""
         statusMessage = "\(sentCount) Follow-Ups gesendet"
     }
+}
