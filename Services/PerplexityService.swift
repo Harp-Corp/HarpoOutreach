@@ -5,14 +5,14 @@ class PerplexityService {
     private let model = "sonar-pro"
     
     // Standard-Footer fuer alle generierten Inhalte (LinkedIn, Newsletter, etc.)
-    static let companyFooter = "\n\n\u{1F517} www.harpocrates-corp.com | \u{1F4E7} info@harpocrates-corp.com"
+    static let companyFooter = "\n\n www.harpocrates-corp.com | 📧 info@harpocrates-corp.com"
 
     // Stellt sicher, dass der Footer IMMER am Ende des Contents steht
     // Entfernt existierenden Footer und haengt ihn frisch an
     static func ensureFooter(_ content: String) -> String {
         var clean = content.trimmingCharacters(in: .whitespacesAndNewlines)
         // Entferne existierenden Footer falls vorhanden (egal ob teilweise oder komplett)
-        if let range = clean.range(of: "\u{1F517} www.harpocrates-corp.com") {
+        if let range = clean.range(of: " www.harpocrates-corp.com") {
             clean = String(clean[clean.startIndex..<range.lowerBound])
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         }
