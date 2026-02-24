@@ -65,10 +65,23 @@ class AppViewModel: ObservableObject {
     }
 
     private func loadSettings() {
+        let defaults = AppSettings()
         if let data = UserDefaults.standard.data(forKey: "harpo_settings"),
-           let s = try? JSONDecoder().decode(AppSettings.self, from: data) { settings = s }
+           let s = try? JSONDecoder().decode(AppSettings.self, from: data) {
+            settings = s
+        }
+        // Migrate: force new credentials if stored ones are empty or outdated
+        let validClientSuffix = "mrurpt9kdelunlaqqklg4ib8arkv16pc"
+        if settings.googleClientID.isEmpty || !settings.googleClientID.contains(validClientSuffix) {
+            settings.googleClientID = defaults.googleClientID
+            settings.googleClientSecret = defaults.googleClientSecret
+            saveSettings()
+        }
+        if settings.perplexityAPIKey.isEmpty {
+            settings.perplexityAPIKey = defaults.perplexityAPIKey
+            saveSettings()
+        }
     }
-
     // MARK: - 1) Unternehmen finden (with optional industry filter)
     func findCompanies(forIndustry: Industry? = nil) async {
         guard !settings.perplexityAPIKey.isEmpty else { errorMessage = "Perplexity API Key fehlt."; return }
