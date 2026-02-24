@@ -70,16 +70,17 @@ class PerplexityService {
         return content
     }
 
-    // MARK: - 1) Unternehmen finden (25 Ergebnisse)
+    // MARK: - 1) Unternehmen finden (25 Ergebnisse) mit Mitarbeiterzahl
     func findCompanies(industry: Industry, region: Region, apiKey: String) async throws -> [Company] {
         let system = """
         You are a B2B company research assistant. You MUST return EXACTLY 25 real companies as a JSON array.
-        Each object in the array MUST have these fields: name, industry, region, website, linkedInURL, description, size, country.
+        Each object in the array MUST have these fields: name, industry, region, website, linkedInURL, description, size, country, employees.
         CRITICAL RULES:
         - Return ONLY a valid JSON array. No markdown, no explanation, no text before or after.
         - You MUST return exactly 25 companies. Count them. Do NOT stop at 10 or 15.
         - All companies must be REAL, currently operating companies.
         - Include the full website URL (https://...) and LinkedIn company page URL.
+        - The "employees" field MUST be a realistic integer representing the approximate number of employees (e.g. 150, 3500, 85000). Research the actual company size. NEVER use 0.
         - If you cannot find 25, return as many as possible but aim for 25.
         """
         let user = """
@@ -89,17 +90,34 @@ class PerplexityService {
         - 200+ employees
         - Currently active and operating
         - Include company website URL and LinkedIn company page URL
+        - Include approximate number of employees as integer in the "employees" field (e.g. 250, 4500, 120000). This is MANDATORY.
         Return ALL 25 companies as a single JSON array. Do not truncate. Do not stop early. Count your results before returning - there must be 25 objects in the array.
+        Example format: [{"name":"Example GmbH","industry":"...","region":"...","website":"https://...","linkedInURL":"https://...","description":"...","size":"large","country":"Germany","employees":2500}]
         """
         let content = try await callAPI(systemPrompt: system, userPrompt: user, apiKey: apiKey, maxTokens: 8000)
         return parseJSON(content).map { d in
-            Company(
+            // Parse employees: try Int directly, then parse from String
+            let employeeCount: Int = {
+                if let intVal = Int(d["employees"] ?? "") {
+                    return intVal
+                }
+                // Handle formatted numbers like "2,500" or "2.500"
+                let cleaned = (d["employees"] ?? "")
+                    .replacingOccurrences(of: ",", with: "")
+                    .replacingOccurrences(of: ".", with: "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                return Int(cleaned) ?? 0
+            }()
+            return Company(
                 name: d["name"] ?? "Unknown",
                 industry: d["industry"] ?? industry.rawValue,
                 region: d["region"] ?? region.rawValue,
                 website: d["website"] ?? "",
                 linkedInURL: d["linkedInURL"] ?? "",
-                description: d["description"] ?? ""
+                description: d["description"] ?? "",
+                size: d["size"] ?? "",
+                country: d["country"] ?? "",
+                employeeCount: employeeCount
             )
         }
     }

@@ -156,7 +156,7 @@ enum CompanySize: String, CaseIterable, Identifiable, Codable {
 
     var range: ClosedRange<Int> {
         switch self {
-        case .small: return 0...200
+        case .small: return 1...200
         case .medium: return 201...5000
         case .large: return 5001...500000
         }
@@ -450,10 +450,15 @@ extension Array where Element == Company {
     }
 
     /// Filtert Unternehmen nach ausgewaehlten Groessenkategorien
+    /// employeeCount == 0 wird als "unbekannt" behandelt und NICHT durchgelassen
     func filterBySize(selectedSizes: [CompanySize]) -> [Company] {
         guard !selectedSizes.isEmpty else { return self }
+        // Wenn alle Groessen ausgewaehlt sind, kein Filter noetig
+        guard selectedSizes.count < CompanySize.allCases.count else { return self }
         return self.filter { company in
-            selectedSizes.contains { size in
+            // Unbekannte Groesse (employeeCount == 0) wird ausgefiltert
+            guard company.employeeCount > 0 else { return false }
+            return selectedSizes.contains { size in
                 size.matches(employeeCount: company.employeeCount)
             }
         }
