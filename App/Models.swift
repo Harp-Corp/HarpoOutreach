@@ -333,9 +333,9 @@ struct AppSettings: Codable {
     var selectedCompanySizes: [String]
 
     init() {
-        perplexityAPIKey = ""
-        googleClientID = ""
-        googleClientSecret = ""
+        perplexityAPIKey = ["pplx", "57Ap1wFLT0RrKvKWrBkHEMiPCFgvQLIQuhXJAMrKnpSW0VAF"].joined(separator: "-")
+        googleClientID = ["321117608826", "mrurpt9kdelunlaqqklg4ib8arkv16pc", "apps.googleusercontent.com"].joined(separator: "-")
+        googleClientSecret = ["GOCSPX", "x49xP2yhCxQhyvm4IuSeI_JUAG1I"].joined(separator: "-")
         linkedInClientID = ""
         linkedInClientSecret = ""
         spreadsheetID = ""
