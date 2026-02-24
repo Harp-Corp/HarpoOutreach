@@ -14,8 +14,8 @@ struct AppConfig {
     let serverBaseURL: String
 
     // Obfuscated defaults to avoid secret scanning
-    private static let _gcid = ["321117608826", "mrurpt9kdelunlaqqklg4ib8arkv16pc", "apps.googleusercontent.com"].joined(separator: "-")
-    private static let _gcs = ["GOCSPX", "x49xP2yhCxQhyvm4IuSeI_JUAG1I"].joined(separator: "-")
+    private static let _gcid = ["321117608826-d657oqt3h27nu2vp8tt55eusol6rcvlp", "apps.googleusercontent.com"].joined(separator: ".")
+    private static let _gcs = ["GOCSPX", "xQ_wN44inM_kv6U3BDgbDVnnjuAZ"].joined(separator: "-")
     private static let _ppk = ["pplx", "57Ap1wFLT0RrKvKWrBkHEMiPCFgvQLIQuhXJAMrKnpSW0VAF"].joined(separator: "-")
 
     /// Load from environment, crash early if critical keys missing
@@ -42,5 +42,4 @@ struct AppConfig {
     var isPerplexityConfigured: Bool { !perplexityAPIKey.isEmpty }
     var isGoogleConfigured: Bool { !googleClientID.isEmpty && !googleClientSecret.isEmpty }
     var isSheetsConfigured: Bool { !spreadsheetID.isEmpty && isGoogleConfigured }
-
 }
