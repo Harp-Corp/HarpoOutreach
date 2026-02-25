@@ -46,6 +46,10 @@ class AppViewModel: ObservableObject {
         self.companiesSaveURL = appDir.appendingPathComponent("companies.json")
         self.socialPostsSaveURL = appDir.appendingPathComponent("socialPosts.json")
         loadSettings(); loadLeads(); loadCompanies(); loadSocialPosts(); migrateSocialPostFooters(); configureAuth()
+                // Auto-initialize Google Sheet on launch
+        if !settings.spreadsheetID.isEmpty {
+            Task { try? await sheetsService.initializeSheet(spreadsheetID: settings.spreadsheetID) }
+        }
         authCancellable = authService.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
     }
 
