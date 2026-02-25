@@ -77,6 +77,7 @@ struct ProspectingHeaderView: View {
                         } else {
                             vm.settings.selectedCompanySizes.append(size.rawValue)
                         }
+                                            vm.refilterCompanies()
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: size.icon).font(.caption2)
@@ -108,7 +109,7 @@ struct ProspectingCompanyList: View {
                 Text("Companies").font(.headline)
                 Spacer()
                 Menu {
-                    Button(action: { Task { await vm.findCompanies() } }) {
+                                    Button(action: { vm.startFindCompanies() }) {
                         Label("Search (filtered by industry)", systemImage: "magnifyingglass")
                     }
                     Button(action: { showManualCompanySheet = true }) {
