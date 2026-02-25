@@ -100,7 +100,7 @@ class GmailService {
             guard !cleanSubject.isEmpty else { continue }
 
             let quotedSubject = "\"" + cleanSubject + "\""
-            let query = "in:inbox subject:\(quotedSubject) -from:me newer_than:90d"
+            let query = "subject:\(quotedSubject) -from:me newer_than:90d"
 
             let msgs = try await searchGmail(query: query, token: token, maxResults: 10)
             for msg in msgs {
@@ -114,12 +114,12 @@ class GmailService {
         }
 
         // 2. Gezielter Fallback: Suche nach Emails VON bekannten Lead-Adressen
-        if allReplies.isEmpty && !leadEmails.isEmpty {
-            print("[Gmail] Kein Subject-Match - suche nach Lead-Emails...")
+        if !leadEmails.isEmpty {
+                        print("[Gmail] Zusaetzliche Suche nach Lead-Emails...")
             for email in leadEmails {
                 let emailLower = email.lowercased().trimmingCharacters(in: .whitespaces)
                 guard !emailLower.isEmpty else { continue }
-                let query = "in:inbox from:\(emailLower) newer_than:90d"
+                let query = "from:\(emailLower) newer_than:90d"
                 let msgs = try await searchGmail(query: query, token: token, maxResults: 5)
                 for msg in msgs {
                     guard !seenIds.contains(msg.id) else { continue }
