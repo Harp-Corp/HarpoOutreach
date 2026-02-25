@@ -3,12 +3,12 @@ import Foundation
 class GoogleSheetsService {
     private let baseURL = "https://sheets.googleapis.com/v4/spreadsheets"
     private let authService: GoogleAuthService
+        private var cachedSheetName: String?
 
     init(authService: GoogleAuthService) {
         self.authService = authService
 
-            // Cached sheet name (auto-detected)
-    private var cachedSheetName: String?
+
     }
 
     // MARK: - Spreadsheet-ID bereinigen
