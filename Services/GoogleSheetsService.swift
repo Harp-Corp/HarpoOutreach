@@ -6,6 +6,9 @@ class GoogleSheetsService {
 
     init(authService: GoogleAuthService) {
         self.authService = authService
+
+            // Cached sheet name (auto-detected)
+    private var cachedSheetName: String?
     }
 
     // MARK: - Spreadsheet-ID bereinigen
@@ -27,6 +30,31 @@ class GoogleSheetsService {
         id = id.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         print("[Sheets] Bereinigte Spreadsheet-ID: \(id)")
         return id
+    }
+
+        // MARK: - Sheet-Name automatisch erkennen
+    private func resolveSheetName(spreadsheetID: String) async throws -> String {
+        if let cached = cachedSheetName { return cached }
+        let token = try await authService.getAccessToken()
+        let cleanID = cleanSpreadsheetID(spreadsheetID)
+        let url = URL(string: "https://sheets.googleapis.com/v4/spreadsheets/\(cleanID)?fields=sheets.properties.title")!
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, http.statusCode == 200,
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let sheets = json["sheets"] as? [[String: Any]],
+           let first = sheets.first,
+           let props = first["properties"] as? [String: Any],
+           let title = props["title"] as? String {
+            cachedSheetName = title
+            print("[Sheets] Erkannter Sheet-Name: \(title)")
+            return title
+        }
+        // Fallback
+        cachedSheetName = "Sheet1"
+        print("[Sheets] Fallback Sheet-Name: Sheet1")
+        return "Sheet1"
     }
 
     // MARK: - URL sicher bauen (ohne doppeltes Encoding)
@@ -58,9 +86,10 @@ class GoogleSheetsService {
             "Datum", "Typ", "Unternehmen", "Ansprechpartner",
             "Email", "Betreff", "Inhalt (Auszug)", "Status", "Zusammenfassung"
         ]
-        let existing = try await readRow(spreadsheetID: spreadsheetID, range: "Sheet1!A1:I1")
+                let sheetName = try await resolveSheetName(spreadsheetID: spreadsheetID)
+                let existing = try await readRow(spreadsheetID: spreadsheetID, range: "\(sheetName)!A1:I1")
         if existing.isEmpty {
-            try await appendRow(spreadsheetID: spreadsheetID, sheet: "Sheet1", values: headers)
+            try await appendRow(spreadsheetID: spreadsheetID, sheet: sheetName, values: headers)
             print("[Sheets] Header geschrieben")
         } else {
             print("[Sheets] Header bereits vorhanden")
@@ -71,6 +100,7 @@ class GoogleSheetsService {
     func logEmailEvent(spreadsheetID: String, lead: Lead, emailType: String,
                        subject: String, body: String, summary: String) async throws {
         print("[Sheets] Logge Email-Event: \(emailType) fuer \(lead.name)")
+                let sheetName = try await resolveSheetName(spreadsheetID: spreadsheetID)
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "dd.MM.yyyy HH:mm"
         let bodyExcerpt = String(body.prefix(300)).replacingOccurrences(of: "\n", with: " ")
@@ -79,7 +109,7 @@ class GoogleSheetsService {
             lead.company, lead.name, lead.email,
             subject, bodyExcerpt, lead.status.rawValue, summary
         ]
-        try await appendRow(spreadsheetID: spreadsheetID, sheet: "Sheet1", values: row)
+        try await appendRow(spreadsheetID: spreadsheetID, sheet: sheetName, values: row)
         print("[Sheets] Email-Event erfolgreich geloggt")
     }
 
@@ -88,6 +118,7 @@ class GoogleSheetsService {
                           replySubject: String, replySnippet: String,
                           replyFrom: String) async throws {
         print("[Sheets] Logge Antwort von \(lead.name)")
+                let sheetName = try await resolveSheetName(spreadsheetID: spreadsheetID)
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "dd.MM.yyyy HH:mm"
         let row: [String] = [
@@ -97,14 +128,15 @@ class GoogleSheetsService {
             lead.status.rawValue,
             "Antwort von \(lead.name) (\(lead.company)) erhalten auf Outreach-Email"
         ]
-        try await appendRow(spreadsheetID: spreadsheetID, sheet: "Sheet1", values: row)
+        try await appendRow(spreadsheetID: spreadsheetID, sheet: sheetName, values: row)
         print("[Sheets] Antwort erfolgreich geloggt")
     }
 
     // MARK: - Alle Tracking-Daten lesen
     func readAllLeads(spreadsheetID: String) async throws -> [[String]] {
         print("[Sheets] Lese alle Daten...")
-        let result = try await readRow(spreadsheetID: spreadsheetID, range: "Sheet1!A:I")
+                let sheetName = try await resolveSheetName(spreadsheetID: spreadsheetID)
+        let result = try await readRow(spreadsheetID: spreadsheetID, range: "\(sheetName)!A:I")
         print("[Sheets] \(result.count) Zeilen gelesen")
         return result
     }
