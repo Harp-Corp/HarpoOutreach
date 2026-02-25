@@ -34,7 +34,7 @@ class AppViewModel: ObservableObject {
     private let saveURL: URL
     private let companiesSaveURL: URL
     private let socialPostsSaveURL: URL
-    private var currentTask: Task<Void, Never>?
+    var currentTask: Task<Void, Never>?
 
     // MARK: - Init
     init() {
