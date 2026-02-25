@@ -342,6 +342,48 @@ class AppViewModel: ObservableObject {
     func cancelOperation() { currentTask?.cancel(); currentTask = nil; isLoading = false; currentStep = ""; statusMessage = "Operation cancelled" }
 
     // MARK: - Manual Entry
+    // MARK: - Search Wrapper + Cancellation Support
+    func startFindCompanies(forIndustry: Industry? = nil) {
+        currentTask?.cancel()
+        currentTask = Task {
+            await findCompaniesWithCancellation(forIndustry: forIndustry)
+        }
+    }
+
+    private func findCompaniesWithCancellation(forIndustry: Industry? = nil) async {
+        guard !settings.perplexityAPIKey.isEmpty else { errorMessage = "Perplexity API Key fehlt."; return }
+        isLoading = true; errorMessage = ""; companies = []
+        let industries: [Industry]
+        if let specific = forIndustry ?? selectedIndustryFilter { industries = [specific] } else {
+            industries = Industry.allCases.filter { settings.selectedIndustries.contains($0.rawValue) }
+        }
+        let regions: [Region]
+        if let specificRegion = selectedRegionFilter { regions = [specificRegion] } else {
+            regions = Region.allCases.filter { settings.selectedRegions.contains($0.rawValue) }
+        }
+        for industry in industries {
+            guard !Task.isCancelled else { break }
+            for region in regions {
+                guard !Task.isCancelled else { break }
+                currentStep = "Searching \(industry.shortName) in \(region.rawValue)..."
+                do {
+                    let found = try await pplxService.findCompanies(industry: industry, region: region, apiKey: settings.perplexityAPIKey)
+                    let newOnes = found.filter { new in !companies.contains { $0.name.lowercased() == new.name.lowercased() } }
+                    companies.append(contentsOf: newOnes)
+                } catch { if !Task.isCancelled { errorMessage = "Error \(industry.rawValue)/\(region.rawValue): \(error.localizedDescription)" } }
+            }
+        }
+        if Task.isCancelled { currentStep = "Search cancelled"; isLoading = false; return }
+        currentStep = "\(companies.count) companies found"
+        refilterCompanies(); saveCompanies(); isLoading = false
+    }
+
+    func refilterCompanies() {
+        let selectedSizes = CompanySize.allCases.filter { settings.selectedCompanySizes.contains($0.rawValue) }
+        companies = companies.applySearchFilters(selectedSizes: selectedSizes, existingLeads: leads)
+        currentStep = "\(companies.count) companies after filtering"
+    }
+
     func addCompanyManually(_ company: Company) {
         if !companies.contains(where: { $0.name.lowercased() == company.name.lowercased() }) { companies.append(company); statusMessage = "Company \(company.name) added" }
         else { errorMessage = "Company \(company.name) already exists" }
