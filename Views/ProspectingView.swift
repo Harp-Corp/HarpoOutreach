@@ -91,6 +91,26 @@ struct ProspectingHeaderView: View {
                     .buttonStyle(.plain)
                 }
             }
+                        // Region filter chips
+            HStack(spacing: 8) {
+                Text("Region:").font(.caption).foregroundStyle(.secondary)
+                Button(action: { vm.selectedRegionFilter = nil }) {
+                    Text("Alle")
+                }
+                .font(.caption).padding(.horizontal, 8).padding(.vertical, 4)
+                .background(vm.selectedRegionFilter == nil ? Color.green.opacity(0.8) : Color.gray.opacity(0.2))
+                .foregroundColor(vm.selectedRegionFilter == nil ? .white : .primary)
+                .cornerRadius(6).buttonStyle(.plain)
+                ForEach(Region.allCases) { region in
+                    Button(action: { vm.selectedRegionFilter = region }) {
+                        Text(region.rawValue).font(.caption)
+                    }
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(vm.selectedRegionFilter == region ? Color.green.opacity(0.8) : Color.gray.opacity(0.2))
+                    .foregroundColor(vm.selectedRegionFilter == region ? .white : .primary)
+                    .cornerRadius(6).buttonStyle(.plain)
+                }
+            }
         }
         .padding(24)
     }
