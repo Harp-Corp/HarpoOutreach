@@ -7,7 +7,7 @@ class AppViewModel: ObservableObject {
     // MARK: - Services
     let authService = GoogleAuthService()
     private var authCancellable: AnyCancellable?
-    private let pplxService = PerplexityService()
+    let pplxService = PerplexityService()
     private lazy var gmailService = GmailService(authService: authService)
     private lazy var sheetsService = GoogleSheetsService(authService: authService)
 
@@ -28,6 +28,7 @@ class AppViewModel: ObservableObject {
 
     // NEW: Industry filter for Prospecting search
     @Published var selectedIndustryFilter: Industry?
+        @Published var selectedRegionFilter: Region?
     // NEW: Per-search contact results (only current search)
     @Published var currentSearchContacts: [Lead] = []
 
@@ -211,7 +212,7 @@ class AppViewModel: ObservableObject {
     // MARK: - Persistenz
     private func saveLeads() { if let data = try? JSONEncoder().encode(leads) { try? data.write(to: saveURL) } }
     private func loadLeads() { guard let data = try? Data(contentsOf: saveURL), let saved = try? JSONDecoder().decode([Lead].self, from: data) else { return }; leads = saved }
-    private func saveCompanies() { if let data = try? JSONEncoder().encode(companies) { try? data.write(to: companiesSaveURL) } }
+    func saveCompanies() { if let data = try? JSONEncoder().encode(companies) { try? data.write(to: companiesSaveURL) } }
     private func loadCompanies() { guard let data = try? Data(contentsOf: companiesSaveURL), let saved = try? JSONDecoder().decode([Company].self, from: data) else { return }; companies = saved }
 
     // MARK: - 5) Email freigeben
