@@ -450,14 +450,14 @@ extension Array where Element == Company {
     }
 
     /// Filtert Unternehmen nach ausgewaehlten Groessenkategorien
-    /// employeeCount == 0 wird als "unbekannt" behandelt und NICHT durchgelassen
+    /// employeeCount == 0 wird als "unbekannt" behandelt und DURCHGELASSEN
     func filterBySize(selectedSizes: [CompanySize]) -> [Company] {
         guard !selectedSizes.isEmpty else { return self }
         // Wenn alle Groessen ausgewaehlt sind, kein Filter noetig
         guard selectedSizes.count < CompanySize.allCases.count else { return self }
         return self.filter { company in
-            // Unbekannte Groesse (employeeCount == 0) wird ausgefiltert
-            guard company.employeeCount > 0 else { return false }
+                        // Unbekannte Groesse (employeeCount == 0) wird DURCHGELASSEN
+            guard company.employeeCount > 0 else { return true }
             return selectedSizes.contains { size in
                 size.matches(employeeCount: company.employeeCount)
             }
