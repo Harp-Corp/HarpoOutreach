@@ -25,15 +25,42 @@ class GoogleAuthService: ObservableObject {
     ].joined(separator: " ")
 
     // MARK: - Configure
-    // WICHTIG: Loescht alle alten Tokens beim Start (force clean state)
+    // Nur Tokens loeschen wenn sich Client-Credentials geaendert haben
     func configure(clientID: String, clientSecret: String) {
+        let credentialsChanged = self.clientID != clientID || self.clientSecret != clientSecret
         self.clientID = clientID
         self.clientSecret = clientSecret
-        // Alte Tokens loeschen - neuer Client Secret erfordert neue Authentifizierung
-        clearAllTokens()
-        print("[GoogleAuth] configure() - alle alten Tokens geloescht, bitte neu einloggen")
+        if credentialsChanged && !clientID.isEmpty {
+            clearAllTokens()
+            print("[GoogleAuth] configure() - Credentials geaendert, Tokens geloescht")
+        } else {
+            // Gespeicherte Tokens laden falls vorhanden
+            loadSavedTokens()
+            print("[GoogleAuth] configure() - Credentials unveraendert, bestehende Session behalten")
+        }
     }
 
+    // MARK: - Load Saved Tokens from UserDefaults
+    private func loadSavedTokens() {
+        // Primaer: Tokens aus "google_tokens" JSON laden (von saveTokens() geschrieben)
+        if let data = UserDefaults.standard.data(forKey: "google_tokens"),
+           let dict = try? JSONDecoder().decode([String: String].self, from: data) {
+            if let token = dict["access_token"], !token.isEmpty {
+                accessToken = token
+            }
+            if let refresh = dict["refresh_token"], !refresh.isEmpty {
+                refreshToken = refresh
+            }
+            if let expStr = dict["expiry"], let exp = Double(expStr) {
+                tokenExpiry = Date(timeIntervalSince1970: exp)
+            }
+        }
+        // Wenn wir einen Refresh-Token haben, sind wir authentifiziert
+        if refreshToken != nil {
+            isAuthenticated = true
+            print("[GoogleAuth] Gespeicherte Session wiederhergestellt")
+        }
+    }
     // MARK: - Clear All Tokens (loescht alle UserDefaults + Memory)
     func clearAllTokens() {
         accessToken = nil
