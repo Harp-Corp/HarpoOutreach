@@ -75,7 +75,8 @@ class GoogleSheetsService {
             ]
         }
         let url = components.url
-        print("[Sheets] Built URL: \(url?.absoluteString.prefix(120) ?? \"nil\")")
+        let urlString = url?.absoluteString.prefix(120) ?? "nil"
+        print("[Sheets] Built URL: \(urlString)")
         return url
     }
 
