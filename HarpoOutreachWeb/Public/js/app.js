@@ -1,7 +1,7 @@
 // HarpoOutreach Web - Frontend Application
 'use strict';
 
-const API_BASE = '/api/v1';
+const API_BASE = '/api';
 
 // --- State ---
 let state = {
