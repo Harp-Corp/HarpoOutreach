@@ -58,8 +58,8 @@ function switchView(viewName) {
 // --- Populate Dropdowns ---
 async function loadIndustries() {
   try {
-    state.industries = await api('/industries');
-    const selects = ['filter-industry', 'lead-industry', 'search-industry', 'social-industry'];
+    const res = await api('/industries');    const selects = ['filter-industry', 'lead-industry', 'search-industry', 'social-industry'];
+        state.industries = res.data || res;
     selects.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
