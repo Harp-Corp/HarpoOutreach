@@ -7,428 +7,468 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		EF44A7872F4108470054C161 /* HarpoOutreachApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF44A77E2F4108470054C161 /* HarpoOutreachApp.swift */; };
-		EF44A7892F4108470054C161 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF44A7852F4108470054C161 /* SettingsView.swift */; };
-		EF44A78A2F4108470054C161 /* PerplexityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF44A7822F4108470054C161 /* PerplexityService.swift */; };
-		EF67ADAF2F410B8C0066E6E9 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADAE2F410B8A0066E6E9 /* Models.swift */; };
-		EF67ADB42F421FC40066E6E9 /* GoogleAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADB32F421FC20066E6E9 /* GoogleAuthService.swift */; };
-		EF67ADB62F421FD20066E6E9 /* GoogleSheetsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADB52F421FD10066E6E9 /* GoogleSheetsService.swift */; };
-		EF67ADB82F421FDF0066E6E9 /* GmailService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADB72F421FDB0066E6E9 /* GmailService.swift */; };
-		EF67ADBC2F4220210066E6E9 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADBB2F4220160066E6E9 /* MainTabView.swift */; };
-		EF67ADBE2F4220340066E6E9 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADBD2F4220330066E6E9 /* DashboardView.swift */; };
-		EF67ADC02F42203F0066E6E9 /* ProspectingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADBF2F42203E0066E6E9 /* ProspectingView.swift */; };
-		EF67ADC42F4220590066E6E9 /* EmailDraftView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADC32F4220580066E6E9 /* EmailDraftView.swift */; };
-		EF67ADC62F4220670066E6E9 /* OutboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADC52F4220620066E6E9 /* OutboxView.swift */; };
-		EF67ADC82F4220740066E6E9 /* InboxFollowUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADC72F4220730066E6E9 /* InboxFollowUpView.swift */; };
-		EF67ADCA2F4220800066E6E9 /* SheetLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADC92F42207F0066E6E9 /* SheetLogView.swift */; };
-		EF67ADCC2F4223800066E6E9 /* ContactListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADCB2F42237A0066E6E9 /* ContactListView.swift */; };
-		EF67ADCD2F4227140066E6E9 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADBA2F4220060066E6E9 /* AppViewModel.swift */; };
-		EF67ADCE2F4228000066E6E9 /* SocialPostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADCF2F4228010066E6E9 /* SocialPostView.swift */; };
-		EF67ADD12F4228210066E6E9 /* OutreachPipelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADD02F4228200066E6E9 /* OutreachPipelineView.swift */; };
-		EF67ADD32F4228310066E6E9 /* ManualEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADD22F4228300066E6E9 /* ManualEntryView.swift */; };
+			EF44A7872F4108470054C161 /* HarpoOutreachApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF44A77E2F4108470054C161 /* HarpoOutreachApp.swift */; };
+			EF44A7892F4108470054C161 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF44A7852F4108470054C161 /* SettingsView.swift */; };
+			EF44A78A2F4108470054C161 /* PerplexityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF44A7822F4108470054C161 /* PerplexityService.swift */; };
+			EF67ADAF2F410B8C0066E6E9 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADAE2F410B8A0066E6E9 /* Models.swift */; };
+			EF67ADB42F421FC40066E6E9 /* GoogleAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADB32F421FC20066E6E9 /* GoogleAuthService.swift */; };
+			EF67ADB62F421FD20066E6E9 /* GoogleSheetsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADB52F421FD10066E6E9 /* GoogleSheetsService.swift */; };
+			EF67ADB82F421FDF0066E6E9 /* GmailService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADB72F421FDB0066E6E9 /* GmailService.swift */; };
+			EF67ADBC2F4220210066E6E9 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADBB2F4220160066E6E9 /* MainTabView.swift */; };
+			EF67ADBE2F4220340066E6E9 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADBD2F4220330066E6E9 /* DashboardView.swift */; };
+			EF67ADC02F42203F0066E6E9 /* ProspectingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADBF2F42203E0066E6E9 /* ProspectingView.swift */; };
+			EF67ADC42F4220590066E6E9 /* EmailDraftView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADC32F4220580066E6E9 /* EmailDraftView.swift */; };
+			EF67ADC62F4220670066E6E9 /* OutboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADC52F4220620066E6E9 /* OutboxView.swift */; };
+			EF67ADC82F4220740066E6E9 /* InboxFollowUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADC72F4220730066E6E9 /* InboxFollowUpView.swift */; };
+			EF67ADCA2F4220800066E6E9 /* SheetLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADC92F42207F0066E6E9 /* SheetLogView.swift */; };
+			EF67ADCC2F4223800066E6E9 /* ContactListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADCB2F42237A0066E6E9 /* ContactListView.swift */; };
+			EF67ADCD2F4227140066E6E9 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADBA2F4220060066E6E9 /* AppViewModel.swift */; };
+			EF67ADCE2F4228000066E6E9 /* SocialPostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADCF2F4228010066E6E9 /* SocialPostView.swift */; };
+			EF67ADD12F4228210066E6E9 /* OutreachPipelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADD02F4228200066E6E9 /* OutreachPipelineView.swift */; };
+			EF67ADD32F4228310066E6E9 /* ManualEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF67ADD22F4228300066E6E9 /* ManualEntryView.swift */; };
+			EF88AA022F4600010066E6E9 /* DatabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA012F4600010066E6E9 /* DatabaseService.swift */; };
+			EF88AA042F4600020066E6E9 /* RetryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA032F4600020066E6E9 /* RetryService.swift */; };
+			EF88AA062F4600030066E6E9 /* AppViewModel+CSV.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA052F4600030066E6E9 /* AppViewModel+CSV.swift */; };
+			EF88AA082F4600040066E6E9 /* AppViewModel+EmailPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA072F4600040066E6E9 /* AppViewModel+EmailPipeline.swift */; };
+			EF88AA0A2F4600050066E6E9 /* AppViewModel+Inbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA092F4600050066E6E9 /* AppViewModel+Inbox.swift */; };
+			EF88AA0C2F4600060066E6E9 /* AppViewModel+Prospecting.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA0B2F4600060066E6E9 /* AppViewModel+Prospecting.swift */; };
+			EF88AA0E2F4600070066E6E9 /* AppViewModel+Social.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA0D2F4600070066E6E9 /* AppViewModel+Social.swift */; };
+			EF88AA102F4600080066E6E9 /* QuickCampaignView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA0F2F4600080066E6E9 /* QuickCampaignView.swift */; };
+			EF88AA122F4600090066E6E9 /* CampaignsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA112F4600090066E6E9 /* CampaignsView.swift */; };
+			EF88AA142F46000A0066E6E9 /* AnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA132F46000A0066E6E9 /* AnalyticsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		EF44A77E2F4108470054C161 /* HarpoOutreachApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarpoOutreachApp.swift; sourceTree = "<group>"; };
-		EF44A7822F4108470054C161 /* PerplexityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerplexityService.swift; sourceTree = "<group>"; };
-		EF44A7852F4108470054C161 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		EF67ADAD2F4109CA0066E6E9 /* HarpoOutreach.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HarpoOutreach.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		EF67ADAE2F410B8A0066E6E9 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
-		EF67ADB32F421FC20066E6E9 /* GoogleAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuthService.swift; sourceTree = "<group>"; };
-		EF67ADB52F421FD10066E6E9 /* GoogleSheetsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSheetsService.swift; sourceTree = "<group>"; };
-		EF67ADB72F421FDB0066E6E9 /* GmailService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GmailService.swift; sourceTree = "<group>"; };
-		EF67ADBA2F4220060066E6E9 /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
-		EF67ADBB2F4220160066E6E9 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
-		EF67ADBD2F4220330066E6E9 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
-		EF67ADBF2F42203E0066E6E9 /* ProspectingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProspectingView.swift; sourceTree = "<group>"; };
-		EF67ADC32F4220580066E6E9 /* EmailDraftView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailDraftView.swift; sourceTree = "<group>"; };
-		EF67ADC52F4220620066E6E9 /* OutboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutboxView.swift; sourceTree = "<group>"; };
-		EF67ADC72F4220730066E6E9 /* InboxFollowUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxFollowUpView.swift; sourceTree = "<group>"; };
-		EF67ADC92F42207F0066E6E9 /* SheetLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetLogView.swift; sourceTree = "<group>"; };
-		EF67ADCB2F42237A0066E6E9 /* ContactListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactListView.swift; sourceTree = "<group>"; };
-		EF67ADCF2F4228010066E6E9 /* SocialPostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialPostView.swift; sourceTree = "<group>"; };
-		EF67ADD02F4228200066E6E9 /* OutreachPipelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutreachPipelineView.swift; sourceTree = "<group>"; };
-		EF67ADD22F4228300066E6E9 /* ManualEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualEntryView.swift; sourceTree = "<group>"; };
+			EF44A77E2F4108470054C161 /* HarpoOutreachApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarpoOutreachApp.swift; sourceTree = "<group>"; };
+			EF44A7822F4108470054C161 /* PerplexityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerplexityService.swift; sourceTree = "<group>"; };
+			EF44A7852F4108470054C161 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+			EF67ADAD2F4109CA0066E6E9 /* HarpoOutreach.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HarpoOutreach.app; sourceTree = BUILT_PRODUCTS_DIR; };
+			EF67ADAE2F410B8A0066E6E9 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+			EF67ADB32F421FC20066E6E9 /* GoogleAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuthService.swift; sourceTree = "<group>"; };
+			EF67ADB52F421FD10066E6E9 /* GoogleSheetsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSheetsService.swift; sourceTree = "<group>"; };
+			EF67ADB72F421FDB0066E6E9 /* GmailService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GmailService.swift; sourceTree = "<group>"; };
+			EF67ADBA2F4220060066E6E9 /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
+			EF67ADBB2F4220160066E6E9 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+			EF67ADBD2F4220330066E6E9 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+			EF67ADBF2F42203E0066E6E9 /* ProspectingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProspectingView.swift; sourceTree = "<group>"; };
+			EF67ADC32F4220580066E6E9 /* EmailDraftView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailDraftView.swift; sourceTree = "<group>"; };
+			EF67ADC52F4220620066E6E9 /* OutboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutboxView.swift; sourceTree = "<group>"; };
+			EF67ADC72F4220730066E6E9 /* InboxFollowUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxFollowUpView.swift; sourceTree = "<group>"; };
+			EF67ADC92F42207F0066E6E9 /* SheetLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetLogView.swift; sourceTree = "<group>"; };
+			EF67ADCB2F42237A0066E6E9 /* ContactListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactListView.swift; sourceTree = "<group>"; };
+			EF67ADCF2F4228010066E6E9 /* SocialPostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialPostView.swift; sourceTree = "<group>"; };
+			EF67ADD02F4228200066E6E9 /* OutreachPipelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutreachPipelineView.swift; sourceTree = "<group>"; };
+			EF67ADD22F4228300066E6E9 /* ManualEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualEntryView.swift; sourceTree = "<group>"; };
+			EF88AA012F4600010066E6E9 /* DatabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseService.swift; sourceTree = "<group>"; };
+			EF88AA032F4600020066E6E9 /* RetryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryService.swift; sourceTree = "<group>"; };
+			EF88AA052F4600030066E6E9 /* AppViewModel+CSV.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel+CSV.swift; sourceTree = "<group>"; };
+			EF88AA072F4600040066E6E9 /* AppViewModel+EmailPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel+EmailPipeline.swift; sourceTree = "<group>"; };
+			EF88AA092F4600050066E6E9 /* AppViewModel+Inbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel+Inbox.swift; sourceTree = "<group>"; };
+			EF88AA0B2F4600060066E6E9 /* AppViewModel+Prospecting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel+Prospecting.swift; sourceTree = "<group>"; };
+			EF88AA0D2F4600070066E6E9 /* AppViewModel+Social.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel+Social.swift; sourceTree = "<group>"; };
+			EF88AA0F2F4600080066E6E9 /* QuickCampaignView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickCampaignView.swift; sourceTree = "<group>"; };
+			EF88AA112F4600090066E6E9 /* CampaignsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignsView.swift; sourceTree = "<group>"; };
+			EF88AA132F46000A0066E6E9 /* AnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		EF44A7212F40DCEF0054C161 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
+			EF44A7212F40DCEF0054C161 /* Frameworks */ = {
+				isa = PBXFrameworksBuildPhase;
+				buildActionMask = 2147483647;
+				files = (
+				);
+				runOnlyForDeploymentPostprocessing = 0;
+			};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		EF44A71B2F40DCEF0054C161 = {
-			isa = PBXGroup;
-			children = (
-				EF67ADAD2F4109CA0066E6E9 /* HarpoOutreach.app */,
-				EF44A77F2F4108470054C161 /* App */,
-				EF44A7832F4108470054C161 /* Services */,
-				EF44A7862F4108470054C161 /* Views */,
-				EF67ADB92F421FF00066E6E9 /* ViewModels */,
-			);
-			sourceTree = "<absolute>";
-		};
-		EF44A77F2F4108470054C161 /* App */ = {
-			isa = PBXGroup;
-			children = (
-				EF44A77E2F4108470054C161 /* HarpoOutreachApp.swift */,
-				EF67ADAE2F410B8A0066E6E9 /* Models.swift */,
-			);
-			path = App;
-			sourceTree = "<group>";
-		};
-		EF44A7832F4108470054C161 /* Services */ = {
-			isa = PBXGroup;
-			children = (
-				EF44A7822F4108470054C161 /* PerplexityService.swift */,
-				EF67ADB32F421FC20066E6E9 /* GoogleAuthService.swift */,
-				EF67ADB52F421FD10066E6E9 /* GoogleSheetsService.swift */,
-				EF67ADB72F421FDB0066E6E9 /* GmailService.swift */,
-			);
-			path = Services;
-			sourceTree = "<group>";
-		};
-		EF44A7862F4108470054C161 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				EF67ADC92F42207F0066E6E9 /* SheetLogView.swift */,
-				EF67ADC72F4220730066E6E9 /* InboxFollowUpView.swift */,
-				EF67ADC52F4220620066E6E9 /* OutboxView.swift */,
-				EF67ADC32F4220580066E6E9 /* EmailDraftView.swift */,
-				EF67ADCB2F42237A0066E6E9 /* ContactListView.swift */,
-				EF67ADBF2F42203E0066E6E9 /* ProspectingView.swift */,
-				EF67ADBD2F4220330066E6E9 /* DashboardView.swift */,
-				EF67ADBB2F4220160066E6E9 /* MainTabView.swift */,
-				EF44A7852F4108470054C161 /* SettingsView.swift */,
-				EF67ADCF2F4228010066E6E9 /* SocialPostView.swift */,
-				EF67ADD02F4228200066E6E9 /* OutreachPipelineView.swift */,
-				EF67ADD22F4228300066E6E9 /* ManualEntryView.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		EF67ADB92F421FF00066E6E9 /* ViewModels */ = {
-			isa = PBXGroup;
-			children = (
-				EF67ADBA2F4220060066E6E9 /* AppViewModel.swift */,
-			);
-			path = ViewModels;
-			sourceTree = "<group>";
-		};
+			EF44A71B2F40DCEF0054C161 = {
+				isa = PBXGroup;
+				children = (
+					EF67ADAD2F4109CA0066E6E9 /* HarpoOutreach.app */,
+					EF44A77F2F4108470054C161 /* App */,
+					EF44A7832F4108470054C161 /* Services */,
+					EF44A7862F4108470054C161 /* Views */,
+					EF67ADB92F421FF00066E6E9 /* ViewModels */,
+				);
+				sourceTree = "<absolute>";
+			};
+			EF44A77F2F4108470054C161 /* App */ = {
+				isa = PBXGroup;
+				children = (
+					EF44A77E2F4108470054C161 /* HarpoOutreachApp.swift */,
+					EF67ADAE2F410B8A0066E6E9 /* Models.swift */,
+				);
+				path = App;
+				sourceTree = "<group>";
+			};
+			EF44A7832F4108470054C161 /* Services */ = {
+				isa = PBXGroup;
+				children = (
+					EF44A7822F4108470054C161 /* PerplexityService.swift */,
+					EF67ADB32F421FC20066E6E9 /* GoogleAuthService.swift */,
+					EF67ADB52F421FD10066E6E9 /* GoogleSheetsService.swift */,
+					EF67ADB72F421FDB0066E6E9 /* GmailService.swift */,
+					EF88AA012F4600010066E6E9 /* DatabaseService.swift */,
+					EF88AA032F4600020066E6E9 /* RetryService.swift */,
+				);
+				path = Services;
+				sourceTree = "<group>";
+			};
+			EF44A7862F4108470054C161 /* Views */ = {
+				isa = PBXGroup;
+				children = (
+					EF67ADC92F42207F0066E6E9 /* SheetLogView.swift */,
+					EF67ADC72F4220730066E6E9 /* InboxFollowUpView.swift */,
+					EF67ADC52F4220620066E6E9 /* OutboxView.swift */,
+					EF67ADC32F4220580066E6E9 /* EmailDraftView.swift */,
+					EF67ADCB2F42237A0066E6E9 /* ContactListView.swift */,
+					EF67ADBF2F42203E0066E6E9 /* ProspectingView.swift */,
+					EF67ADBD2F4220330066E6E9 /* DashboardView.swift */,
+					EF67ADBB2F4220160066E6E9 /* MainTabView.swift */,
+					EF44A7852F4108470054C161 /* SettingsView.swift */,
+					EF67ADCF2F4228010066E6E9 /* SocialPostView.swift */,
+					EF67ADD02F4228200066E6E9 /* OutreachPipelineView.swift */,
+					EF67ADD22F4228300066E6E9 /* ManualEntryView.swift */,
+					EF88AA0F2F4600080066E6E9 /* QuickCampaignView.swift */,
+					EF88AA112F4600090066E6E9 /* CampaignsView.swift */,
+					EF88AA132F46000A0066E6E9 /* AnalyticsView.swift */,
+				);
+				path = Views;
+				sourceTree = "<group>";
+			};
+			EF67ADB92F421FF00066E6E9 /* ViewModels */ = {
+				isa = PBXGroup;
+				children = (
+					EF67ADBA2F4220060066E6E9 /* AppViewModel.swift */,
+					EF88AA052F4600030066E6E9 /* AppViewModel+CSV.swift */,
+					EF88AA072F4600040066E6E9 /* AppViewModel+EmailPipeline.swift */,
+					EF88AA092F4600050066E6E9 /* AppViewModel+Inbox.swift */,
+					EF88AA0B2F4600060066E6E9 /* AppViewModel+Prospecting.swift */,
+					EF88AA0D2F4600070066E6E9 /* AppViewModel+Social.swift */,
+				);
+				path = ViewModels;
+				sourceTree = "<group>";
+			};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		EF44A7232F40DCEF0054C161 /* HarpoOutreach */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = EF44A72F2F40DCF10054C161 /* Build configuration list for PBXNativeTarget "HarpoOutreach" */;
-			buildPhases = (
-				EF44A7202F40DCEF0054C161 /* Sources */,
-				EF44A7212F40DCEF0054C161 /* Frameworks */,
-				EF44A7222F40DCEF0054C161 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = HarpoOutreach;
-			packageProductDependencies = (
-			);
-			productName = HarpoOutreach;
-			productReference = EF67ADAD2F4109CA0066E6E9 /* HarpoOutreach.app */;
-			productType = "com.apple.product-type.application";
-		};
+			EF44A7232F40DCEF0054C161 /* HarpoOutreach */ = {
+				isa = PBXNativeTarget;
+				buildConfigurationList = EF44A72F2F40DCF10054C161 /* Build configuration list for PBXNativeTarget "HarpoOutreach" */;
+				buildPhases = (
+					EF44A7202F40DCEF0054C161 /* Sources */,
+					EF44A7212F40DCEF0054C161 /* Frameworks */,
+					EF44A7222F40DCEF0054C161 /* Resources */,
+				);
+				buildRules = (
+				);
+				dependencies = (
+				);
+				name = HarpoOutreach;
+				packageProductDependencies = (
+				);
+				productName = HarpoOutreach;
+				productReference = EF67ADAD2F4109CA0066E6E9 /* HarpoOutreach.app */;
+				productType = "com.apple.product-type.application";
+			};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		EF44A71C2F40DCEF0054C161 /* Project object */ = {
-			isa = PBXProject;
-			attributes = {
-				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2620;
-				LastUpgradeCheck = 2620;
-				TargetAttributes = {
-					EF44A7232F40DCEF0054C161 = {
-						CreatedOnToolsVersion = 14.0;
+			EF44A71C2F40DCEF0054C161 /* Project object */ = {
+				isa = PBXProject;
+				attributes = {
+					BuildIndependentTargetsInParallel = 1;
+					LastSwiftUpdateCheck = 2620;
+					LastUpgradeCheck = 2620;
+					TargetAttributes = {
+						EF44A7232F40DCEF0054C161 = {
+							CreatedOnToolsVersion = 14.0;
+						};
 					};
 				};
+				buildConfigurationList = EF44A71F2F40DCEF0054C161 /* Build configuration list for PBXProject "HarpoOutreach" */;
+				developmentRegion = en;
+				hasScannedForEncodings = 0;
+				knownRegions = (
+					en,
+					Base,
+				);
+				mainGroup = EF44A71B2F40DCEF0054C161;
+				minimizedProjectReferenceProxies = 1;
+				preferredProjectObjectVersion = 77;
+				productRefGroup = EF44A71B2F40DCEF0054C161;
+				projectDirPath = "";
+				projectRoot = "";
+				targets = (
+					EF44A7232F40DCEF0054C161 /* HarpoOutreach */,
+				);
 			};
-			buildConfigurationList = EF44A71F2F40DCEF0054C161 /* Build configuration list for PBXProject "HarpoOutreach" */;
-			developmentRegion = en;
-			hasScannedForEncodings = 0;
-			knownRegions = (
-				en,
-				Base,
-			);
-			mainGroup = EF44A71B2F40DCEF0054C161;
-			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
-			productRefGroup = EF44A71B2F40DCEF0054C161;
-			projectDirPath = "";
-			projectRoot = "";
-			targets = (
-				EF44A7232F40DCEF0054C161 /* HarpoOutreach */,
-			);
-		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		EF44A7222F40DCEF0054C161 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
+			EF44A7222F40DCEF0054C161 /* Resources */ = {
+				isa = PBXResourcesBuildPhase;
+				buildActionMask = 2147483647;
+				files = (
+				);
+				runOnlyForDeploymentPostprocessing = 0;
+			};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		EF44A7202F40DCEF0054C161 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				EF67ADB82F421FDF0066E6E9 /* GmailService.swift in Sources */,
-				EF67ADC82F4220740066E6E9 /* InboxFollowUpView.swift in Sources */,
-				EF67ADB62F421FD20066E6E9 /* GoogleSheetsService.swift in Sources */,
-				EF67ADCC2F4223800066E6E9 /* ContactListView.swift in Sources */,
-				EF67ADB42F421FC40066E6E9 /* GoogleAuthService.swift in Sources */,
-				EF67ADBC2F4220210066E6E9 /* MainTabView.swift in Sources */,
-				EF67ADC62F4220670066E6E9 /* OutboxView.swift in Sources */,
-				EF67ADBE2F4220340066E6E9 /* DashboardView.swift in Sources */,
-				EF44A7872F4108470054C161 /* HarpoOutreachApp.swift in Sources */,
-				EF44A7892F4108470054C161 /* SettingsView.swift in Sources */,
-				EF67ADCD2F4227140066E6E9 /* AppViewModel.swift in Sources */,
-				EF67ADCA2F4220800066E6E9 /* SheetLogView.swift in Sources */,
-				EF67ADC02F42203F0066E6E9 /* ProspectingView.swift in Sources */,
-				EF67ADAF2F410B8C0066E6E9 /* Models.swift in Sources */,
-				EF44A78A2F4108470054C161 /* PerplexityService.swift in Sources */,
-				EF67ADC42F4220590066E6E9 /* EmailDraftView.swift in Sources */,
-				EF67ADCE2F4228000066E6E9 /* SocialPostView.swift in Sources */,
-				EF67ADD12F4228210066E6E9 /* OutreachPipelineView.swift in Sources */,
-				EF67ADD32F4228310066E6E9 /* ManualEntryView.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
+			EF44A7202F40DCEF0054C161 /* Sources */ = {
+				isa = PBXSourcesBuildPhase;
+				buildActionMask = 2147483647;
+				files = (
+					EF67ADB82F421FDF0066E6E9 /* GmailService.swift in Sources */,
+					EF67ADC82F4220740066E6E9 /* InboxFollowUpView.swift in Sources */,
+					EF67ADB62F421FD20066E6E9 /* GoogleSheetsService.swift in Sources */,
+					EF67ADCC2F4223800066E6E9 /* ContactListView.swift in Sources */,
+					EF67ADB42F421FC40066E6E9 /* GoogleAuthService.swift in Sources */,
+					EF67ADBC2F4220210066E6E9 /* MainTabView.swift in Sources */,
+					EF67ADC62F4220670066E6E9 /* OutboxView.swift in Sources */,
+					EF67ADBE2F4220340066E6E9 /* DashboardView.swift in Sources */,
+					EF44A7872F4108470054C161 /* HarpoOutreachApp.swift in Sources */,
+					EF44A7892F4108470054C161 /* SettingsView.swift in Sources */,
+					EF67ADCD2F4227140066E6E9 /* AppViewModel.swift in Sources */,
+					EF67ADCA2F4220800066E6E9 /* SheetLogView.swift in Sources */,
+					EF67ADC02F42203F0066E6E9 /* ProspectingView.swift in Sources */,
+					EF67ADAF2F410B8C0066E6E9 /* Models.swift in Sources */,
+					EF44A78A2F4108470054C161 /* PerplexityService.swift in Sources */,
+					EF67ADC42F4220590066E6E9 /* EmailDraftView.swift in Sources */,
+					EF67ADCE2F4228000066E6E9 /* SocialPostView.swift in Sources */,
+					EF67ADD12F4228210066E6E9 /* OutreachPipelineView.swift in Sources */,
+					EF67ADD32F4228310066E6E9 /* ManualEntryView.swift in Sources */,
+					EF88AA022F4600010066E6E9 /* DatabaseService.swift in Sources */,
+					EF88AA042F4600020066E6E9 /* RetryService.swift in Sources */,
+					EF88AA062F4600030066E6E9 /* AppViewModel+CSV.swift in Sources */,
+					EF88AA082F4600040066E6E9 /* AppViewModel+EmailPipeline.swift in Sources */,
+					EF88AA0A2F4600050066E6E9 /* AppViewModel+Inbox.swift in Sources */,
+					EF88AA0C2F4600060066E6E9 /* AppViewModel+Prospecting.swift in Sources */,
+					EF88AA0E2F4600070066E6E9 /* AppViewModel+Social.swift in Sources */,
+					EF88AA102F4600080066E6E9 /* QuickCampaignView.swift in Sources */,
+					EF88AA122F4600090066E6E9 /* CampaignsView.swift in Sources */,
+					EF88AA142F46000A0066E6E9 /* AnalyticsView.swift in Sources */,
+				);
+				runOnlyForDeploymentPostprocessing = 0;
+			};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		EF44A72D2F40DCF10054C161 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = 8B9265Y22Q;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
-				MTL_FAST_MATH = YES;
-				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			EF44A72D2F40DCF10054C161 /* Debug */ = {
+				isa = XCBuildConfiguration;
+				buildSettings = {
+					ALWAYS_SEARCH_USER_PATHS = NO;
+					ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+					CLANG_ANALYZER_NONNULL = YES;
+					CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+					CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+					CLANG_ENABLE_MODULES = YES;
+					CLANG_ENABLE_OBJC_ARC = YES;
+					CLANG_ENABLE_OBJC_WEAK = YES;
+					CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+					CLANG_WARN_BOOL_CONVERSION = YES;
+					CLANG_WARN_COMMA = YES;
+					CLANG_WARN_CONSTANT_CONVERSION = YES;
+					CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+					CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+					CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+					CLANG_WARN_EMPTY_BODY = YES;
+					CLANG_WARN_ENUM_CONVERSION = YES;
+					CLANG_WARN_INFINITE_RECURSION = YES;
+					CLANG_WARN_INT_CONVERSION = YES;
+					CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+					CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+					CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+					CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+					CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+					CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+					CLANG_WARN_STRICT_PROTOTYPES = YES;
+					CLANG_WARN_SUSPICIOUS_MOVE = YES;
+					CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+					CLANG_WARN_UNREACHABLE_CODE = YES;
+					CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+					COPY_PHASE_STRIP = NO;
+					DEBUG_INFORMATION_FORMAT = dwarf;
+					DEVELOPMENT_TEAM = 8B9265Y22Q;
+					ENABLE_STRICT_OBJC_MSGSEND = YES;
+					ENABLE_TESTABILITY = YES;
+					ENABLE_USER_SCRIPT_SANDBOXING = YES;
+					GCC_C_LANGUAGE_STANDARD = gnu17;
+					GCC_DYNAMIC_NO_PIC = NO;
+					GCC_NO_COMMON_BLOCKS = YES;
+					GCC_OPTIMIZATION_LEVEL = 0;
+					GCC_PREPROCESSOR_DEFINITIONS = (
+						"DEBUG=1",
+						"$(inherited)",
+					);
+					GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+					GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+					GCC_WARN_UNDECLARED_SELECTOR = YES;
+					GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+					GCC_WARN_UNUSED_FUNCTION = YES;
+					GCC_WARN_UNUSED_VARIABLE = YES;
+					LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+					MACOSX_DEPLOYMENT_TARGET = 14.0;
+					MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+					MTL_FAST_MATH = YES;
+					ONLY_ACTIVE_ARCH = YES;
+					SDKROOT = macosx;
+					SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+					SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				};
+				name = Debug;
 			};
-			name = Debug;
-		};
-		EF44A72E2F40DCF10054C161 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = 8B9265Y22Q;
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				MTL_FAST_MATH = YES;
-				SDKROOT = macosx;
-				SWIFT_COMPILATION_MODE = wholemodule;
+			EF44A72E2F40DCF10054C161 /* Release */ = {
+				isa = XCBuildConfiguration;
+				buildSettings = {
+					ALWAYS_SEARCH_USER_PATHS = NO;
+					ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+					CLANG_ANALYZER_NONNULL = YES;
+					CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+					CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+					CLANG_ENABLE_MODULES = YES;
+					CLANG_ENABLE_OBJC_ARC = YES;
+					CLANG_ENABLE_OBJC_WEAK = YES;
+					CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+					CLANG_WARN_BOOL_CONVERSION = YES;
+					CLANG_WARN_COMMA = YES;
+					CLANG_WARN_CONSTANT_CONVERSION = YES;
+					CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+					CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+					CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+					CLANG_WARN_EMPTY_BODY = YES;
+					CLANG_WARN_ENUM_CONVERSION = YES;
+					CLANG_WARN_INFINITE_RECURSION = YES;
+					CLANG_WARN_INT_CONVERSION = YES;
+					CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+					CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+					CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+					CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+					CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+					CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+					CLANG_WARN_STRICT_PROTOTYPES = YES;
+					CLANG_WARN_SUSPICIOUS_MOVE = YES;
+					CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+					CLANG_WARN_UNREACHABLE_CODE = YES;
+					CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+					COPY_PHASE_STRIP = NO;
+					DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+					DEVELOPMENT_TEAM = 8B9265Y22Q;
+					ENABLE_NS_ASSERTIONS = NO;
+					ENABLE_STRICT_OBJC_MSGSEND = YES;
+					ENABLE_USER_SCRIPT_SANDBOXING = YES;
+					GCC_C_LANGUAGE_STANDARD = gnu17;
+					GCC_NO_COMMON_BLOCKS = YES;
+					GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+					GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+					GCC_WARN_UNDECLARED_SELECTOR = YES;
+					GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+					GCC_WARN_UNUSED_FUNCTION = YES;
+					GCC_WARN_UNUSED_VARIABLE = YES;
+					LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+					MACOSX_DEPLOYMENT_TARGET = 14.0;
+					MTL_ENABLE_DEBUG_INFO = NO;
+					MTL_FAST_MATH = YES;
+					SDKROOT = macosx;
+					SWIFT_COMPILATION_MODE = wholemodule;
+				};
+				name = Release;
 			};
-			name = Release;
-		};
-		EF44A7302F40DCF10054C161 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8B9265Y22Q;
-				ENABLE_APP_SANDBOX = NO;
-				ENABLE_HARDENED_RUNTIME = NO;
-				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = HarpoOutreach;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = MF.HarpoOutreach;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+			EF44A7302F40DCF10054C161 /* Debug */ = {
+				isa = XCBuildConfiguration;
+				buildSettings = {
+					ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+					ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+					"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+					CODE_SIGN_STYLE = Automatic;
+					COMBINE_HIDPI_IMAGES = YES;
+					CURRENT_PROJECT_VERSION = 1;
+					DEVELOPMENT_TEAM = 8B9265Y22Q;
+					ENABLE_APP_SANDBOX = NO;
+					ENABLE_HARDENED_RUNTIME = NO;
+					ENABLE_PREVIEWS = YES;
+					ENABLE_USER_SCRIPT_SANDBOXING = NO;
+					GENERATE_INFOPLIST_FILE = YES;
+					INFOPLIST_KEY_CFBundleDisplayName = HarpoOutreach;
+					INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
+					INFOPLIST_KEY_NSHumanReadableCopyright = "";
+					LD_RUNPATH_SEARCH_PATHS = (
+						"$(inherited)",
+						"@executable_path/../Frameworks",
+					);
+					MACOSX_DEPLOYMENT_TARGET = 14.0;
+					MARKETING_VERSION = 1.0;
+					PRODUCT_BUNDLE_IDENTIFIER = MF.HarpoOutreach;
+					PRODUCT_NAME = "$(TARGET_NAME)";
+					REGISTER_APP_GROUPS = YES;
+					STRING_CATALOG_GENERATE_SYMBOLS = YES;
+					SWIFT_APPROACHABLE_CONCURRENCY = YES;
+					SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+					SWIFT_EMIT_LOC_STRINGS = YES;
+					SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+					SWIFT_VERSION = 5.0;
+				};
+				name = Debug;
 			};
-			name = Debug;
-		};
-		EF44A7312F40DCF10054C161 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8B9265Y22Q;
-				ENABLE_APP_SANDBOX = NO;
-				ENABLE_HARDENED_RUNTIME = NO;
-				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = HarpoOutreach;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = MF.HarpoOutreach;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+			EF44A7312F40DCF10054C161 /* Release */ = {
+				isa = XCBuildConfiguration;
+				buildSettings = {
+					ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+					ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+					"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+					CODE_SIGN_STYLE = Automatic;
+					COMBINE_HIDPI_IMAGES = YES;
+					CURRENT_PROJECT_VERSION = 1;
+					DEVELOPMENT_TEAM = 8B9265Y22Q;
+					ENABLE_APP_SANDBOX = NO;
+					ENABLE_HARDENED_RUNTIME = NO;
+					ENABLE_PREVIEWS = YES;
+					ENABLE_USER_SCRIPT_SANDBOXING = NO;
+					GENERATE_INFOPLIST_FILE = YES;
+					INFOPLIST_KEY_CFBundleDisplayName = HarpoOutreach;
+					INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
+					INFOPLIST_KEY_NSHumanReadableCopyright = "";
+					LD_RUNPATH_SEARCH_PATHS = (
+						"$(inherited)",
+						"@executable_path/../Frameworks",
+					);
+					MACOSX_DEPLOYMENT_TARGET = 14.0;
+					MARKETING_VERSION = 1.0;
+					PRODUCT_BUNDLE_IDENTIFIER = MF.HarpoOutreach;
+					PRODUCT_NAME = "$(TARGET_NAME)";
+					REGISTER_APP_GROUPS = YES;
+					STRING_CATALOG_GENERATE_SYMBOLS = YES;
+					SWIFT_APPROACHABLE_CONCURRENCY = YES;
+					SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+					SWIFT_EMIT_LOC_STRINGS = YES;
+					SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+					SWIFT_VERSION = 5.0;
+				};
+				name = Release;
 			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		EF44A71F2F40DCEF0054C161 /* Build configuration list for PBXProject "HarpoOutreach" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				EF44A72D2F40DCF10054C161 /* Debug */,
-				EF44A72E2F40DCF10054C161 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		EF44A72F2F40DCF10054C161 /* Build configuration list for PBXNativeTarget "HarpoOutreach" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				EF44A7302F40DCF10054C161 /* Debug */,
-				EF44A7312F40DCF10054C161 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
+			EF44A71F2F40DCEF0054C161 /* Build configuration list for PBXProject "HarpoOutreach" */ = {
+				isa = XCConfigurationList;
+				buildConfigurations = (
+					EF44A72D2F40DCF10054C161 /* Debug */,
+					EF44A72E2F40DCF10054C161 /* Release */,
+				);
+				defaultConfigurationIsVisible = 0;
+				defaultConfigurationName = Release;
+			};
+			EF44A72F2F40DCF10054C161 /* Build configuration list for PBXNativeTarget "HarpoOutreach" */ = {
+				isa = XCConfigurationList;
+				buildConfigurations = (
+					EF44A7302F40DCF10054C161 /* Debug */,
+					EF44A7312F40DCF10054C161 /* Release */,
+				);
+				defaultConfigurationIsVisible = 0;
+				defaultConfigurationName = Release;
+			};
 /* End XCConfigurationList section */
 	};
 	rootObject = EF44A71C2F40DCEF0054C161 /* Project object */;
