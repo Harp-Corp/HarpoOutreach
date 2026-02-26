@@ -8,10 +8,25 @@ let state = {
   industries: [],
   regions: [],
   leads: [],
-  currentView: 'dashboard'
+  currentView: 'dashboard',
+  isAuthenticated: false
 };
 
 // --- API Helper ---
+
+// --- Toast Notifications ---
+function showToast(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.classList.add('show'), 100);
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
 async function api(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
   const config = {
@@ -100,7 +115,7 @@ async function loadRegions() {
 async function loadDashboard() {
   try {
     const res = await api('/dashboard');    document.getElementById('stat-leads').textContent = stats.totalLeads || 0;
-        const stats = res.data || res;
+    const stats = res.data || res;
     document.getElementById('stat-emails-sent').textContent = stats.emailsSent || 0;
     document.getElementById('stat-emails-opened').textContent = stats.emailsOpened || 0;
     document.getElementById('stat-responses').textContent = stats.responses || 0;
