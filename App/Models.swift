@@ -366,7 +366,7 @@ struct AppSettings: Codable {
     var batchDelaySeconds: Int
 
     init() {
-        perplexityAPIKey = ["pplx", "57Ap1wFLT0RrKvKWrBkHEMiPCFgvQLIQuhXJAMrKnpSW0VAF"].joined(separator: "-")
+        perplexityAPIKey = ["pplx", "N9JG4Kmy5Wk125VBeCk9GRVOR4hShbitfc9cPdRr2Qy58U4A"].joined(separator: "-")
         googleClientID = ["321117608826-etabo2nhj89ghcdphk2qj7fm9j3r5i5p", "apps.googleusercontent.com"].joined(separator: ".")
         googleClientSecret = ["GOCSPX", "1MUsDT44nHjh_WwGcg0gOu08j-Hc"].joined(separator: "-")
         linkedInClientID = ""
