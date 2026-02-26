@@ -63,11 +63,16 @@ extension AppViewModel {
         } else {
             regions = Region.allCases.filter { settings.selectedRegions.contains($0.rawValue) }
         }
+                var consecutiveFailures = 0
+        let totalCombinations = industries.count * regions.count
+        var currentCombination = 0
         for industry in industries {
             guard !Task.isCancelled else { break }
+                        guard consecutiveFailures < 3 else { break }
             for region in regions {
                 guard !Task.isCancelled else { break }
-                currentStep = "Searching \(industry.shortName) in \(region.rawValue)..."
+                                currentCombination += 1
+                                currentStep = "(\(currentCombination)/\(totalCombinations)) Searching \(industry.shortName) in \(region.rawValue)..."
                 do {
                     let found = try await pplxService.findCompanies(industry: industry, region: region, apiKey: settings.perplexityAPIKey)
                     let newOnes = found.filter { new in
@@ -75,9 +80,15 @@ extension AppViewModel {
                         && !DatabaseService.shared.companyExists(name: new.name)
                     }
                     companies.append(contentsOf: newOnes)
+                                        consecutiveFailures = 0
                 } catch {
                     if !Task.isCancelled {
                         errorMessage = "Error \(industry.rawValue)/\(region.rawValue): \(error.localizedDescription)"
+                                                consecutiveFailures += 1
+                        if consecutiveFailures >= 3 {
+                            errorMessage = "Search stopped: \(consecutiveFailures) consecutive API failures. Check your internet connection or API key."
+                            break
+                        }
                     }
                 }
             }
