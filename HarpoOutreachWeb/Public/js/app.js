@@ -78,8 +78,8 @@ async function loadIndustries() {
 
 async function loadRegions() {
   try {
-    state.regions = await api('/regions');
-    const selects = ['filter-region', 'lead-region', 'search-region'];
+    const res = await api('/regions');    const selects = ['filter-region', 'lead-region', 'search-region'];
+        state.regions = res.data || res;
     selects.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -99,8 +99,8 @@ async function loadRegions() {
 // --- Dashboard ---
 async function loadDashboard() {
   try {
-    const stats = await api('/dashboard');
-    document.getElementById('stat-leads').textContent = stats.totalLeads || 0;
+    const res = await api('/dashboard');    document.getElementById('stat-leads').textContent = stats.totalLeads || 0;
+        const stats = res.data || res;
     document.getElementById('stat-emails-sent').textContent = stats.emailsSent || 0;
     document.getElementById('stat-emails-opened').textContent = stats.emailsOpened || 0;
     document.getElementById('stat-responses').textContent = stats.responses || 0;
@@ -114,8 +114,8 @@ async function loadDashboard() {
 // --- Leads ---
 async function loadLeads() {
   try {
-    state.leads = await api('/leads');
-    renderLeadsTable(state.leads);
+    const res = await api('/leads');    renderLeadsTable(state.leads);
+        state.leads = res.data || res;
     populateEmailLeadSelect();
   } catch (e) {
     console.warn('Leads load error:', e);
