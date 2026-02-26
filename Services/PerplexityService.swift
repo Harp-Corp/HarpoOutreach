@@ -56,7 +56,7 @@ class PerplexityService {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(requestBody)
-        request.timeoutInterval = 120
+        request.timeoutInterval = 60
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw PplxError.invalidResponse }
