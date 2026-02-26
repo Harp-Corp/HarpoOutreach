@@ -153,7 +153,7 @@ struct QuickCampaignView: View {
                                 Spacer()
                                 if selectedIndustry == industry {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(.accentColor)
+                                        .foregroundColor(.accentColor)
                                 }
                             }
                             .padding(10)
@@ -183,7 +183,7 @@ struct QuickCampaignView: View {
                                 Spacer()
                                 if selectedRegion == region {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(.accentColor)
+                                        .foregroundColor(.accentColor)
                                 }
                             }
                             .padding(10)
@@ -455,7 +455,7 @@ struct QuickCampaignView: View {
             GroupBox("Nächste Schritte") {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "1.circle.fill").foregroundStyle(.accentColor)
+                        Image(systemName: "1.circle.fill").foregroundColor(.accentColor)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Emails überprüfen").font(.callout.bold())
                             Text("Gehe zu Campaigns → Drafts und prüfe die erstellten Emails")
@@ -463,7 +463,7 @@ struct QuickCampaignView: View {
                         }
                     }
                     HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "2.circle.fill").foregroundStyle(.accentColor)
+                        Image(systemName: "2.circle.fill").foregroundColor(.accentColor)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Emails freigeben").font(.callout.bold())
                             Text("Klicke auf 'Alle freigeben' oder genehmige Emails einzeln")
@@ -471,7 +471,7 @@ struct QuickCampaignView: View {
                         }
                     }
                     HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "3.circle.fill").foregroundStyle(.accentColor)
+                        Image(systemName: "3.circle.fill").foregroundColor(.accentColor)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Kampagne versenden").font(.callout.bold())
                             Text("Klicke auf 'Alle senden' in der Outbox")
