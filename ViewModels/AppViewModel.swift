@@ -155,7 +155,7 @@ class AppViewModel: ObservableObject {
             settings = s
         }
         // Migrate: force new credentials if stored ones are empty or outdated
-        let validClientSuffix = "mrurpt9kdelunlaqqklg4ib8arkv16pc"
+        let validClientSuffix = "etabo2nhj89ghcdphk2qj7fm9j3r5i5p"
         if settings.googleClientID.isEmpty || !settings.googleClientID.contains(validClientSuffix) {
             settings.googleClientID = defaults.googleClientID
             settings.googleClientSecret = defaults.googleClientSecret
