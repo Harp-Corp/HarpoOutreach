@@ -3,11 +3,12 @@ import SwiftUI
 // MARK: - Main Dashboard
 struct DashboardView: View {
     @ObservedObject var vm: AppViewModel
+    @State private var showQuickCampaign = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                DashboardHeaderView(vm: vm)
+                DashboardHeaderView(vm: vm, showQuickCampaign: $showQuickCampaign)
                 DashboardStatusBanner(vm: vm)
                 DashboardKPIGrid(vm: vm)
                 DashboardCampaignView(vm: vm)
@@ -17,12 +18,16 @@ struct DashboardView: View {
             }
             .padding(24)
         }
+        .sheet(isPresented: $showQuickCampaign) {
+            QuickCampaignView(vm: vm)
+        }
     }
 }
 
 // MARK: - Header
 struct DashboardHeaderView: View {
     @ObservedObject var vm: AppViewModel
+    @Binding var showQuickCampaign: Bool
 
     var body: some View {
         HStack {
@@ -37,6 +42,13 @@ struct DashboardHeaderView: View {
                 ProgressView()
                     .controlSize(.regular)
             }
+            Button {
+                showQuickCampaign = true
+            } label: {
+                Label("Quick Campaign", systemImage: "bolt.fill")
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.indigo)
         }
         .padding(.bottom, 8)
     }
@@ -77,6 +89,7 @@ struct DashboardStatusBanner: View {
         }
     }
 }
+
 // MARK: - KPI Grid (Email Pipeline)
 struct DashboardKPIGrid: View {
     @ObservedObject var vm: AppViewModel
@@ -228,7 +241,7 @@ struct DashboardSocialPostsView: View {
     }
 }
 
-// MARK: - Pipeline by Industry (fixed)
+// MARK: - Pipeline by Industry
 struct DashboardPipelineView: View {
     @ObservedObject var vm: AppViewModel
 
@@ -244,7 +257,7 @@ struct DashboardPipelineView: View {
     }
 }
 
-// MARK: - Industry Row (fixed)
+// MARK: - Industry Row
 struct DashboardIndustryRow: View {
     let industry: Industry
     let leads: [Lead]

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var vm: AppViewModel
+    @State private var purgeConfirmation = false
 
     var body: some View {
         ScrollView {
@@ -15,10 +16,11 @@ struct SettingsView: View {
                 linkedInSection
                 sheetSection
                 senderSection
+                batchSection
                 industrySection
                 regionSection
                 companySizeSection
-                                dataManagementSection
+                dataManagementSection
 
                 Button("Einstellungen speichern") {
                     vm.saveSettings()
@@ -122,6 +124,31 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Batch Settings (NEW)
+    private var batchSection: some View {
+        GroupBox("Email Versand") {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Max. Emails pro Batch:")
+                    Spacer()
+                    TextField("10", value: $vm.settings.batchSize, format: .number)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                }
+                HStack {
+                    Text("Pause zwischen Emails (Sek.):")
+                    Spacer()
+                    TextField("45", value: $vm.settings.batchDelaySeconds, format: .number)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                }
+                Text("Gmail Limit: max. 500 Emails/Tag")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            .padding(8)
+        }
+    }
+
     private var industrySection: some View {
         GroupBox("Industrien") {
             VStack(alignment: .leading, spacing: 6) {
@@ -211,8 +238,6 @@ struct SettingsView: View {
     }
 
     // MARK: - Daten-Management
-    @State private var purgeConfirmation = false
-
     private var dataManagementSection: some View {
         GroupBox("Daten-Management") {
             VStack(alignment: .leading, spacing: 8) {
@@ -230,6 +255,22 @@ struct SettingsView: View {
                         Label("Bereinigen", systemImage: "trash")
                     }
                     .buttonStyle(.bordered)
+                }
+
+                Divider()
+
+                // CSV Import / Export
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("CSV Import / Export")
+                        .font(.caption.bold()).foregroundStyle(.secondary)
+                    HStack {
+                        Button("Leads exportieren (CSV)") { vm.exportLeadsCSV() }
+                        Button("Leads importieren (CSV)") { vm.importLeadsFromCSV() }
+                    }
+                    HStack {
+                        Button("Unternehmen exportieren (CSV)") { vm.exportCompaniesCSV() }
+                        Button("Unternehmen importieren (CSV)") { vm.importCompaniesFromCSV() }
+                    }
                 }
             }
             .padding(8)
