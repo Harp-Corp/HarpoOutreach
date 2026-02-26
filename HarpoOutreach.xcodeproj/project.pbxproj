@@ -61,11 +61,11 @@
 		EF67ADD22F4228300066E6E9 /* ManualEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualEntryView.swift; sourceTree = "<group>"; };
 		EF88AA012F4600010066E6E9 /* DatabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseService.swift; sourceTree = "<group>"; };
 		EF88AA032F4600020066E6E9 /* RetryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryService.swift; sourceTree = "<group>"; };
-		EF88AA052F4600030066E6E9 /* AppViewModel+CSV.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel+CSV.swift; sourceTree = "<group>"; };
-		EF88AA072F4600040066E6E9 /* AppViewModel+EmailPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel+EmailPipeline.swift; sourceTree = "<group>"; };
-		EF88AA092F4600050066E6E9 /* AppViewModel+Inbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel+Inbox.swift; sourceTree = "<group>"; };
-		EF88AA0B2F4600060066E6E9 /* AppViewModel+Prospecting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel+Prospecting.swift; sourceTree = "<group>"; };
-		EF88AA0D2F4600070066E6E9 /* AppViewModel+Social.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel+Social.swift; sourceTree = "<group>"; };
+		EF88AA052F4600030066E6E9 /* AppViewModel+CSV.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppViewModel+CSV.swift"; sourceTree = "<group>"; };
+		EF88AA072F4600040066E6E9 /* AppViewModel+EmailPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppViewModel+EmailPipeline.swift"; sourceTree = "<group>"; };
+		EF88AA092F4600050066E6E9 /* AppViewModel+Inbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppViewModel+Inbox.swift"; sourceTree = "<group>"; };
+		EF88AA0B2F4600060066E6E9 /* AppViewModel+Prospecting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppViewModel+Prospecting.swift"; sourceTree = "<group>"; };
+		EF88AA0D2F4600070066E6E9 /* AppViewModel+Social.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppViewModel+Social.swift"; sourceTree = "<group>"; };
 		EF88AA0F2F4600080066E6E9 /* QuickCampaignView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickCampaignView.swift; sourceTree = "<group>"; };
 		EF88AA112F4600090066E6E9 /* CampaignsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignsView.swift; sourceTree = "<group>"; };
 		EF88AA132F46000A0066E6E9 /* AnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsView.swift; sourceTree = "<group>"; };
