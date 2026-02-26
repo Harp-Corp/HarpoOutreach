@@ -161,7 +161,8 @@ class AppViewModel: ObservableObject {
             settings.googleClientSecret = defaults.googleClientSecret
             saveSettings()
         }
-        if settings.perplexityAPIKey.isEmpty {
+        let validPplxKeyPrefix = "N9JG4Kmy5Wk125V"
+        if settings.perplexityAPIKey.isEmpty || !settings.perplexityAPIKey.contains(validPplxKeyPrefix) {
             settings.perplexityAPIKey = defaults.perplexityAPIKey
             saveSettings()
         }
