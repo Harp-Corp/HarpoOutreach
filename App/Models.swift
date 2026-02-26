@@ -218,6 +218,15 @@ enum LeadStatus: String, Codable, CaseIterable {
     case closed = "Closed"
 }
 
+// MARK: - Delivery Status (Task 6 - Email Zustellungsstatus)
+enum DeliveryStatus: String, Codable, CaseIterable {
+    case pending = "Pending"
+    case sent = "Sent"
+    case delivered = "Delivered"
+    case bounced = "Bounced"
+    case failed = "Failed"
+}
+
 // MARK: - Lead
 struct Lead: Identifiable, Codable, Hashable {
     let id: UUID
@@ -240,6 +249,16 @@ struct Lead: Identifiable, Codable, Hashable {
     var replyReceived: String
     var isManuallyCreated: Bool
 
+    // MARK: - Task 5: Scheduled Send Date
+    var scheduledSendDate: Date?
+
+    // MARK: - Task 9: Opt-Out / Unsubscribe
+    var optedOut: Bool
+    var optOutDate: Date?
+
+    // MARK: - Task 6: Delivery Status
+    var deliveryStatus: DeliveryStatus
+
     init(id: UUID = UUID(), name: String, title: String = "", company: String,
          email: String, emailVerified: Bool = false, linkedInURL: String = "",
          phone: String = "", responsibility: String = "",
@@ -247,7 +266,10 @@ struct Lead: Identifiable, Codable, Hashable {
          verificationNotes: String = "", draftedEmail: OutboundEmail? = nil,
          followUpEmail: OutboundEmail? = nil, dateIdentified: Date = Date(),
          dateEmailSent: Date? = nil, dateFollowUpSent: Date? = nil,
-         replyReceived: String = "", isManuallyCreated: Bool = false) {
+         replyReceived: String = "", isManuallyCreated: Bool = false,
+         scheduledSendDate: Date? = nil,
+         optedOut: Bool = false, optOutDate: Date? = nil,
+         deliveryStatus: DeliveryStatus = .pending) {
         self.id = id
         self.name = name
         self.title = title
@@ -267,6 +289,10 @@ struct Lead: Identifiable, Codable, Hashable {
         self.dateFollowUpSent = dateFollowUpSent
         self.replyReceived = replyReceived
         self.isManuallyCreated = isManuallyCreated
+        self.scheduledSendDate = scheduledSendDate
+        self.optedOut = optedOut
+        self.optOutDate = optOutDate
+        self.deliveryStatus = deliveryStatus
     }
 }
 
@@ -326,11 +352,18 @@ struct AppSettings: Codable {
     var linkedInClientID: String
     var linkedInClientSecret: String
     var spreadsheetID: String
+    /// Configurable sender email (used throughout the app instead of the static constant in AppViewModel)
     var senderEmail: String
     var senderName: String
     var selectedIndustries: [String]
     var selectedRegions: [String]
     var selectedCompanySizes: [String]
+
+    // MARK: - Task 5: Batch Sending Settings
+    /// Number of emails to send per batch before pausing
+    var batchSize: Int
+    /// Seconds to wait between batches
+    var batchDelaySeconds: Int
 
     init() {
         perplexityAPIKey = ["pplx", "57Ap1wFLT0RrKvKWrBkHEMiPCFgvQLIQuhXJAMrKnpSW0VAF"].joined(separator: "-")
@@ -344,6 +377,8 @@ struct AppSettings: Codable {
         selectedIndustries = Industry.allCases.map { $0.rawValue }
         selectedRegions = Region.allCases.map { $0.rawValue }
         selectedCompanySizes = CompanySize.allCases.map { $0.rawValue }
+        batchSize = 10
+        batchDelaySeconds = 45
     }
 }
 

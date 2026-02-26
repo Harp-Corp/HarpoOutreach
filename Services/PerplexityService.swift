@@ -450,6 +450,35 @@ class PerplexityService {
         return SocialPost(platform: platform, content: fullContent, hashtags: hashtags)
     }
 
+    // MARK: - Dynamic Subject Generation
+    func generateSubjectAlternatives(company: Company, emailBody: String, apiKey: String) async throws -> [String] {
+        let systemPrompt = """
+        You are an expert at writing compelling B2B cold email subject lines for RegTech/Compliance outreach.
+        Generate exactly 3 different subject lines. Each must:
+        - Be personalized to the company name and their industry
+        - Reference a specific compliance challenge or regulation relevant to them
+        - Be concise (max 60 characters)
+        - Not be generic or spammy
+        - Be in English
+        Return ONLY 3 subject lines, one per line. No numbering, no quotes.
+        """
+
+        let userPrompt = """
+        Company: \(company.name)
+        Industry: \(company.industry)
+        Email body summary: \(String(emailBody.prefix(300)))
+
+        Generate 3 compelling subject lines:
+        """
+
+        let content = try await callAPI(systemPrompt: systemPrompt, userPrompt: userPrompt, apiKey: apiKey, maxTokens: 200)
+        let subjects = content.components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && $0.count > 5 && $0.count < 100 }
+
+        return subjects.isEmpty ? ["Compliance Partnership Opportunity - \(company.name)"] : subjects
+    }
+
     // MARK: - JSON Helpers
     private func stripCitations(_ text: String) -> String {
         var result = text

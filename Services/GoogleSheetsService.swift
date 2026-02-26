@@ -60,7 +60,7 @@ class GoogleSheetsService {
     // MARK: - URL sicher bauen (ohne doppeltes Encoding)
     private func buildURL(spreadsheetID: String, range: String, action: String = "") -> URL? {
         let cleanID = cleanSpreadsheetID(spreadsheetID)
-        // Range NICHT percent-encoden - Google API erwartet Sheet1!A:I unverändert im Pfad
+        // Range NICHT percent-encoden - Google API erwartet Sheet1!A:I unveraendert im Pfad
         var path = "/v4/spreadsheets/\(cleanID)/values/\(range)"
         if !action.isEmpty {
             path += ":\(action)"
@@ -75,7 +75,7 @@ class GoogleSheetsService {
             ]
         }
         let url = components.url
-        print("[Sheets] Built URL: \(url?.absoluteString.prefix(120) ?? "nil")")
+        print("[Sheets] Built URL: \(url?.absoluteString.prefix(120) ?? \"nil\")")
         return url
     }
 

@@ -115,7 +115,7 @@ class GmailService {
 
         // 2. Gezielter Fallback: Suche nach Emails VON bekannten Lead-Adressen
         if !leadEmails.isEmpty {
-                        print("[Gmail] Zusaetzliche Suche nach Lead-Emails...")
+            print("[Gmail] Zusaetzliche Suche nach Lead-Emails...")
             for email in leadEmails {
                 let emailLower = email.lowercased().trimmingCharacters(in: .whitespaces)
                 guard !emailLower.isEmpty else { continue }
@@ -241,10 +241,14 @@ class GmailService {
         return GmailMessage(id: id, from: from, subject: subject, date: date, snippet: snippet, body: body)
     }
 
-    // MARK: - MIME Email mit professioneller Visitenkarte + Logo
+    // MARK: - MIME Email mit professioneller Visitenkarte + Logo + List-Unsubscribe Headers
     private func buildMimeEmail(to: String, from: String, subject: String, body: String) -> String {
         let encodedSubject = "=?UTF-8?B?\(Data(subject.utf8).base64EncodedString())?="
         let boundary = "HarpoMIME_\(UUID().uuidString)"
+
+        // Add unsubscribe footer to the plain-text body
+        let unsubscribeURL = "mailto:unsubscribe@harpocrates-corp.com?subject=Unsubscribe&body=Please%20remove%20\(to.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? to)"
+        let bodyWithOptOut = body + "\n\n---\nTo unsubscribe from future emails, reply with 'Unsubscribe' or click: \(unsubscribeURL)"
 
         // Body-Text in HTML-Paragraphen
         let htmlParagraphs = body
@@ -285,7 +289,7 @@ class GmailService {
         </div>
         <div style="max-width:600px;margin:0 auto;padding:12px 24px;">
         <p style="margin:0;font-size:10px;color:#a0aec0;font-family:Arial,Helvetica,sans-serif;">
-        <a href="mailto:mf@harpocrates-corp.com?subject=Unsubscribe&body=Bitte%20entfernen%20Sie%20mich%20von%20Ihrer%20Mailingliste."
+        <a href="mailto:unsubscribe@harpocrates-corp.com?subject=Unsubscribe&body=Please%20remove%20\(to.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? to)"
            style="color:#a0aec0;text-decoration:underline;">Abmelden / Unsubscribe</a>
         </p>
         </div>
@@ -293,12 +297,14 @@ class GmailService {
         </html>
         """
 
-        let plainB64 = Data(body.utf8).base64EncodedString()
+        let plainB64 = Data(bodyWithOptOut.utf8).base64EncodedString()
         let htmlB64 = Data(html.utf8).base64EncodedString()
 
         var mime = "From: Martin Foerster <\(from)>\r\n"
         mime += "To: \(to)\r\n"
         mime += "Subject: \(encodedSubject)\r\n"
+        mime += "List-Unsubscribe: <mailto:unsubscribe@harpocrates-corp.com?subject=Unsubscribe>\r\n"
+        mime += "List-Unsubscribe-Post: List-Unsubscribe=One-Click\r\n"
         mime += "MIME-Version: 1.0\r\n"
         mime += "Content-Type: multipart/alternative; boundary=\"\(boundary)\"\r\n"
         mime += "\r\n"
@@ -315,6 +321,88 @@ class GmailService {
         mime += "--\(boundary)--"
 
         return mime
+    }
+
+    // MARK: - Bounce Detection
+    func checkForBounces(sentEmails: [(to: String, subject: String)]) async throws -> [(email: String, bounceType: String)] {
+        let token = try await authService.getAccessToken()
+        var bounces: [(email: String, bounceType: String)] = []
+        var seenIds = Set<String>()
+
+        // Common bounce indicator queries
+        let bounceQueries = [
+            "subject:\"Delivery Status Notification\" newer_than:30d",
+            "subject:\"Undeliverable\" newer_than:30d",
+            "subject:\"Mail Delivery Failed\" newer_than:30d",
+            "subject:\"Mail delivery failed\" newer_than:30d",
+            "subject:\"Delivery Failure\" newer_than:30d",
+            "subject:\"Returned mail\" newer_than:30d",
+            "from:mailer-daemon newer_than:30d",
+            "from:postmaster newer_than:30d"
+        ]
+
+        print("[Gmail] Checking for bounce-back messages...")
+
+        for query in bounceQueries {
+            let msgs = try await searchGmail(query: query, token: token, maxResults: 20)
+            for msg in msgs {
+                guard !seenIds.contains(msg.id) else { continue }
+                seenIds.insert(msg.id)
+
+                // Determine bounce type from subject and body
+                let subjectLower = msg.subject.lowercased()
+                let bodyLower = (msg.body + msg.snippet).lowercased()
+                let combined = subjectLower + " " + bodyLower
+
+                var bounceType = "unknown"
+                if combined.contains("user unknown") || combined.contains("no such user") || combined.contains("does not exist") || combined.contains("550") {
+                    bounceType = "hard_bounce_user_unknown"
+                } else if combined.contains("mailbox full") || combined.contains("quota exceeded") || combined.contains("over quota") {
+                    bounceType = "soft_bounce_mailbox_full"
+                } else if combined.contains("connection refused") || combined.contains("host not found") || combined.contains("domain not found") {
+                    bounceType = "hard_bounce_domain_error"
+                } else if combined.contains("spam") || combined.contains("rejected") || combined.contains("blocked") {
+                    bounceType = "soft_bounce_rejected"
+                } else if combined.contains("delivery status") || combined.contains("undeliverable") || combined.contains("failed") {
+                    bounceType = "hard_bounce_undeliverable"
+                }
+
+                // Try to extract the original recipient address from the bounce body
+                var matchedEmail = ""
+                for sent in sentEmails {
+                    if combined.contains(sent.to.lowercased()) {
+                        matchedEmail = sent.to
+                        break
+                    }
+                }
+
+                // If we found a bounce but couldn't match a sent address, record with raw snippet
+                if matchedEmail.isEmpty {
+                    // Try to extract email from body using a simple pattern
+                    let emailPattern = "[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}"
+                    if let regex = try? NSRegularExpression(pattern: emailPattern),
+                       let match = regex.firstMatch(in: msg.body, range: NSRange(msg.body.startIndex..., in: msg.body)),
+                       let range = Range(match.range, in: msg.body) {
+                        let extracted = String(msg.body[range]).lowercased()
+                        // Only count if it's not a harpocrates address
+                        if !extracted.contains("harpocrates-corp.com") {
+                            matchedEmail = extracted
+                        }
+                    }
+                }
+
+                if !matchedEmail.isEmpty {
+                    // Avoid duplicates for same email
+                    if !bounces.contains(where: { $0.email.lowercased() == matchedEmail.lowercased() }) {
+                        bounces.append((email: matchedEmail, bounceType: bounceType))
+                        print("[Gmail] Bounce detected: \(matchedEmail) - \(bounceType)")
+                    }
+                }
+            }
+        }
+
+        print("[Gmail] Total bounces found: \(bounces.count)")
+        return bounces
     }
 
     // MARK: - Types
