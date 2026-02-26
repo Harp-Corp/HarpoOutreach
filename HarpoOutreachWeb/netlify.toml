@@ -1,0 +1,22 @@
+[build]
+  base    = "HarpoOutreachWeb"
+  publish = "Public"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Rewrite /harp/* → served from root of publish dir
+[[redirects]]
+  from = "/harp/*"
+  to   = "/:splat"
+  status = 200
+
+# SPA fallback
+[[redirects]]
+  from = "/*"
+  to   = "/index.html"
+  status = 200
+
+[functions]
+  node_bundler = "esbuild"
