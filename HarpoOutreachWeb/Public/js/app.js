@@ -182,11 +182,9 @@ function initLeadModal() {
       form.reset();
       loadLeads();
     } catch (err) {
-      alert('Fehler beim Speichern: ' + err.message);
+, 'error'      alert('Fehler beim Speichern: ' + err.message);
     }
-  });
-}
-
+  }showToast
 function initLeadFilters() {
   const filterIndustry = document.getElementById('filter-industry');
   const filterRegion = document.getElementById('filter-region');
@@ -280,16 +278,15 @@ function initEmail() {
     btnDraft.textContent = 'Generiere...';
     btnDraft.disabled = true;
     try {
-      const res = await api('/email/draft', { method: 'POST', body: { leadId } });
+      const res = await api('/email/draft', { method: 'POST', body: { leadId showToast
       const draft = res.data || res;
       document.getElementById('email-subject').value = draft.subject || '';
       document.getElementById('email-body').value = draft.body || '';
     } catch (err) {
-      alert('Fehler beim Generieren: ' + err.message);
+, 'error'      alert('Fehler beim Generieren: ' + err.message);
     } finally {
       btnDraft.textContent = 'Entwurf generieren';
-      btnDraft.disabled = false;
-    }
+      btnDraft.disabled = falseshowToast
   });
 
   if (btnSend) btnSend.addEventListener('click', async () => {
@@ -301,11 +298,11 @@ function initEmail() {
     btnSend.disabled = true;
     try {
       await api('/email/send', { method: 'POST', body: { leadId, subject, body } });
-      alert('E-Mail wurde gesendet!');
+      alert('E-Mail wurde gesendeshowToast, 'success'
       document.getElementById('email-subject').value = '';
       document.getElementById('email-body').value = '';
     } catch (err) {
-      alert('Fehler beim Senden: ' + err.message);
+      alert('Fehler beim Senden: ' + err.messshowToast, 'error'
     } finally {
       btnSend.textContent = 'Senden';
       btnSend.disabled = false;
