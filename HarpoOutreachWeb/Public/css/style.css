@@ -1,6 +1,6 @@
 /* HarpoOutreach Web - Style Sheet */
 :root {
-  16px--bg-primary: #0d1117;
+  --bg-primary: #0d1117;
   --bg-secondary: #161b22;
   --bg-card: #1c2128;
   --border: #30363d;
@@ -23,7 +23,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-    font-size: 116px;
+    font-size: 16px;
 }
 
 /* Header */
