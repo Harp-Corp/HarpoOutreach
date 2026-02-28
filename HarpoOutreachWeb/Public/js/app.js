@@ -244,6 +244,80 @@ function initCompanySearch() {
       resultsDiv.innerHTML = '<p style="color:var(--danger);">Fehler bei der Suche: ' + esc(err.message) + '</p>';
     }
   });
+
+    // Start/Stop Search Button
+  let searchAbortController = null;
+  const btnStartSearch = document.getElementById('btn-start-search');
+  if (btnStartSearch) {
+    btnStartSearch.addEventListener('click', async () => {
+      if (searchAbortController) {
+        // Suche abbrechen
+        searchAbortController.abort();
+        searchAbortController = null;
+        btnStartSearch.textContent = 'Start Suche';
+        btnStartSearch.classList.remove('btn-danger');
+        btnStartSearch.classList.add('btn-primary');
+        const resultsDiv = document.getElementById('companies-results');
+        resultsDiv.innerHTML += '<p style="color:var(--warning);">Suche abgebrochen.</p>';
+      } else {
+        // Suche starten
+        btnStartSearch.textContent = 'Suche abbrechen';
+        btnStartSearch.classList.remove('btn-primary');
+        btnStartSearch.classList.add('btn-danger');
+        
+        const resultsDiv = document.getElementById('companies-results');
+        resultsDiv.innerHTML = '<div class="loading"></div> Suche laeuft...';
+        
+        searchAbortController = new AbortController();
+        
+        try {
+          const body = {
+            industry: document.getElementById('search-industry').value,
+            region: document.getElementById('search-region').value,
+            companySize: document.getElementById('search-size').value,
+            query: document.getElementById('search-query').value
+          };
+          
+          const res = await api('/companies/search', { 
+            method: 'POST', 
+            body,
+            signal: searchAbortController.signal 
+          });
+          const companies = res.data || res || [];
+          
+          searchAbortController = null;
+          btnStartSearch.textContent = 'Start Suche';
+          btnStartSearch.classList.remove('btn-danger');
+          btnStartSearch.classList.add('btn-primary');
+          
+          if (companies.length === 0) {
+            resultsDiv.innerHTML = '<p style="color:var(--text-secondary);">Keine Firmen gefunden. Versuche andere Suchkriterien.</p>';
+            return;
+          }
+          
+          resultsDiv.innerHTML = companies.map(c => `
+            <div class="company-card">
+              <h4>\${esc(c.name)}</h4>
+              <p>\${esc(c.description || '')}</p>
+              <p><strong>Branche:</strong> \${esc(c.industry || '')} | <strong>Groesse:</strong> \${esc(c.size || '')}</p>
+              <button class="btn btn-outline" onclick="addCompanyAsLead(\${JSON.stringify(c).replace(/"/g, '&quot;')})">Als Lead hinzufuegen</button>
+            </div>
+          `).join('');
+        } catch (err) {
+          searchAbortController = null;
+          btnStartSearch.textContent = 'Start Suche';
+          btnStartSearch.classList.remove('btn-danger');
+          btnStartSearch.classList.add('btn-primary');
+          
+          if (err.name === 'AbortError') {
+            // Abbruch bereits behandelt
+            return;
+          }
+          resultsDiv.innerHTML = '<p style="color:var(--danger);">Fehler bei der Suche: ' + esc(err.message) + '</p>';
+        }
+      }
+    });
+  }
 }
 
 function addCompanyAsLead(company) {
