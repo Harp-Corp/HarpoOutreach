@@ -51,4 +51,5 @@ struct ProspectingHeaderView: View {
         }
         .padding(24)
     }
+    }
                     
