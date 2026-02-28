@@ -24,6 +24,7 @@ struct ProspectingView: View {
         }
     }
 }
+}
 
 // MARK: - Header with Industry Filter + CompanySize Filter
 struct ProspectingHeaderView: View {
