@@ -95,6 +95,23 @@ struct ProspectingHeaderView: View {
             }
         }
     }
+
+            // Start/Stop Search Button
+        Button(action: {
+            if vm.isLoading {
+                vm.cancelSearch()
+            } else {
+                vm.startFindCompanies()
+            }
+        }) {
+            Text(vm.isLoading ? "Suche abbrechen" : "Start Suche")
+                .font(.system(size: 16, design: .default))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(vm.isLoading ? Color.red : Color.accentColor)
+        .cornerRadius(6)
 }
 
 // MARK: - Company List (Left)
