@@ -48,6 +48,13 @@ extension AppViewModel {
         }
     }
 
+    func cancelSearch() {
+        currentTask?.cancel()
+        currentTask = nil
+        isLoading = false
+        currentStep = "Suche abgebrochen"
+    }
+
     func findCompaniesWithCancellation(forIndustry: Industry? = nil) async {
         guard !settings.perplexityAPIKey.isEmpty else { errorMessage = "Perplexity API Key fehlt."; return }
         isLoading = true; errorMessage = ""; companies = []
