@@ -32,10 +32,9 @@ class AppViewModel: ObservableObject {
     @Published var errorMessage = ""
     @Published var currentStep = ""
 
-    // Industry / region filter for Prospecting search
-    @Published var selectedIndustryFilter: Industry?
-    @Published var selectedRegionFilter: Region?
-
+        // Industry / region / size filter for Prospecting search (multi-select via settings)
+    // NOTE: Removed legacy selectedIndustryFilter/selectedRegionFilter single-select.
+    // All filtering now uses settings.selectedIndustries, settings.selectedRegions, settings.selectedCompanySizes
     // Per-search contact results (only current search)
     @Published var currentSearchContacts: [Lead] = []
 
