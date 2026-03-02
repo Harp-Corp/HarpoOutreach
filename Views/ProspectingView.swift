@@ -44,7 +44,61 @@ struct ProspectingView: View {
     }
 }
 
+// MARK: - Siemens Star Loading Indicator
+// Rotierender Stern als visuelles Zeichen fuer aktive Suche
+struct SiemensStarView: View {
+    @State private var rotation: Double = 0
+    let size: CGFloat
+    let color: Color
+
+    init(size: CGFloat = 28, color: Color = .accentColor) {
+        self.size = size
+        self.color = color
+    }
+
+    var body: some View {
+        SiemensStarShape()
+            .fill(color)
+            .frame(width: size, height: size)
+            .rotationEffect(.degrees(rotation))
+            .onAppear {
+                withAnimation(.linear(duration: 2.0).repeatForever(autoreverses: false)) {
+                    rotation = 360
+                }
+            }
+    }
+}
+
+// Shape: Siemens-Stern (6 Dreiecke sternfoermig angeordnet)
+struct SiemensStarShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let radius = min(rect.width, rect.height) / 2
+        let innerRadius = radius * 0.25
+        let segments = 6
+        let angleStep = 360.0 / Double(segments * 2)
+
+        for i in 0..<(segments * 2) {
+            let angle = Angle.degrees(Double(i) * angleStep - 90)
+            let r = i.isMultiple(of: 2) ? radius : innerRadius
+            let point = CGPoint(
+                x: center.x + CGFloat(cos(angle.radians)) * r,
+                y: center.y + CGFloat(sin(angle.radians)) * r
+            )
+            if i == 0 {
+                path.move(to: point)
+            } else {
+                path.addLine(to: point)
+            }
+        }
+        path.closeSubpath()
+        return path
+    }
+}
+
 // MARK: - Multi-Select Filter Toggle Button
+// Deutlich unterscheidbar: Ausgewaehlt = gefuellt + Rahmen, Nicht ausgewaehlt = nur Outline
 struct FilterToggleButton: View {
     let title: String
     let isSelected: Bool
@@ -52,13 +106,24 @@ struct FilterToggleButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(.caption)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(isSelected ? Color.accentColor : Color.gray.opacity(0.2))
-                .foregroundStyle(isSelected ? .white : .primary)
-                .cornerRadius(8)
+            HStack(spacing: 4) {
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                }
+                Text(title)
+                    .font(.caption)
+                    .fontWeight(isSelected ? .semibold : .regular)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(isSelected ? Color.accentColor : Color.clear)
+            .foregroundStyle(isSelected ? .white : .primary)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.5), lineWidth: isSelected ? 2 : 1)
+            )
+            .cornerRadius(8)
         }
         .buttonStyle(.plain)
     }
@@ -72,9 +137,15 @@ struct ProspectingHeaderView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Prospecting")
-                        .font(.title2)
-                        .bold()
+                    HStack(spacing: 8) {
+                        Text("Prospecting")
+                            .font(.title2)
+                            .bold()
+                        // Siemens Star bei aktiver Suche
+                        if vm.isLoading {
+                            SiemensStarView(size: 22, color: .accentColor)
+                        }
+                    }
                     if !vm.currentStep.isEmpty {
                         Text(vm.currentStep)
                             .font(.caption)
@@ -98,7 +169,12 @@ struct ProspectingHeaderView: View {
                         vm.startFindCompanies()
                     }
                 }) {
-                    Text(vm.isLoading ? "Suche abbrechen" : "Start Suche")
+                    HStack(spacing: 6) {
+                        if vm.isLoading {
+                            SiemensStarView(size: 14, color: .white)
+                        }
+                        Text(vm.isLoading ? "Suche abbrechen" : "Start Suche")
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(vm.isLoading ? Color.red : Color.accentColor)
@@ -342,8 +418,7 @@ struct ManualCompanyEntryView: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("Unternehmen hinzufuegen")
-                .font(.title2)
-                .bold()
+                .font(.title2).bold()
             TextField("Firmenname*", text: $companyName)
                 .textFieldStyle(.roundedBorder)
             HStack(spacing: 12) {
@@ -351,14 +426,12 @@ struct ManualCompanyEntryView: View {
                     ForEach(Industry.allCases, id: \.self) { ind in
                         Text(ind.rawValue).tag(ind)
                     }
-                }
-                .pickerStyle(.menu)
+                }.pickerStyle(.menu)
                 Picker("Region", selection: $region) {
                     ForEach(Region.allCases, id: \.self) { reg in
                         Text(reg.rawValue).tag(reg)
                     }
-                }
-                .pickerStyle(.menu)
+                }.pickerStyle(.menu)
             }
             TextField("Website", text: $website)
                 .textFieldStyle(.roundedBorder)
@@ -402,8 +475,7 @@ struct ManualContactEntryView: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("Kontakt hinzufuegen")
-                .font(.title2)
-                .bold()
+                .font(.title2).bold()
             Text(company.name)
                 .foregroundStyle(.secondary)
             TextField("Name*", text: $contactName)
