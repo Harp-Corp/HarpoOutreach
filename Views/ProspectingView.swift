@@ -43,6 +43,7 @@ struct ProspectingView: View {
         }
     }
 }
+}
 
 // MARK: - Siemens Star Loading Indicator
 // Rotierender Stern als visuelles Zeichen fuer aktive Suche
