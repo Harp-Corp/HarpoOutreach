@@ -7,16 +7,13 @@ import SwiftUI
 extension AppViewModel {
 
     // MARK: - 1) Find Companies (original, non-cancellable variant)
-    func findCompanies(forIndustry: Industry? = nil) async {
+    func findCompanies() async {
         guard !settings.perplexityAPIKey.isEmpty else { errorMessage = "Perplexity API Key fehlt."; return }
         isLoading = true; errorMessage = ""; companies = []
-        let industries: [Industry]
-        if let specific = forIndustry ?? selectedIndustryFilter {
-            industries = [specific]
-        } else {
-            industries = Industry.allCases.filter { settings.selectedIndustries.contains($0.rawValue) }
-        }
+
+        let industries = Industry.allCases.filter { settings.selectedIndustries.contains($0.rawValue) }
         let regions = Region.allCases.filter { settings.selectedRegions.contains($0.rawValue) }
+
         for industry in industries {
             for region in regions {
                 currentStep = "Searching \(industry.shortName) in \(region.rawValue)..."
@@ -32,6 +29,7 @@ extension AppViewModel {
                 }
             }
         }
+
         currentStep = "\(companies.count) companies found"
         let selectedSizes = CompanySize.allCases.filter { settings.selectedCompanySizes.contains($0.rawValue) }
         companies = companies.applySearchFilters(selectedSizes: selectedSizes, existingLeads: leads)
@@ -41,10 +39,10 @@ extension AppViewModel {
     }
 
     // MARK: - 1b) Find Companies with Cancellation Support
-    func startFindCompanies(forIndustry: Industry? = nil) {
+    func startFindCompanies() {
         currentTask?.cancel()
         currentTask = Task {
-            await findCompaniesWithCancellation(forIndustry: forIndustry)
+            await findCompaniesWithCancellation()
         }
     }
 
@@ -55,31 +53,24 @@ extension AppViewModel {
         currentStep = "Suche abgebrochen"
     }
 
-    func findCompaniesWithCancellation(forIndustry: Industry? = nil) async {
+    func findCompaniesWithCancellation() async {
         guard !settings.perplexityAPIKey.isEmpty else { errorMessage = "Perplexity API Key fehlt."; return }
         isLoading = true; errorMessage = ""; companies = []
-        let industries: [Industry]
-        if let specific = forIndustry ?? selectedIndustryFilter {
-            industries = [specific]
-        } else {
-            industries = Industry.allCases.filter { settings.selectedIndustries.contains($0.rawValue) }
-        }
-        let regions: [Region]
-        if let specificRegion = selectedRegionFilter {
-            regions = [specificRegion]
-        } else {
-            regions = Region.allCases.filter { settings.selectedRegions.contains($0.rawValue) }
-        }
-                var consecutiveFailures = 0
+
+        let industries = Industry.allCases.filter { settings.selectedIndustries.contains($0.rawValue) }
+        let regions = Region.allCases.filter { settings.selectedRegions.contains($0.rawValue) }
+
+        var consecutiveFailures = 0
         let totalCombinations = industries.count * regions.count
         var currentCombination = 0
+
         for industry in industries {
             guard !Task.isCancelled else { break }
-                        guard consecutiveFailures < 3 else { break }
+            guard consecutiveFailures < 3 else { break }
             for region in regions {
                 guard !Task.isCancelled else { break }
-                                currentCombination += 1
-                                currentStep = "(\(currentCombination)/\(totalCombinations)) Searching \(industry.shortName) in \(region.rawValue)..."
+                currentCombination += 1
+                currentStep = "(\(currentCombination)/\(totalCombinations)) Searching \(industry.shortName) in \(region.rawValue)..."
                 do {
                     let found = try await pplxService.findCompanies(industry: industry, region: region, apiKey: settings.perplexityAPIKey)
                     let newOnes = found.filter { new in
@@ -87,11 +78,11 @@ extension AppViewModel {
                         && !DatabaseService.shared.companyExists(name: new.name)
                     }
                     companies.append(contentsOf: newOnes)
-                                        consecutiveFailures = 0
+                    consecutiveFailures = 0
                 } catch {
                     if !Task.isCancelled {
                         errorMessage = "Error \(industry.rawValue)/\(region.rawValue): \(error.localizedDescription)"
-                                                consecutiveFailures += 1
+                        consecutiveFailures += 1
                         if consecutiveFailures >= 3 {
                             errorMessage = "Search stopped: \(consecutiveFailures) consecutive API failures. Check your internet connection or API key."
                             break
@@ -100,7 +91,9 @@ extension AppViewModel {
                 }
             }
         }
+
         if Task.isCancelled { currentStep = "Search cancelled"; isLoading = false; return }
+
         currentStep = "\(companies.count) companies found"
         refilterCompanies()
         saveCompanies()
@@ -207,6 +200,7 @@ extension AppViewModel {
             saveCompanies()
             statusMessage = "Test company added"
         }
+
         let testLead = Lead(
             name: "Martin Foerster",
             title: "CEO & Founder",
