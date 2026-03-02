@@ -91,7 +91,6 @@ struct SocialPostView: View {
     @ViewBuilder
     private func socialPostCard(_ post: SocialPost) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header
             HStack {
                 Image(systemName: post.platform == .linkedin ? "link" : "bird")
                     .foregroundColor(.blue)
@@ -102,16 +101,11 @@ struct SocialPostView: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
-
-            // Content
             Text(SocialPost.ensureFooter(post.content))
                 .font(.body)
                 .textSelection(.enabled)
                 .lineLimit(nil)
-
             Divider()
-
-            // Footer check
             if post.content.contains("harpocrates-corp.com") {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
@@ -129,14 +123,12 @@ struct SocialPostView: View {
                         .foregroundColor(.red)
                 }
             }
-
             // Actions
             HStack(spacing: 12) {
                 Button(action: { vm.copyPostToClipboard(post) }) {
                     Label("Kopieren", systemImage: "doc.on.doc")
                 }
                 .buttonStyle(.bordered)
-
                 Button(action: {
                     editContent = post.content
                     editingPost = post
@@ -144,18 +136,12 @@ struct SocialPostView: View {
                     Label("Bearbeiten", systemImage: "pencil")
                 }
                 .buttonStyle(.bordered)
-
-                // NEW: Newsletter Campaign Button
-                Button(action: {
-                    newsletterPost = post
-                }) {
+                Button(action: { newsletterPost = post }) {
                     Label("Als Newsletter", systemImage: "envelope.fill")
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.orange)
-
                 Spacer()
-
                 Button(role: .destructive, action: { vm.deleteSocialPost(post.id) }) {
                     Label("Loeschen", systemImage: "trash")
                 }
@@ -206,17 +192,30 @@ struct NewsletterRecipientSheet: View {
     @State private var draftsCreated: Int = 0
     @State private var showConfirmation = false
 
+    /// Build a lookup from company name -> Company for filtering
+    private var companyLookup: [String: Company] {
+        Dictionary(uniqueKeysWithValues: vm.companies.map { ($0.name, $0) })
+    }
+
+    /// Filter leads: must be verified, and match company-level industry/region/size filters
     private var filteredLeads: [Lead] {
         vm.leads.filter { lead in
-            guard lead.isVerified else { return false }
-            if !filterIndustries.isEmpty && !filterIndustries.contains(lead.industry) {
-                return false
-            }
-            if !filterRegions.isEmpty && !filterRegions.contains(lead.region) {
-                return false
-            }
-            if !filterSizes.isEmpty && !filterSizes.contains(lead.companySize) {
-                return false
+            guard lead.emailVerified || lead.isManuallyCreated else { return false }
+            guard lead.dateEmailSent == nil else { return false }
+            if let company = companyLookup[lead.company] {
+                if !filterIndustries.isEmpty && !filterIndustries.contains(company.industry) {
+                    return false
+                }
+                if !filterRegions.isEmpty && !filterRegions.contains(company.region) {
+                    return false
+                }
+                if !filterSizes.isEmpty {
+                    let matchesSize = filterSizes.contains { sizeRaw in
+                        guard let size = CompanySize(rawValue: sizeRaw) else { return false }
+                        return company.employeeCount > 0 && size.matches(employeeCount: company.employeeCount)
+                    }
+                    if !matchesSize && company.employeeCount > 0 { return false }
+                }
             }
             return true
         }
@@ -224,12 +223,11 @@ struct NewsletterRecipientSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             HStack {
                 VStack(alignment: .leading) {
                     Text("Newsletter aus Post erstellen")
                         .font(.title2.bold())
-                    Text("\(post.platform.rawValue) - \(post.topic.rawValue)")
+                    Text("\(post.platform.rawValue) Post vom \(post.createdDate, style: .date)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -237,9 +235,7 @@ struct NewsletterRecipientSheet: View {
                 Button("Schliessen") { dismiss() }
             }
             .padding()
-
             Divider()
-
             HStack(alignment: .top, spacing: 20) {
                 // Left: Post preview
                 VStack(alignment: .leading, spacing: 8) {
@@ -256,20 +252,16 @@ struct NewsletterRecipientSheet: View {
                     .cornerRadius(8)
                 }
                 .frame(minWidth: 300)
-
                 Divider()
-
                 // Right: Filters + Recipients
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Empfaenger filtern")
                         .font(.headline)
-
-                    // Industry Filter
                     GroupBox("Industrie filtern") {
                         FlowLayout(spacing: 6) {
                             ForEach(Industry.allCases, id: \.self) { ind in
                                 FilterToggleButton(
-                                    title: ind.rawValue,
+                                    title: ind.shortName,
                                     isSelected: filterIndustries.contains(ind.rawValue)
                                 ) {
                                     if filterIndustries.contains(ind.rawValue) {
@@ -284,8 +276,6 @@ struct NewsletterRecipientSheet: View {
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
-
-                    // Region Filter
                     GroupBox("Region filtern") {
                         FlowLayout(spacing: 6) {
                             ForEach(Region.allCases, id: \.self) { reg in
@@ -305,8 +295,6 @@ struct NewsletterRecipientSheet: View {
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
-
-                    // Size Filter
                     GroupBox("Groesse filtern") {
                         FlowLayout(spacing: 6) {
                             ForEach(CompanySize.allCases, id: \.self) { size in
@@ -326,10 +314,7 @@ struct NewsletterRecipientSheet: View {
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
-
                     Divider()
-
-                    // Recipient count + action
                     HStack {
                         VStack(alignment: .leading) {
                             Text("\(filteredLeads.count) Empfaenger")
@@ -359,20 +344,18 @@ struct NewsletterRecipientSheet: View {
 
     private func createNewsletterDrafts() {
         var count = 0
+        let subject = "[Newsletter] \(post.platform.rawValue) Update"
         for lead in filteredLeads {
-            let subject = "[Newsletter] \(post.platform.rawValue) Update"
-            let draft = EmailDraft(
-                leadId: lead.id,
-                leadName: lead.name,
-                leadEmail: lead.email,
-                companyName: lead.company,
-                subject: subject,
-                body: post.content
-            )
-            vm.emailDrafts.append(draft)
-            count += 1
+            if let idx = vm.leads.firstIndex(where: { $0.id == lead.id }) {
+                vm.leads[idx].draftedEmail = OutboundEmail(
+                    subject: subject,
+                    body: post.content
+                )
+                vm.leads[idx].status = .emailDrafted
+                count += 1
+            }
         }
-        vm.saveEmailDrafts()
+        vm.saveLeads()
         draftsCreated = count
         showConfirmation = true
     }
