@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProspectingView: View {
     @ObservedObject var vm: AppViewModel
+
     @State private var showManualCompanySheet = false
     @State private var showManualContactSheet = false
     @State private var selectedCompanyForContact: Company?
@@ -11,7 +12,12 @@ struct ProspectingView: View {
             ProspectingHeaderView(vm: vm)
             Divider()
             HStack(spacing: 0) {
-                ProspectingCompanyList(vm: vm, showManualCompanySheet: $showManualCompanySheet, showManualContactSheet: $showManualContactSheet, selectedCompanyForContact: $selectedCompanyForContact)
+                ProspectingCompanyList(
+                    vm: vm,
+                    showManualCompanySheet: $showManualCompanySheet,
+                    showManualContactSheet: $showManualContactSheet,
+                    selectedCompanyForContact: $selectedCompanyForContact
+                )
                 Divider()
                 ProspectingContactList(vm: vm)
             }
@@ -19,37 +25,364 @@ struct ProspectingView: View {
         .sheet(isPresented: $showManualCompanySheet) {
             ManualCompanyEntryView(vm: vm)
         }
-        .sheet(item: $selectedCompanyForContact) { company in
-            ManualContactEntryView(vm: vm, company: company)
+        .sheet(isPresented: $showManualContactSheet, onDismiss: {
+            selectedCompanyForContact = nil
+        }) {
+            Group {
+                if let company = selectedCompanyForContact {
+                    ManualContactEntryView(vm: vm, company: company)
+                } else {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Kein Unternehmen ausgewaehlt.")
+                        Text("Bitte in der Company-Liste einen Kontakt fuer ein Unternehmen hinzufuegen.")
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(24)
+                }
+            }
         }
     }
 }
 
-// MARK: - Header with Industry Filter + CompanySize Filter
+// MARK: - Header
 struct ProspectingHeaderView: View {
     @ObservedObject var vm: AppViewModel
+
     var body: some View {
-        VStack(spacing: 12) { headerRow; industryFilterChips; sizeFilterChips; regionFilterChips }{ 
-            headerRow
-            industryFilterChips
-            sizeFilterChips
-            regionFilterChips
-            
-            // Start/Stop Search Button
-            Button(action: {
-                if vm.isLoading {
-                    vm.cancelSearch()
-                } else {
-                    vm.startFindCompanies()
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Prospecting")
+                        .font(.title2)
+                        .bold()
+
+                    if !vm.currentStep.isEmpty {
+                        Text(vm.currentStep)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else if !vm.statusMessage.isEmpty {
+                        Text(vm.statusMessage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if !vm.errorMessage.isEmpty {
+                        Text(vm.errorMessage)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
                 }
-            }) {
-                Text(vm.isLoading ? "Suche abbrechen" : "Start Suche")
-                    .font(.system(size: 16, design: .default))
+
+                Spacer()
+
+                Button(action: {
+                    if vm.isLoading {
+                        vm.cancelSearch()
+                    } else {
+                        vm.startFindCompanies()
+                    }
+                }) {
+                    Text(vm.isLoading ? "Suche abbrechen" : "Start Suche")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(vm.isLoading ? Color.red : Color.accentColor)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(vm.isLoading ? Color.red : Color.accentColor)
+
+            HStack(spacing: 12) {
+                Picker("Branche", selection: Binding(get: {
+                    vm.selectedIndustryFilter
+                }, set: { newValue in
+                    vm.selectedIndustryFilter = newValue
+                })) {
+                    Text("Alle Branchen").tag(Industry?.none)
+                    ForEach(Industry.allCases, id: \.self) { ind in
+                        Text(ind.rawValue).tag(Industry?.some(ind))
+                    }
+                }
+                .pickerStyle(.menu)
+
+                Picker("Region", selection: Binding(get: {
+                    vm.selectedRegionFilter
+                }, set: { newValue in
+                    vm.selectedRegionFilter = newValue
+                })) {
+                    Text("Alle Regionen").tag(Region?.none)
+                    ForEach(Region.allCases, id: \.self) { reg in
+                        Text(reg.rawValue).tag(Region?.some(reg))
+                    }
+                }
+                .pickerStyle(.menu)
+
+                Button("Filter anwenden") {
+                    vm.refilterCompanies()
+                }
+                .buttonStyle(.bordered)
+            }
         }
         .padding(24)
     }
+}
+
+// MARK: - Company List
+struct ProspectingCompanyList: View {
+    @ObservedObject var vm: AppViewModel
+    @Binding var showManualCompanySheet: Bool
+    @Binding var showManualContactSheet: Bool
+    @Binding var selectedCompanyForContact: Company?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+            Divider()
+
+            List {
+                if vm.companies.isEmpty {
+                    Text("Keine Companies. Starte die Suche oder fuege manuell hinzu.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(vm.companies.indices, id: \.self) { idx in
+                        let company = vm.companies[idx]
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(company.name)
+                                .font(.headline)
+
+                            HStack(spacing: 10) {
+                                if !company.industry.isEmpty {
+                                    Text(company.industry)
+                                        .foregroundStyle(.secondary)
+                                        .font(.caption)
+                                }
+                                if !company.region.isEmpty {
+                                    Text(company.region)
+                                        .foregroundStyle(.secondary)
+                                        .font(.caption)
+                                }
+                            }
+
+                            HStack(spacing: 8) {
+                                Button("Kontakte suchen") {
+                                    Task { await vm.findContacts(for: company) }
+                                }
+                                .buttonStyle(.bordered)
+
+                                Button("Kontakt hinzufuegen") {
+                                    selectedCompanyForContact = company
+                                    showManualContactSheet = true
+                                }
+                                .buttonStyle(.borderedProminent)
+                            }
+                        }
+                        .padding(.vertical, 6)
+                    }
+                }
+            }
+        }
+        .frame(minWidth: 420)
     }
-                    
+
+    private var header: some View {
+        HStack {
+            Text("Companies (\(vm.companies.count))")
+                .font(.headline)
+            Spacer()
+            Button("Manuell") { showManualCompanySheet = true }
+                .buttonStyle(.bordered)
+        }
+        .padding(12)
+    }
+}
+
+// MARK: - Contact List
+struct ProspectingContactList: View {
+    @ObservedObject var vm: AppViewModel
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+            Divider()
+
+            List {
+                if vm.leads.isEmpty {
+                    Text("Keine Kontakte.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(vm.leads.indices, id: \.self) { idx in
+                        let lead = vm.leads[idx]
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(lead.name)
+                                .font(.headline)
+
+                            Text(lead.company)
+                                .foregroundStyle(.secondary)
+
+                            HStack(spacing: 10) {
+                                Text(lead.email)
+                                    .font(.caption)
+
+                                Text(lead.emailVerified ? "Verified" : "Unverified")
+                                    .font(.caption)
+                                    .foregroundStyle(lead.emailVerified ? .green : .orange)
+                            }
+
+                            if !lead.emailVerified {
+                                Button("Verify") {
+                                    Task { await vm.verifyEmail(for: lead.id) }
+                                }
+                                .buttonStyle(.borderedProminent)
+                            }
+                        }
+                        .padding(.vertical, 6)
+                    }
+                }
+            }
+        }
+        .frame(minWidth: 420)
+    }
+
+    private var header: some View {
+        HStack {
+            Text("Kontakte (\(vm.leads.count))")
+                .font(.headline)
+            Spacer()
+        }
+        .padding(12)
+    }
+}
+
+// MARK: - Manual Company Entry
+struct ManualCompanyEntryView: View {
+    @ObservedObject var vm: AppViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var companyName = ""
+    @State private var industry: Industry = .Q_healthcare
+    @State private var region: Region = .dach
+    @State private var website = ""
+    @State private var companyDescription = ""
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("Unternehmen hinzufuegen")
+                .font(.title2)
+                .bold()
+
+            TextField("Firmenname*", text: $companyName)
+                .textFieldStyle(.roundedBorder)
+
+            HStack(spacing: 12) {
+                Picker("Branche", selection: $industry) {
+                    ForEach(Industry.allCases, id: \.self) { ind in
+                        Text(ind.rawValue).tag(ind)
+                    }
+                }
+                .pickerStyle(.menu)
+
+                Picker("Region", selection: $region) {
+                    ForEach(Region.allCases, id: \.self) { reg in
+                        Text(reg.rawValue).tag(reg)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+
+            TextField("Website", text: $website)
+                .textFieldStyle(.roundedBorder)
+
+            TextField("Beschreibung", text: $companyDescription, axis: .vertical)
+                .textFieldStyle(.roundedBorder)
+                .lineLimit(3...6)
+
+            HStack {
+                Button("Abbrechen", role: .cancel) { dismiss() }
+                Spacer()
+                Button("Speichern") {
+                    let company = Company(
+                        name: companyName,
+                        industry: industry.rawValue,
+                        region: region.rawValue,
+                        website: website,
+                        description: companyDescription
+                    )
+                    vm.addCompanyManually(company)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(companyName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(minWidth: 520)
+    }
+}
+
+// MARK: - Manual Contact Entry
+struct ManualContactEntryView: View {
+    @ObservedObject var vm: AppViewModel
+    let company: Company
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var contactName = ""
+    @State private var contactTitle = ""
+    @State private var contactEmail = ""
+    @State private var linkedInURL = ""
+    @State private var responsibility = ""
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("Kontakt hinzufuegen")
+                .font(.title2)
+                .bold()
+
+            Text(company.name)
+                .foregroundStyle(.secondary)
+
+            TextField("Name*", text: $contactName)
+                .textFieldStyle(.roundedBorder)
+
+            TextField("Position", text: $contactTitle)
+                .textFieldStyle(.roundedBorder)
+
+            TextField("E-Mail*", text: $contactEmail)
+                .textFieldStyle(.roundedBorder)
+
+            TextField("LinkedIn URL", text: $linkedInURL)
+                .textFieldStyle(.roundedBorder)
+
+            TextField("Verantwortungsbereich", text: $responsibility, axis: .vertical)
+                .textFieldStyle(.roundedBorder)
+                .lineLimit(2...4)
+
+            HStack {
+                Button("Abbrechen", role: .cancel) { dismiss() }
+                Spacer()
+                Button("Speichern") {
+                    let lead = Lead(
+                        name: contactName,
+                        title: contactTitle,
+                        company: company.name,
+                        email: contactEmail,
+                        emailVerified: false,
+                        linkedInURL: linkedInURL,
+                        responsibility: responsibility,
+                        status: .identified,
+                        source: "Manual Entry",
+                        isManuallyCreated: true
+                    )
+                    vm.addLeadManually(lead)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(
+                    contactName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                    contactEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                )
+            }
+        }
+        .padding(24)
+        .frame(minWidth: 520)
+    }
+}
+
+#Preview {
+    ProspectingView(vm: AppViewModel())
+}
