@@ -547,7 +547,7 @@ struct QuickCampaignView: View {
                     vm.settings.selectedRegions = [region.rawValue]
                 }
                 vm.settings.selectedIndustries = [industry.rawValue]
-                vm.startFindCompanies(forIndustry: industry)
+                vm.startFindCompanies()
                 // Wait for loading to complete
                 while vm.isLoading {
                     try? await Task.sleep(nanoseconds: 300_000_000)
