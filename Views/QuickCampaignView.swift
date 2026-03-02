@@ -544,9 +544,9 @@ struct QuickCampaignView: View {
             Task {
                 // Set the region filter before searching
                 if let region = selectedRegion {
-                    vm.selectedRegionFilter = region
+                    vm.settings.selectedRegions = [region.rawValue]
                 }
-                vm.selectedIndustryFilter = industry
+                vm.settings.selectedIndustries = [industry.rawValue]
                 vm.startFindCompanies(forIndustry: industry)
                 // Wait for loading to complete
                 while vm.isLoading {
