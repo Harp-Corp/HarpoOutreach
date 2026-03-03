@@ -31,7 +31,7 @@ extension AppViewModel {
         }
 
         currentStep = "\(companies.count) companies found"
-        let selectedSizes = CompanySize.allCases.filter { settings.selectedCompanySizes.contains($0.rawValue) }
+        let selectedSizes = settings.selectedCompanySizes.isEmpty ? CompanySize.allCases : CompanySize.allCases.filter { settings.selectedCompanySizes.contains($0.rawValue) }
         companies = companies.applySearchFilters(selectedSizes: selectedSizes, existingLeads: leads)
         currentStep = "\(companies.count) companies after filtering"
         saveCompanies()
@@ -102,7 +102,7 @@ extension AppViewModel {
 
     // MARK: - 1c) Refilter Companies
     func refilterCompanies() {
-        let selectedSizes = CompanySize.allCases.filter { settings.selectedCompanySizes.contains($0.rawValue) }
+        let selectedSizes = settings.selectedCompanySizes.isEmpty ? CompanySize.allCases : CompanySize.allCases.filter { settings.selectedCompanySizes.contains($0.rawValue) }
         companies = companies.applySearchFilters(selectedSizes: selectedSizes, existingLeads: leads)
         currentStep = "\(companies.count) companies after filtering"
     }
