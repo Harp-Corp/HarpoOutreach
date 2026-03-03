@@ -156,7 +156,7 @@ struct QuickCampaignView: View {
                                         .foregroundColor(.accentColor)
                                 }
                             }
-                            .padding(10)
+                            .padding(.vertical, 14).padding(.horizontal, 16)
                         }
                         .buttonStyle(.plain)
                         .background(selectedIndustry == industry ? Color.accentColor.opacity(0.12) : Color.gray.opacity(0.07))
@@ -186,7 +186,7 @@ struct QuickCampaignView: View {
                                         .foregroundColor(.accentColor)
                                 }
                             }
-                            .padding(10)
+                            .padding(.vertical, 14).padding(.horizontal, 16)
                         }
                         .buttonStyle(.plain)
                         .background(selectedRegion == region ? Color.accentColor.opacity(0.12) : Color.gray.opacity(0.07))
@@ -547,11 +547,7 @@ struct QuickCampaignView: View {
                     vm.settings.selectedRegions = [region.rawValue]
                 }
                 vm.settings.selectedIndustries = [industry.rawValue]
-                vm.startFindCompanies()
-                // Wait for loading to complete
-                while vm.isLoading {
-                    try? await Task.sleep(nanoseconds: 300_000_000)
-                }
+                        await vm.findCompaniesWithCancellation()            
                 companiesFound = vm.companies.count - beforeCompanies
                 isRunning = false
             }
