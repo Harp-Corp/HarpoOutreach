@@ -543,6 +543,7 @@ struct QuickCampaignView: View {
                     vm.settings.selectedRegions = [region.rawValue]
                 }
                 vm.settings.selectedIndustries = [industry.rawValue]
+                                    vm.settings.selectedCompanySizes = CompanySize.allCases.map { $0.rawValue }
                         await vm.findCompaniesWithCancellation()            
                 companiesFound = vm.companies.count - beforeCompanies
                 isRunning = false
