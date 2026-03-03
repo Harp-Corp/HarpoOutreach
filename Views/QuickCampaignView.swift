@@ -530,10 +530,6 @@ struct QuickCampaignView: View {
 
         switch currentStep {
         case 0:
-            // Just advance - filters selected
-            currentStep = nextStep
-
-        case 1:
             // Step 1 completed → auto-run find companies
             guard let industry = selectedIndustry else {
                 stepError = "Bitte Branche auswählen"
@@ -552,7 +548,7 @@ struct QuickCampaignView: View {
                 isRunning = false
             }
 
-        case 2:
+        case 1:
             // Step 2 completed → auto-run find contacts
             guard !vm.companies.isEmpty else {
                 stepError = "Keine Unternehmen gefunden. Bitte zurück und erneut versuchen."
@@ -566,7 +562,7 @@ struct QuickCampaignView: View {
                 isRunning = false
             }
 
-        case 3:
+        case 2:
             // Step 3 completed → auto-run draft emails
             guard !vm.leads.isEmpty else {
                 stepError = "Keine Kontakte gefunden. Bitte zurück und erneut versuchen."
