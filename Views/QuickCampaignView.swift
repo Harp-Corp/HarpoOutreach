@@ -5,8 +5,8 @@ struct QuickCampaignView: View {
     @ObservedObject var vm: AppViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var currentStep = 0
-    @State private var selectedIndustry: Industry?
-    @State private var selectedRegion: Region?
+    @State private var selectedIndustries: Set<Industry> = []
+    @State private var selectedRegions: Set<Region> = []
     @State private var isRunning = false
     @State private var stepError = ""
     @State private var companiesFound: Int = 0
@@ -145,13 +145,13 @@ struct QuickCampaignView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                     ForEach(Industry.allCases) { industry in
-                        Button(action: { selectedIndustry = industry }) {
+                        Button(action: { if selectedIndustries.contains(industry) { selectedIndustries.remove(industry) } else { selectedIndustries.insert(industry) } }) {
                             HStack {
                                 Image(systemName: industry.icon)
                                 Text(industry.shortName)
                                     .font(.callout)
                                 Spacer()
-                                if selectedIndustry == industry {
+                                if selectedIndustries.contains(industry) {
                                     Image(systemName: "checkmark.circle.fill")
                                         .foregroundColor(.accentColor)
                                 }
@@ -159,11 +159,11 @@ struct QuickCampaignView: View {
                             .padding(.vertical, 14).padding(.horizontal, 16)
                         }
                         .buttonStyle(.plain)
-                        .background(selectedIndustry == industry ? Color.accentColor.opacity(0.12) : Color.gray.opacity(0.07))
+                        .background(selectedIndustries.contains(industry) ? Color.accentColor.opacity(0.12) : Color.gray.opacity(0.07))
                         .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(selectedIndustry == industry ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                                .stroke(selectedIndustries.contains(industry) ? Color.accentColor : Color.clear, lineWidth: 1.5)
                         )
                     }
                 }
@@ -176,12 +176,12 @@ struct QuickCampaignView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                     ForEach(Region.allCases) { region in
-                        Button(action: { selectedRegion = region }) {
+                        Button(action: { if selectedRegions.contains(region) { selectedRegions.remove(region) } else { selectedRegions.insert(region) } }) {
                             HStack {
                                 Text(region.rawValue)
                                     .font(.callout)
                                 Spacer()
-                                if selectedRegion == region {
+                                if selectedRegions.contains(region) {
                                     Image(systemName: "checkmark.circle.fill")
                                         .foregroundColor(.accentColor)
                                 }
@@ -189,17 +189,17 @@ struct QuickCampaignView: View {
                             .padding(.vertical, 14).padding(.horizontal, 16)
                         }
                         .buttonStyle(.plain)
-                        .background(selectedRegion == region ? Color.accentColor.opacity(0.12) : Color.gray.opacity(0.07))
+                        .background(selectedRegions.contains(region) ? Color.accentColor.opacity(0.12) : Color.gray.opacity(0.07))
                         .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(selectedRegion == region ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                                .stroke(selectedRegions.contains(region) ? Color.accentColor : Color.clear, lineWidth: 1.5)
                         )
                     }
                 }
             }
 
-            if let industry = selectedIndustry {
+            if let industry = selectedIndustries.first, selectedIndustries.count == 1 {
                 GroupBox {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
@@ -227,8 +227,8 @@ struct QuickCampaignView: View {
                 VStack(alignment: .leading) {
                     Text("Unternehmen suchen")
                         .font(.headline)
-                    if let industry = selectedIndustry, let region = selectedRegion {
-                        Text("Suche nach \(industry.shortName)-Unternehmen in \(region.rawValue)")
+                    if !selectedIndustries.isEmpty {
+                        Text("Suche nach \(selectedIndustries.count) Branchen in \(selectedRegions.count) Regionen")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
@@ -514,7 +514,7 @@ struct QuickCampaignView: View {
     // MARK: - Can Advance?
     private var canAdvance: Bool {
         switch currentStep {
-        case 0: return selectedIndustry != nil && selectedRegion != nil
+        case 0: return !selectedIndustries.isEmpty && !selectedRegions.isEmpty
         default: return true
         }
     }
@@ -539,10 +539,10 @@ struct QuickCampaignView: View {
             currentStep = nextStep
             Task {
                 // Set the region filter before searching
-                if let region = selectedRegion {
-                    vm.settings.selectedRegions = [region.rawValue]
+                if true {
+                    vm.settings.selectedRegions = selectedRegions.map { $0.rawValue }
                 }
-                vm.settings.selectedIndustries = [industry.rawValue]
+                vm.settings.selectedIndustries = selectedIndustries.map { $0.rawValue }
                                     vm.settings.selectedCompanySizes = CompanySize.allCases.map { $0.rawValue }
                         await vm.findCompaniesWithCancellation()            
                 companiesFound = vm.companies.count - beforeCompanies
