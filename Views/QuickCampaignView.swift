@@ -531,11 +531,7 @@ struct QuickCampaignView: View {
         switch currentStep {
         case 0:
             // Step 1 completed → auto-run find companies
-            guard let industry = selectedIndustry else {
-                stepError = "Bitte Branche auswählen"
-                return
-            }
-            isRunning = true
+                        guard !selectedIndustries.isEmpty else {
             currentStep = nextStep
             Task {
                 // Set the region filter before searching
