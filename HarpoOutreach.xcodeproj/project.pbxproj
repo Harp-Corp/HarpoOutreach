@@ -36,6 +36,10 @@
 		EF88AA102F4600080066E6E9 /* QuickCampaignView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA0F2F4600080066E6E9 /* QuickCampaignView.swift */; };
 		EF88AA122F4600090066E6E9 /* CampaignsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA112F4600090066E6E9 /* CampaignsView.swift */; };
 		EF88AA142F46000A0066E6E9 /* AnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA132F46000A0066E6E9 /* AnalyticsView.swift */; };
+		EF88AA162F46000B0066E6E9 /* DatabaseService+OutreachLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA152F46000B0066E6E9 /* DatabaseService+OutreachLog.swift */; };
+		EF88AA182F46000C0066E6E9 /* AppViewModel+OutboundSingle.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA172F46000C0066E6E9 /* AppViewModel+OutboundSingle.swift */; };
+		EF88AA1A2F46000D0066E6E9 /* AddressBookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA192F46000D0066E6E9 /* AddressBookView.swift */; };
+		EF88AA1C2F46000E0066E6E9 /* OutboundSingleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF88AA1B2F46000E0066E6E9 /* OutboundSingleView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -69,6 +73,10 @@
 		EF88AA0F2F4600080066E6E9 /* QuickCampaignView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickCampaignView.swift; sourceTree = "<group>"; };
 		EF88AA112F4600090066E6E9 /* CampaignsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignsView.swift; sourceTree = "<group>"; };
 		EF88AA132F46000A0066E6E9 /* AnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsView.swift; sourceTree = "<group>"; };
+		EF88AA152F46000B0066E6E9 /* DatabaseService+OutreachLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DatabaseService+OutreachLog.swift"; sourceTree = "<group>"; };
+		EF88AA172F46000C0066E6E9 /* AppViewModel+OutboundSingle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppViewModel+OutboundSingle.swift"; sourceTree = "<group>"; };
+		EF88AA192F46000D0066E6E9 /* AddressBookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressBookView.swift; sourceTree = "<group>"; };
+		EF88AA1B2F46000E0066E6E9 /* OutboundSingleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutboundSingleView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -110,6 +118,7 @@
 				EF67ADB52F421FD10066E6E9 /* GoogleSheetsService.swift */,
 				EF67ADB72F421FDB0066E6E9 /* GmailService.swift */,
 				EF88AA012F4600010066E6E9 /* DatabaseService.swift */,
+				EF88AA152F46000B0066E6E9 /* DatabaseService+OutreachLog.swift */,
 				EF88AA032F4600020066E6E9 /* RetryService.swift */,
 			);
 			path = Services;
@@ -133,6 +142,8 @@
 				EF88AA0F2F4600080066E6E9 /* QuickCampaignView.swift */,
 				EF88AA112F4600090066E6E9 /* CampaignsView.swift */,
 				EF88AA132F46000A0066E6E9 /* AnalyticsView.swift */,
+				EF88AA192F46000D0066E6E9 /* AddressBookView.swift */,
+				EF88AA1B2F46000E0066E6E9 /* OutboundSingleView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -146,6 +157,7 @@
 				EF88AA092F4600050066E6E9 /* AppViewModel+Inbox.swift */,
 				EF88AA0B2F4600060066E6E9 /* AppViewModel+Prospecting.swift */,
 				EF88AA0D2F4600070066E6E9 /* AppViewModel+Social.swift */,
+				EF88AA172F46000C0066E6E9 /* AppViewModel+OutboundSingle.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -250,6 +262,10 @@
 				EF88AA102F4600080066E6E9 /* QuickCampaignView.swift in Sources */,
 				EF88AA122F4600090066E6E9 /* CampaignsView.swift in Sources */,
 				EF88AA142F46000A0066E6E9 /* AnalyticsView.swift in Sources */,
+				EF88AA162F46000B0066E6E9 /* DatabaseService+OutreachLog.swift in Sources */,
+				EF88AA182F46000C0066E6E9 /* AppViewModel+OutboundSingle.swift in Sources */,
+				EF88AA1A2F46000D0066E6E9 /* AddressBookView.swift in Sources */,
+				EF88AA1C2F46000E0066E6E9 /* OutboundSingleView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
