@@ -82,8 +82,8 @@ extension AppViewModel {
         Task {
             do {
                 try await gmailService.sendEmail(
-                    from: senderEmail,
                     to: leads[idx].email,
+                    from: senderEmail,
                     subject: approvedEmail.subject,
                     body: approvedEmail.body
                 )
