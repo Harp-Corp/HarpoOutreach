@@ -24,6 +24,9 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      - name: Sync new Swift files into Xcode project
+        run: python3 .github/scripts/sync_pbxproj.py
+
       - name: Cache DerivedData
         uses: actions/cache@v4
         with:
@@ -58,86 +61,19 @@ jobs:
           ERROR_COUNT=${ERROR_COUNT:-0}
           WARNING_COUNT=$(grep -c "warning:" build.log 2>/dev/null || true)
           WARNING_COUNT=${WARNING_COUNT:-0}
-          echo "- Errors: **${ERROR_COUNT}**" >> $GITHUB_STEP_SUMMARY
-          echo "- Warnings: **${WARNING_COUNT}**" >> $GITHUB_STEP_SUMMARY
-          if [ "${ERROR_COUNT}" -gt 0 ] 2>/dev/null; then
+          echo "- Errors: $ERROR_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- Warnings: $WARNING_COUNT" >> $GITHUB_STEP_SUMMARY
+          if [ "$ERROR_COUNT" -gt 0 ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Errors:" >> $GITHUB_STEP_SUMMARY
+            echo "### Errors" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             grep "error:" build.log | head -30 >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            grep "error:" build.log | head -20 | while IFS= read -r line; do
-              echo "::error::$line"
-            done
           fi
-          if [ "${WARNING_COUNT}" -gt 0 ] 2>/dev/null; then
+          if [ "$WARNING_COUNT" -gt 0 ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Warnings:" >> $GITHUB_STEP_SUMMARY
+            echo "### Warnings (first 15)" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            grep "warning:" build.log | head -20 >> $GITHUB_STEP_SUMMARY
+            grep "warning:" build.log | head -15 >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Verify build artifacts exist
-        run: |
-          APP_PATH=$(find build/Build/Products/Debug -name "*.app" -maxdepth 1 2>/dev/null | head -1)
-          if [ -z "$APP_PATH" ]; then
-            echo "::error::No .app bundle found in build output!"
-            exit 1
-          fi
-          echo "App found: $APP_PATH"
-          echo "App size: $(du -sh "$APP_PATH" | cut -f1)"
-          echo "## Build Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- App: $(basename $APP_PATH)" >> $GITHUB_STEP_SUMMARY
-          echo "- Size: $(du -sh "$APP_PATH" | cut -f1)" >> $GITHUB_STEP_SUMMARY
-
-      - name: Verify app structure
-        run: |
-          APP_PATH=$(find build/Build/Products/Debug -name "*.app" -maxdepth 1 | head -1)
-          echo "## App Structure Verification" >> $GITHUB_STEP_SUMMARY
-          if [ -f "$APP_PATH/Contents/Info.plist" ]; then
-            echo "- Info.plist: OK" >> $GITHUB_STEP_SUMMARY
-            BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "unknown")
-            VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "unknown")
-            echo "- Bundle ID: $BUNDLE_ID" >> $GITHUB_STEP_SUMMARY
-            echo "- Version: $VERSION" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "::error::Info.plist missing!"
-            exit 1
-          fi
-          if [ -f "$APP_PATH/Contents/MacOS/HarpoOutreach" ]; then
-            echo "- Executable: OK" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "::error::Main executable missing!"
-            exit 1
-          fi
-
-      - name: Upload Build Log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: build.log
-          retention-days: 14
-
-      - name: Upload Build Artifacts
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: HarpoOutreach-build
-          path: build/Build/Products/Debug/
-          retention-days: 30
-
-      - name: Build Summary
-        if: always()
-        run: |
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Build Result" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "Build erfolgreich" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Build fehlgeschlagen" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Letzte Fehler:" >> $GITHUB_STEP_SUMMARY
-            grep -i "error:" build.log | tail -20 >> $GITHUB_STEP_SUMMARY || echo "Siehe build.log Artifact" >> $GITHUB_STEP_SUMMARY
           fi
