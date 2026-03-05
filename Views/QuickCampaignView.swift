@@ -535,7 +535,7 @@ struct QuickCampaignView: View {
                                 .textFieldStyle(.roundedBorder)
                                 .font(.caption)
                             HStack(spacing: 6) {
-                                Button("Hinzuf\u00fcgen") {
+                                Button("Hinzufügen") {
                                     addManualContact()
                                 }
                                 .buttonStyle(.borderedProminent)
@@ -615,7 +615,7 @@ struct QuickCampaignView: View {
 
                     // Gut sichtbarer Button zum Hinzufuegen
                     Button(action: { showAddContact.toggle() }) {
-                        Label(showAddContact ? "Formular schlie\u00dfen" : "Kontakt hinzuf\u00fcgen", systemImage: showAddContact ? "xmark" : "plus")
+                        Label(showAddContact ? "Formular schließen" : "Kontakt hinzufügen", systemImage: showAddContact ? "xmark" : "plus")
                             .font(.caption)
                             .frame(maxWidth: .infinity)
                     }
