@@ -517,7 +517,7 @@ struct QuickCampaignView: View {
                         Button(action: { showAddContact.toggle() }) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.caption)
-                                .foregroundStyle(.accentColor)
+                                .foregroundStyle(Color.accentColor)
                         }
                         .buttonStyle(.plain)
                         .help("Kontakt manuell hinzufügen")
