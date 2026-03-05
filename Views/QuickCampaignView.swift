@@ -42,18 +42,24 @@ struct QuickCampaignView: View {
             Divider()
 
             // Step content
-            ScrollView {
-                VStack(spacing: 0) {
-                    switch currentStep {
-                    case 0: stepSelectFilters
-                    case 1: stepFindCompanies
-                    case 2: stepFindContacts
-                    case 3: stepDraftEmails
-                    case 4: stepReviewSend
-                    default: EmptyView()
+            if currentStep == 4 {
+                // Step 4 braucht feste Hoehe fuer HSplitView/TextEditor – kein ScrollView
+                stepReviewSend
+                    .padding(24)
+                    .frame(maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        switch currentStep {
+                        case 0: stepSelectFilters
+                        case 1: stepFindCompanies
+                        case 2: stepFindContacts
+                        case 3: stepDraftEmails
+                        default: EmptyView()
+                        }
                     }
+                    .padding(24)
                 }
-                .padding(24)
             }
 
             Divider()
@@ -425,6 +431,10 @@ struct QuickCampaignView: View {
     @State private var reviewEditingLeadId: UUID? = nil
     @State private var editSubject: String = ""
     @State private var editBody: String = ""
+    @State private var editEmail: String = ""
+
+    /// Unsubscribe-Footer der immer am Ende jeder Email stehen muss
+    private static let unsubscribeFooter = "\n\n---\nWenn Sie keine weiteren Nachrichten erhalten möchten, antworten Sie mit 'Abbestellen' oder schreiben Sie an: unsubscribe@harpocrates-corp.com"
 
     /// Leads that have a draft (eligible for this campaign step)
     private var draftLeads: [Lead] {
@@ -555,16 +565,20 @@ struct QuickCampaignView: View {
                     if let leadId = reviewEditingLeadId,
                        let lead = vm.leads.first(where: { $0.id == leadId }),
                        lead.draftedEmail != nil {
-                        // Header
+                        // Header mit editierbarer Email-Adresse
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
-                                VStack(alignment: .leading, spacing: 2) {
+                                VStack(alignment: .leading, spacing: 4) {
                                     Text("An: \(lead.name)")
                                         .font(.callout.bold())
-                                    Text(lead.email)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .textSelection(.enabled)
+                                    HStack(spacing: 4) {
+                                        Text("Email:")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                        TextField("Email-Adresse", text: $editEmail)
+                                            .textFieldStyle(.plain)
+                                            .font(.caption)
+                                    }
                                 }
                                 Spacer()
                                 Text(lead.company)
@@ -597,14 +611,29 @@ struct QuickCampaignView: View {
                         TextEditor(text: $editBody)
                             .font(.callout)
                             .padding(8)
-                            .frame(maxHeight: .infinity)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                        Divider()
+
+                        // Unsubscribe-Hinweis
+                        HStack(spacing: 4) {
+                            Image(systemName: "link")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text("Unsubscribe-Footer wird automatisch angehängt")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(Color.gray.opacity(0.05))
 
                         Divider()
 
                         // Draft action bar
                         HStack {
                             Button("Änderungen speichern") {
-                                vm.updateDraft(for: lead, subject: editSubject, body: editBody)
+                                saveCurrentDraft(lead: lead)
                             }
                             .buttonStyle(.bordered)
                             .font(.caption)
@@ -617,7 +646,7 @@ struct QuickCampaignView: View {
                                     .foregroundStyle(.green)
                             } else {
                                 Button(action: {
-                                    vm.updateDraft(for: lead, subject: editSubject, body: editBody)
+                                    saveCurrentDraft(lead: lead)
                                     vm.approveEmail(for: lead.id)
                                 }) {
                                     Label("Freigeben", systemImage: "checkmark.seal")
@@ -666,18 +695,39 @@ struct QuickCampaignView: View {
         }
     }
 
+    /// Speichert den aktuellen Draft inkl. Email-Adresse und sorgt fuer Unsubscribe-Footer
+    private func saveCurrentDraft(lead: Lead) {
+        // Email-Adresse aktualisieren
+        if let index = vm.leads.firstIndex(where: { $0.id == lead.id }) {
+            vm.leads[index].email = editEmail
+        }
+        // Body mit Unsubscribe-Footer sicherstellen
+        let bodyToSave = ensureUnsubscribeFooter(editBody)
+        vm.updateDraft(for: lead, subject: editSubject, body: bodyToSave)
+    }
+
+    /// Stellt sicher, dass der Unsubscribe-Footer immer am Ende des Body steht
+    private func ensureUnsubscribeFooter(_ text: String) -> String {
+        let marker = "unsubscribe@harpocrates-corp.com"
+        if text.contains(marker) {
+            return text
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines) + Self.unsubscribeFooter
+    }
+
     private func selectLeadForEditing(_ id: UUID) {
         // Save current edits before switching
         if let prevId = reviewEditingLeadId,
            let prevLead = vm.leads.first(where: { $0.id == prevId }),
            prevLead.draftedEmail != nil {
-            vm.updateDraft(for: prevLead, subject: editSubject, body: editBody)
+            saveCurrentDraft(lead: prevLead)
         }
         reviewEditingLeadId = id
         if let lead = vm.leads.first(where: { $0.id == id }),
            let draft = lead.draftedEmail {
             editSubject = draft.subject
             editBody = draft.body
+            editEmail = lead.email
         }
     }
 
