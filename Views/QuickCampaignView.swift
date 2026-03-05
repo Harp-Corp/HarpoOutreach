@@ -89,7 +89,7 @@ struct QuickCampaignView: View {
             }
             .padding()
         }
-        .frame(width: 700, height: 580)
+        .frame(width: 960, height: 680)
     }
 
     // MARK: - Step Indicator
@@ -421,93 +421,263 @@ struct QuickCampaignView: View {
     }
 
     // MARK: - Step 4: Review & Send
+    @State private var reviewSelectedLeads: Set<UUID> = []
+    @State private var reviewEditingLeadId: UUID? = nil
+    @State private var editSubject: String = ""
+    @State private var editBody: String = ""
+
+    /// Leads that have a draft (eligible for this campaign step)
+    private var draftLeads: [Lead] {
+        vm.leads.filter { $0.draftedEmail != nil && $0.dateEmailSent == nil }
+    }
+
     private var stepReviewSend: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.title2).foregroundStyle(.green)
-                Text("Kampagne bereit")
-                    .font(.headline)
-            }
-
-            // Summary boxes
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                WizardSummaryCard(
-                    title: "Unternehmen",
-                    value: "\(vm.statsCompanies)",
-                    icon: "building.2.fill",
-                    color: .indigo
-                )
-                WizardSummaryCard(
-                    title: "Kontakte",
-                    value: "\(vm.leads.count)",
-                    icon: "person.2.fill",
-                    color: .blue
-                )
-                WizardSummaryCard(
-                    title: "Email Drafts",
-                    value: "\(vm.statsDraftsReady)",
-                    icon: "envelope.badge.fill",
-                    color: .cyan
-                )
-            }
-
-            GroupBox("Nächste Schritte") {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "1.circle.fill").foregroundColor(.accentColor)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Emails überprüfen").font(.callout.bold())
-                            Text("Gehe zu Campaigns → Drafts und prüfe die erstellten Emails")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "2.circle.fill").foregroundColor(.accentColor)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Emails freigeben").font(.callout.bold())
-                            Text("Klicke auf 'Alle freigeben' oder genehmige Emails einzeln")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "3.circle.fill").foregroundColor(.accentColor)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Kampagne versenden").font(.callout.bold())
-                            Text("Klicke auf 'Alle senden' in der Outbox")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
+        VStack(spacing: 0) {
+            // Top bar: summary + actions
+            HStack(spacing: 16) {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                    Text("\(reviewSelectedLeads.count) von \(draftLeads.count) ausgewählt")
+                        .font(.callout.bold())
                 }
-                .padding(8)
-            }
-
-            if vm.statsDraftsReady > 0 {
-                HStack(spacing: 12) {
-                    Button(action: { vm.approveAllEmails() }) {
-                        Label("Alle Emails freigeben (\(vm.statsDraftsReady))", systemImage: "checkmark.seal.fill")
+                Spacer()
+                Button(action: {
+                    if reviewSelectedLeads.count == draftLeads.count {
+                        reviewSelectedLeads.removeAll()
+                    } else {
+                        reviewSelectedLeads = Set(draftLeads.map { $0.id })
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.green)
-
-                    Button(action: { Task { await vm.sendAllApproved() } }) {
-                        Label("Alle senden", systemImage: "paperplane.fill")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(vm.statsApproved == 0 || vm.isLoading)
+                }) {
+                    Text(reviewSelectedLeads.count == draftLeads.count ? "Keine auswählen" : "Alle auswählen")
+                        .font(.caption)
                 }
+                .buttonStyle(.bordered)
+
+                Button(action: {
+                    for id in reviewSelectedLeads {
+                        vm.approveEmail(for: id)
+                    }
+                }) {
+                    Label("Auswahl freigeben (\(reviewSelectedLeads.count))", systemImage: "checkmark.seal.fill")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+                .disabled(reviewSelectedLeads.isEmpty)
+
+                Button(action: { Task { await vm.sendAllApproved() } }) {
+                    Label("Freigegebene senden", systemImage: "paperplane.fill")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(vm.statsApproved == 0 || vm.isLoading)
             }
+            .padding(.bottom, 12)
 
             if vm.isLoading {
                 HStack {
                     ProgressView()
                     Text(vm.currentStep).font(.caption).foregroundStyle(.secondary)
                 }
-                .padding()
+                .padding(8)
                 .frame(maxWidth: .infinity)
                 .background(Color.gray.opacity(0.05))
                 .cornerRadius(8)
+                .padding(.bottom, 8)
             }
+
+            // Split view: left = contact list, right = email editor
+            HSplitView {
+                // MARK: Left: Contact List
+                VStack(spacing: 0) {
+                    HStack {
+                        Text("Kontakte")
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text("\(draftLeads.count) Drafts")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+
+                    Divider()
+
+                    List(selection: Binding<UUID?>(get: { reviewEditingLeadId }, set: { newVal in
+                        if let id = newVal { selectLeadForEditing(id) }
+                    })) {
+                        ForEach(draftLeads) { lead in
+                            HStack(spacing: 8) {
+                                // Checkbox for campaign inclusion
+                                Button(action: {
+                                    if reviewSelectedLeads.contains(lead.id) {
+                                        reviewSelectedLeads.remove(lead.id)
+                                    } else {
+                                        reviewSelectedLeads.insert(lead.id)
+                                    }
+                                }) {
+                                    Image(systemName: reviewSelectedLeads.contains(lead.id)
+                                          ? "checkmark.square.fill" : "square")
+                                        .foregroundStyle(reviewSelectedLeads.contains(lead.id) ? .green : .secondary)
+                                }
+                                .buttonStyle(.plain)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(lead.name)
+                                        .font(.callout)
+                                        .lineLimit(1)
+                                    Text(lead.company)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                                Spacer()
+
+                                // Status badge
+                                if lead.draftedEmail?.isApproved == true {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(.green)
+                                }
+                            }
+                            .tag(lead.id)
+                            .contentShape(Rectangle())
+                        }
+                    }
+                    .listStyle(.plain)
+                }
+                .frame(minWidth: 220, idealWidth: 260, maxWidth: 300)
+                .background(Color(nsColor: .controlBackgroundColor))
+
+                // MARK: Right: Email Draft Editor
+                VStack(spacing: 0) {
+                    if let leadId = reviewEditingLeadId,
+                       let lead = vm.leads.first(where: { $0.id == leadId }),
+                       lead.draftedEmail != nil {
+                        // Header
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("An: \(lead.name)")
+                                        .font(.callout.bold())
+                                    Text(lead.email)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .textSelection(.enabled)
+                                }
+                                Spacer()
+                                Text(lead.company)
+                                    .font(.caption)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Color.indigo.opacity(0.1))
+                                    .cornerRadius(4)
+                            }
+                        }
+                        .padding(12)
+
+                        Divider()
+
+                        // Subject
+                        HStack {
+                            Text("Betreff:")
+                                .font(.caption.bold())
+                                .foregroundStyle(.secondary)
+                            TextField("Betreff", text: $editSubject)
+                                .textFieldStyle(.plain)
+                                .font(.callout)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+
+                        Divider()
+
+                        // Body editor
+                        TextEditor(text: $editBody)
+                            .font(.callout)
+                            .padding(8)
+                            .frame(maxHeight: .infinity)
+
+                        Divider()
+
+                        // Draft action bar
+                        HStack {
+                            Button("Änderungen speichern") {
+                                vm.updateDraft(for: lead, subject: editSubject, body: editBody)
+                            }
+                            .buttonStyle(.bordered)
+                            .font(.caption)
+
+                            Spacer()
+
+                            if lead.draftedEmail?.isApproved == true {
+                                Label("Freigegeben", systemImage: "checkmark.seal.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                            } else {
+                                Button(action: {
+                                    vm.updateDraft(for: lead, subject: editSubject, body: editBody)
+                                    vm.approveEmail(for: lead.id)
+                                }) {
+                                    Label("Freigeben", systemImage: "checkmark.seal")
+                                        .font(.caption)
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.green)
+                            }
+                        }
+                        .padding(12)
+                    } else {
+                        // Empty state
+                        VStack(spacing: 12) {
+                            Spacer()
+                            Image(systemName: "envelope.open")
+                                .font(.system(size: 36))
+                                .foregroundStyle(.secondary)
+                            Text("Kontakt auswählen")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                            Text("Wähle links einen Kontakt, um den Email-Draft zu bearbeiten.")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .multilineTextAlignment(.center)
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+                .frame(minWidth: 350)
+                .background(Color(nsColor: .textBackgroundColor))
+            }
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .onAppear {
+            // Pre-select all leads with drafts
+            reviewSelectedLeads = Set(draftLeads.map { $0.id })
+            // Auto-select first lead for editing
+            if let first = draftLeads.first {
+                selectLeadForEditing(first.id)
+            }
+        }
+    }
+
+    private func selectLeadForEditing(_ id: UUID) {
+        // Save current edits before switching
+        if let prevId = reviewEditingLeadId,
+           let prevLead = vm.leads.first(where: { $0.id == prevId }),
+           prevLead.draftedEmail != nil {
+            vm.updateDraft(for: prevLead, subject: editSubject, body: editBody)
+        }
+        reviewEditingLeadId = id
+        if let lead = vm.leads.first(where: { $0.id == id }),
+           let draft = lead.draftedEmail {
+            editSubject = draft.subject
+            editBody = draft.body
         }
     }
 
