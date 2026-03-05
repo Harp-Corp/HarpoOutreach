@@ -1,1 +1,391 @@
-aW1wb3J0IEZvdW5kYXRpb24KaW1wb3J0IFN3aWZ0VUkKCi8vIE1BUks6IC0gQXBwVmlld01vZGVsK0VtYWlsUGlwZWxpbmUKLy8gSGFuZGxlczogZHJhZnRpbmcsIGFwcHJvdmluZywgc2VuZGluZyBlbWFpbHMgKGluaXRpYWwgb3V0cmVhY2gpCi8vIEZlYXR1cmVzOgovLyAgIFRhc2sgNTogIFNjaGVkdWxpbmcgLSBza2lwIGxlYWRzIHdpdGggc2NoZWR1bGVkU2VuZERhdGUgaW4gdGhlIGZ1dHVyZQovLyAgIFRhc2sgNzogIERlbGl2ZXJ5IHRyYWNraW5nIC0gdXBkYXRlIGRlbGl2ZXJ5U3RhdHVzIGFmdGVyIHNlbmQKLy8gICBUYXNrIDg6ICBCYXRjaCBsaW1pdCAtIHNlbmRBbGxBcHByb3ZlZCgpIGNhcHBlZCB0byBzZXR0aW5ncy5iYXRjaFNpemUgd2l0aCByYW5kb20gMzAtOTBzIGRlbGF5cwovLyAgIFRhc2sgOTogIE9wdC1vdXQgY2hlY2sgLSBEYXRhYmFzZVNlcnZpY2Uuc2hhcmVkLmlzQmxvY2tlZCgpIGJlZm9yZSBldmVyeSBzZW5kCi8vICAgVGFzayAxMDogQ29uZmlndXJhYmxlIHNlbmRlciAtIHNldHRpbmdzLnNlbmRlckVtYWlsIGluc3RlYWQgb2Ygc3RhdGljIGNvbnN0YW50Ci8vICAgVGFzayAxMzogRHluYW1pYyBzdWJqZWN0IGFsdGVybmF0aXZlcyAtIGdlbmVyYXRlIDMgc3ViamVjdHMgYW5kIHBpY2sgYmVzdAoKZXh0ZW5zaW9uIEFwcFZpZXdNb2RlbCB7CgogICAgLy8gTUFSSzogLSA0KzUpIFJlc2VhcmNoICsgRHJhZnQgRW1haWwgKHdpdGggZHluYW1pYyBzdWJqZWN0IGdlbmVyYXRpb24gLSB0YXNrIDEzKQogICAgZnVuYyBkcmFmdEVtYWlsKGZvciBsZWFkSUQ6IFVVSUQpIGFzeW5jIHsKICAgICAgICBndWFyZCBsZXQgaWR4ID0gbGVhZHMuZmlyc3RJbmRleCh3aGVyZTogeyAkMC5pZCA9PSBsZWFkSUQgfSkgZWxzZSB7IHJldHVybiB9CiAgICAgICAgZ3VhcmQgbGVhZHNbaWR4XS5lbWFpbFZlcmlmaWVkIHx8IGxlYWRzW2lkeF0uaXNNYW51YWxseUNyZWF0ZWQgZWxzZSB7CiAgICAgICAgICAgIGVycm9yTWVzc2FnZSA9ICJFbWFpbCBtdXN0IGJlIHZlcmlmaWVkIGZpcnN0LiI7IHJldHVybgogICAgICAgIH0KICAgICAgICBpc0xvYWRpbmcgPSB0cnVlOyBjdXJyZW50U3RlcCA9ICJSZXNlYXJjaGluZyBjaGFsbGVuZ2VzIGZvciBcKGxlYWRzW2lkeF0uY29tcGFueSkuLi4iCiAgICAgICAgZG8gewogICAgICAgICAgICBsZXQgY29tcGFueUZvclJlc2VhcmNoID0gY29tcGFuaWVzLmZpcnN0IHsKICAgICAgICAgICAgICAgICQwLm5hbWUubG93ZXJjYXNlZCgpID09IGxlYWRzW2lkeF0uY29tcGFueS5sb3dlcmNhc2VkKCkKICAgICAgICAgICAgfSA/PyBDb21wYW55KG5hbWU6IGxlYWRzW2lkeF0uY29tcGFueSwgaW5kdXN0cnk6ICIiLCByZWdpb246ICIiKQoKICAgICAgICAgICAgbGV0IGNoYWxsZW5nZXMgPSB0cnkgYXdhaXQgcHBseFNlcnZpY2UucmVzZWFyY2hDaGFsbGVuZ2VzKAogICAgICAgICAgICAgICAgY29tcGFueTogY29tcGFueUZvclJlc2VhcmNoLCBhcGlLZXk6IHNldHRpbmdzLnBlcnBsZXhpdHlBUElLZXkKICAgICAgICAgICAgKQogICAgICAgICAgICBjdXJyZW50U3RlcCA9ICJDcmVhdGluZyBwZXJzb25hbGl6ZWQgZW1haWwgZm9yIFwobGVhZHNbaWR4XS5uYW1lKS4uLiIKICAgICAgICAgICAgdmFyIGVtYWlsID0gdHJ5IGF3YWl0IHBwbHhTZXJ2aWNlLmRyYWZ0RW1haWwoCiAgICAgICAgICAgICAgICBsZWFkOiBsZWFkc1tpZHhdLAogICAgICAgICAgICAgICAgY2hhbGxlbmdlczogY2hhbGxlbmdlcywKICAgICAgICAgICAgICAgIHNlbmRlck5hbWU6IHNldHRpbmdzLnNlbmRlck5hbWUsCiAgICAgICAgICAgICAgICBhcGlLZXk6IHNldHRpbmdzLnBlcnBsZXhpdHlBUElLZXkKICAgICAgICAgICAgKQoKICAgICAgICAgICAgLy8gVGFzayAxMzogR2VuZXJhdGUgZHluYW1pYyBzdWJqZWN0IGFsdGVybmF0aXZlcyBhbmQgdXNlIHRoZSBiZXN0IG9uZQogICAgICAgICAgICBjdXJyZW50U3RlcCA9ICJHZW5lcmF0aW5nIHN1YmplY3QgYWx0ZXJuYXRpdmVzIGZvciBcKGxlYWRzW2lkeF0uY29tcGFueSkuLi4iCiAgICAgICAgICAgIGlmIGxldCBiZXN0U3ViamVjdCA9IGF3YWl0IGdlbmVyYXRlQmVzdFN1YmplY3QoCiAgICAgICAgICAgICAgICBjb21wYW55OiBsZWFkc1tpZHhdLmNvbXBhbnksCiAgICAgICAgICAgICAgICBpbmR1c3RyeTogY29tcGFueUZvclJlc2VhcmNoLmluZHVzdHJ5LAogICAgICAgICAgICAgICAgZW1haWxCb2R5UHJldmlldzogU3RyaW5nKGVtYWlsLmJvZHkucHJlZml4KDIwMCkpCiAgICAgICAgICAgICkgewogICAgICAgICAgICAgICAgZW1haWwgPSBPdXRib3VuZEVtYWlsKAogICAgICAgICAgICAgICAgICAgIGlkOiBlbWFpbC5pZCwKICAgICAgICAgICAgICAgICAgICBzdWJqZWN0OiBiZXN0U3ViamVjdCwKICAgICAgICAgICAgICAgICAgICBib2R5OiBlbWFpbC5ib2R5LAogICAgICAgICAgICAgICAgICAgIGlzQXBwcm92ZWQ6IGVtYWlsLmlzQXBwcm92ZWQsCiAgICAgICAgICAgICAgICAgICAgc2VudERhdGU6IGVtYWlsLnNlbnREYXRlCiAgICAgICAgICAgICAgICApCiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIGxlYWRzW2lkeF0uZHJhZnRlZEVtYWlsID0gZW1haWwKICAgICAgICAgICAgbGVhZHNbaWR4XS5zdGF0dXMgPSAuZW1haWxEcmFmdGVkCiAgICAgICAgICAgIHNhdmVMZWFkcygpCiAgICAgICAgICAgIGN1cnJlbnRTdGVwID0gIkVtYWlsIGRyYWZ0IGNyZWF0ZWQgZm9yIFwobGVhZHNbaWR4XS5uYW1lKSIKICAgICAgICB9IGNhdGNoIHsKICAgICAgICAgICAgZXJyb3JNZXNzYWdlID0gIkVycm9yOiBcKGVycm9yLmxvY2FsaXplZERlc2NyaXB0aW9uKSIKICAgICAgICB9CiAgICAgICAgaXNMb2FkaW5nID0gZmFsc2UKICAgIH0KCiAgICAvLy8gVGFzayAxMzogQXNrIFBlcnBsZXhpdHkgZm9yIDMgc3ViamVjdCBhbHRlcm5hdGl2ZXMsIHJldHVybiB0aGUgZmlyc3Qgb25lLgogICAgcHJpdmF0ZSBmdW5jIGdlbmVyYXRlQmVzdFN1YmplY3QoY29tcGFueTogU3RyaW5nLCBpbmR1c3RyeTogU3RyaW5nLCBlbWFpbEJvZHlQcmV2aWV3OiBTdHJpbmcpIGFzeW5jIC0+IFN0cmluZz8gewogICAgICAgIGxldCBwcm9tcHQgPSAiIiIKICAgICAgICBHZW5lcmF0ZSAzIGRpZmZlcmVudCBlbWFpbCBzdWJqZWN0IGxpbmVzIGZvciBhIGNvbGQgb3V0cmVhY2ggZW1haWwgdG8gXChjb21wYW55KSBhYm91dCBjb21wbGlhbmNlL1JlZ1RlY2guCiAgICAgICAgVGhlIGVtYWlsIGJvZHkgaXMgYWJvdXQ6IFwoZW1haWxCb2R5UHJldmlldykKICAgICAgICBJbmR1c3RyeSBjb250ZXh0OiBcKGluZHVzdHJ5LmlzRW1wdHkgPyAicmVndWxhdGVkIGVudGVycHJpc2UiIDogaW5kdXN0cnkpCiAgICAgICAgUmV0dXJuIE9OTFkgMyBzdWJqZWN0cywgb25lIHBlciBsaW5lLiBObyBudW1iZXJpbmcsIG5vIGV4cGxhbmF0aW9uLgogICAgICAgICIiIgogICAgICAgIGd1YXJkIGxldCByYXcgPSB0cnk/IGF3YWl0IHBwbHhTZXJ2aWNlLnJhd0dlbmVyYXRlKHByb21wdDogcHJvbXB0LCBhcGlLZXk6IHNldHRpbmdzLnBlcnBsZXhpdHlBUElLZXkpIGVsc2UgewogICAgICAgICAgICByZXR1cm4gbmlsCiAgICAgICAgfQogICAgICAgIGxldCBsaW5lcyA9IHJhdwogICAgICAgICAgICAuY29tcG9uZW50cyhzZXBhcmF0ZWRCeTogIlxuIikKICAgICAgICAgICAgLm1hcCB7ICQwLnRyaW1taW5nQ2hhcmFjdGVycyhpbjogLndoaXRlc3BhY2VzQW5kTmV3bGluZXMpIH0KICAgICAgICAgICAgLmZpbHRlciB7ICEkMC5pc0VtcHR5IH0KICAgICAgICByZXR1cm4gbGluZXMuZmlyc3QKICAgIH0KCiAgICBmdW5jIGRyYWZ0QWxsRW1haWxzKCkgYXN5bmMgewogICAgICAgIGZvciBsZWFkIGluIGxlYWRzLmZpbHRlcih7ICgkMC5lbWFpbFZlcmlmaWVkIHx8ICQwLmlzTWFudWFsbHlDcmVhdGVkKSAmJiAkMC5kcmFmdGVkRW1haWwgPT0gbmlsIH0pIHsKICAgICAgICAgICAgYXdhaXQgZHJhZnRFbWFpbChmb3I6IGxlYWQuaWQpCiAgICAgICAgfQogICAgfQoKICAgIC8vIE1BUks6IC0gNSkgQXBwcm92ZSBFbWFpbAogICAgZnVuYyBhcHByb3ZlRW1haWwoZm9yIGxlYWRJRDogVVVJRCkgewogICAgICAgIGd1YXJkIGxldCBpZHggPSBsZWFkcy5maXJzdEluZGV4KHdoZXJlOiB7ICQwLmlkID09IGxlYWRJRCB9KSBlbHNlIHsgcmV0dXJuIH0KICAgICAgICBsZWFkc1tpZHhdLmRyYWZ0ZWRFbWFpbD8uaXNBcHByb3ZlZCA9IHRydWUKICAgICAgICBsZWFkc1tpZHhdLnN0YXR1cyA9IC5lbWFpbEFwcHJvdmVkCiAgICAgICAgc2F2ZUxlYWRzKCkKICAgIH0KCiAgICBmdW5jIGFwcHJvdmVBbGxFbWFpbHMoKSB7CiAgICAgICAgdmFyIGNvdW50ID0gMAogICAgICAgIGZvciBpIGluIGxlYWRzLmluZGljZXMgewogICAgICAgICAgICBpZiBsZWFkc1tpXS5kcmFmdGVkRW1haWwgIT0gbmlsICYmIGxlYWRzW2ldLmRyYWZ0ZWRFbWFpbD8uaXNBcHByb3ZlZCA9PSBmYWxzZSB7CiAgICAgICAgICAgICAgICBsZWFkc1tpXS5kcmFmdGVkRW1haWw/LmlzQXBwcm92ZWQgPSB0cnVlCiAgICAgICAgICAgICAgICBsZWFkc1tpXS5zdGF0dXMgPSAuZW1haWxBcHByb3ZlZAogICAgICAgICAgICAgICAgY291bnQgKz0gMQogICAgICAgICAgICB9CiAgICAgICAgfQogICAgICAgIHNhdmVMZWFkcygpCiAgICAgICAgc3RhdHVzTWVzc2FnZSA9ICJcKGNvdW50KSBlbWFpbHMgYXBwcm92ZWQiCiAgICB9CgogICAgLy8gTUFSSzogLSBEcmFmdCBNYW5hZ2VtZW50CiAgICBmdW5jIHVwZGF0ZURyYWZ0KGZvciBsZWFkOiBMZWFkLCBzdWJqZWN0OiBTdHJpbmcsIGJvZHk6IFN0cmluZykgewogICAgICAgIGlmIGxldCBpbmRleCA9IGxlYWRzLmZpcnN0SW5kZXgod2hlcmU6IHsgJDAuaWQgPT0gbGVhZC5pZCB9KSB7CiAgICAgICAgICAgIGxlYWRzW2luZGV4XS5kcmFmdGVkRW1haWwgPSBPdXRib3VuZEVtYWlsKAogICAgICAgICAgICAgICAgaWQ6IGxlYWQuZHJhZnRlZEVtYWlsPy5pZCA/PyBVVUlEKCksCiAgICAgICAgICAgICAgICBzdWJqZWN0OiBzdWJqZWN0LAogICAgICAgICAgICAgICAgYm9keTogYm9keSwKICAgICAgICAgICAgICAgIGlzQXBwcm92ZWQ6IHRydWUKICAgICAgICAgICAgKQogICAgICAgICAgICBzYXZlTGVhZHMoKQogICAgICAgICAgICBzdGF0dXNNZXNzYWdlID0gIkRyYWZ0IGZvciBcKGxlYWQubmFtZSkgdXBkYXRlZCIKICAgICAgICB9CiAgICB9CgogICAgZnVuYyBkZWxldGVEcmFmdChmb3IgbGVhZDogTGVhZCkgewogICAgICAgIGlmIGxldCBpbmRleCA9IGxlYWRzLmZpcnN0SW5kZXgod2hlcmU6IHsgJDAuaWQgPT0gbGVhZC5pZCB9KSB7CiAgICAgICAgICAgIGxlYWRzW2luZGV4XS5kcmFmdGVkRW1haWwgPSBuaWwKICAgICAgICAgICAgbGVhZHNbaW5kZXhdLnN0YXR1cyA9IC5pZGVudGlmaWVkCiAgICAgICAgICAgIHNhdmVMZWFkcygpCiAgICAgICAgICAgIHN0YXR1c01lc3NhZ2UgPSAiRHJhZnQgZm9yIFwobGVhZC5uYW1lKSBkZWxldGVkIgogICAgICAgIH0KICAgIH0KCiAgICAvLyBNQVJLOiAtIDYpIFNlbmQgRW1haWwgKGJ5IElEIC0gdGFzayA5OiBvcHQtb3V0IGNoZWNrLCB0YXNrIDEwOiBjb25maWd1cmFibGUgc2VuZGVyKQogICAgZnVuYyBzZW5kRW1haWwoZm9yIGxlYWRJRDogVVVJRCkgYXN5bmMgewogICAgICAgIGd1YXJkIGxldCBpZHggPSBsZWFkcy5maXJzdEluZGV4KHdoZXJlOiB7ICQwLmlkID09IGxlYWRJRCB9KSwKICAgICAgICAgICAgICBsZXQgZW1haWwgPSBsZWFkc1tpZHhdLmRyYWZ0ZWRFbWFpbCwgZW1haWwuaXNBcHByb3ZlZCBlbHNlIHsKICAgICAgICAgICAgZXJyb3JNZXNzYWdlID0gIkVtYWlsIG11c3QgYmUgYXBwcm92ZWQgZmlyc3QuIjsgcmV0dXJuCiAgICAgICAgfQoKICAgICAgICAvLyBUYXNrIDk6IE9wdC1vdXQgLyBibG9ja2xpc3QgY2hlY2sKICAgICAgICBpZiBEYXRhYmFzZVNlcnZpY2Uuc2hhcmVkLmlzQmxvY2tlZChlbWFpbDogbGVhZHNbaWR4XS5lbWFpbCkgewogICAgICAgICAgICBlcnJvck1lc3NhZ2UgPSAiXChsZWFkc1tpZHhdLmVtYWlsKSBpcyBvbiB0aGUgb3B0LW91dCBibG9ja2xpc3QuIgogICAgICAgICAgICBsZWFkc1tpZHhdLnN0YXR1cyA9IC5kb05vdENvbnRhY3QKICAgICAgICAgICAgbGVhZHNbaWR4XS5vcHRlZE91dCA9IHRydWUKICAgICAgICAgICAgc2F2ZUxlYWRzKCkKICAgICAgICAgICAgcmV0dXJuCiAgICAgICAgfQoKICAgICAgICAvLyBUYXNrIDU6IFNjaGVkdWxpbmcgY2hlY2sKICAgICAgICBpZiBsZXQgc2NoZWR1bGVkRGF0ZSA9IGxlYWRzW2lkeF0uc2NoZWR1bGVkU2VuZERhdGUsIHNjaGVkdWxlZERhdGUgPiBEYXRlKCkgewogICAgICAgICAgICBzdGF0dXNNZXNzYWdlID0gIkVtYWlsIHRvIFwobGVhZHNbaWR4XS5uYW1lKSBpcyBzY2hlZHVsZWQgZm9yIFwoc2NoZWR1bGVkRGF0ZS5mb3JtYXR0ZWQoKSkuIFNraXBwaW5nLiIKICAgICAgICAgICAgaXNMb2FkaW5nID0gZmFsc2UKICAgICAgICAgICAgcmV0dXJuCiAgICAgICAgfQoKICAgICAgICBpc0xvYWRpbmcgPSB0cnVlOyBjdXJyZW50U3RlcCA9ICJTZW5kaW5nIGVtYWlsIHRvIFwobGVhZHNbaWR4XS5lbWFpbCkuLi4iCiAgICAgICAgZG8gewogICAgICAgICAgICAvLyBUYXNrIDEwOiB1c2Ugc2V0dGluZ3Muc2VuZGVyRW1haWwKICAgICAgICAgICAgXyA9IHRyeSBhd2FpdCBnbWFpbFNlcnZpY2Uuc2VuZEVtYWlsKAogICAgICAgICAgICAgICAgdG86IGxlYWRzW2lkeF0uZW1haWwsCiAgICAgICAgICAgICAgICBmcm9tOiBzZXR0aW5ncy5zZW5kZXJFbWFpbCwKICAgICAgICAgICAgICAgIHN1YmplY3Q6IGVtYWlsLnN1YmplY3QsCiAgICAgICAgICAgICAgICBib2R5OiBlbWFpbC5ib2R5CiAgICAgICAgICAgICkKICAgICAgICAgICAgbGVhZHNbaWR4XS5kYXRlRW1haWxTZW50ID0gRGF0ZSgpCiAgICAgICAgICAgIGxlYWRzW2lkeF0uZHJhZnRlZEVtYWlsPy5zZW50RGF0ZSA9IERhdGUoKQogICAgICAgICAgICBsZWFkc1tpZHhdLnN0YXR1cyA9IC5lbWFpbFNlbnQKCiAgICAgICAgICAgIC8vIFRhc2sgNzogRGVsaXZlcnkgdHJhY2tpbmcgLSBtYXJrIGFzIGRlbGl2ZXJlZCAoYm91bmNlIGRldGVjdGlvbiBoYXBwZW5zIGluIGNoZWNrRm9yUmVwbGllcykKICAgICAgICAgICAgbGVhZHNbaWR4XS5kZWxpdmVyeVN0YXR1cyA9IC5kZWxpdmVyZWQKCiAgICAgICAgICAgIHNhdmVMZWFkcygpCgogICAgICAgICAgICBpZiAhc2V0dGluZ3Muc3ByZWFkc2hlZXRJRC5pc0VtcHR5IHsKICAgICAgICAgICAgICAgIHRyeT8gYXdhaXQgc2hlZXRzU2VydmljZS5sb2dFbWFpbEV2ZW50KAogICAgICAgICAgICAgICAgICAgIHNwcmVhZHNoZWV0SUQ6IHNldHRpbmdzLnNwcmVhZHNoZWV0SUQsCiAgICAgICAgICAgICAgICAgICAgbGVhZDogbGVhZHNbaWR4XSwKICAgICAgICAgICAgICAgICAgICBlbWFpbFR5cGU6ICJJbml0aWFsIiwKICAgICAgICAgICAgICAgICAgICBzdWJqZWN0OiBlbWFpbC5zdWJqZWN0LAogICAgICAgICAgICAgICAgICAgIGJvZHk6IGVtYWlsLmJvZHksCiAgICAgICAgICAgICAgICAgICAgc3VtbWFyeTogIk91dHJlYWNoIHRvIFwobGVhZHNbaWR4XS5uYW1lKSAoXChsZWFkc1tpZHhdLmNvbXBhbnkpKSIKICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgfQogICAgICAgICAgICBjdXJyZW50U3RlcCA9ICJFbWFpbCBzZW50IHRvIFwobGVhZHNbaWR4XS5lbWFpbCkiCiAgICAgICAgfSBjYXRjaCB7CiAgICAgICAgICAgIC8vIFRhc2sgNzogTWFyayBkZWxpdmVyeSBmYWlsZWQgb24gZXJyb3IKICAgICAgICAgICAgbGVhZHNbaWR4XS5kZWxpdmVyeVN0YXR1cyA9IC5mYWlsZWQKICAgICAgICAgICAgc2F2ZUxlYWRzKCkKICAgICAgICAgICAgZXJyb3JNZXNzYWdlID0gIlNlbmQgZmFpbGVkOiBcKGVycm9yLmxvY2FsaXplZERlc2NyaXB0aW9uKSIKICAgICAgICB9CiAgICAgICAgaXNMb2FkaW5nID0gZmFsc2UKICAgIH0KCiAgICAvLyBNQVJLOiAtIDZiKSBTZW5kIEVtYWlsICh0byBsZWFkIGRpcmVjdGx5KQogICAgZnVuYyBzZW5kRW1haWwodG8gbGVhZDogTGVhZCkgYXN5bmMgewogICAgICAgIGd1YXJkIGxldCBkcmFmdCA9IGxlYWQuZHJhZnRlZEVtYWlsIGVsc2UgeyBlcnJvck1lc3NhZ2UgPSAiTm8gZHJhZnQgZm9yIFwobGVhZC5uYW1lKSI7IHJldHVybiB9CiAgICAgICAgZ3VhcmQgIWxlYWQuZW1haWwuaXNFbXB0eSBlbHNlIHsgZXJyb3JNZXNzYWdlID0gIk5vIGVtYWlsIGZvciBcKGxlYWQubmFtZSkiOyByZXR1cm4gfQogICAgICAgIGd1YXJkIGF1dGhTZXJ2aWNlLmlzQXV0aGVudGljYXRlZCBlbHNlIHsgZXJyb3JNZXNzYWdlID0gIk5vdCBhdXRoZW50aWNhdGVkIHdpdGggR29vZ2xlLiI7IHJldHVybiB9CgogICAgICAgIC8vIFRhc2sgOTogT3B0LW91dCBjaGVjawogICAgICAgIGlmIERhdGFiYXNlU2VydmljZS5zaGFyZWQuaXNCbG9ja2VkKGVtYWlsOiBsZWFkLmVtYWlsKSB7CiAgICAgICAgICAgIGVycm9yTWVzc2FnZSA9ICJcKGxlYWQuZW1haWwpIGlzIG9uIHRoZSBvcHQtb3V0IGJsb2NrbGlzdC4iCiAgICAgICAgICAgIGlmIGxldCBpZHggPSBsZWFkcy5maXJzdEluZGV4KHdoZXJlOiB7ICQwLmlkID09IGxlYWQuaWQgfSkgewogICAgICAgICAgICAgICAgbGVhZHNbaWR4XS5zdGF0dXMgPSAuZG9Ob3RDb250YWN0CiAgICAgICAgICAgICAgICBsZWFkc1tpZHhdLm9wdGVkT3V0ID0gdHJ1ZQogICAgICAgICAgICAgICAgc2F2ZUxlYWRzKCkKICAgICAgICAgICAgfQogICAgICAgICAgICByZXR1cm4KICAgICAgICB9CgogICAgICAgIC8vIFRhc2sgNTogU2NoZWR1bGluZyBjaGVjawogICAgICAgIGlmIGxldCBzY2hlZHVsZWREYXRlID0gbGVhZC5zY2hlZHVsZWRTZW5kRGF0ZSwgc2NoZWR1bGVkRGF0ZSA+IERhdGUoKSB7CiAgICAgICAgICAgIHN0YXR1c01lc3NhZ2UgPSAiRW1haWwgdG8gXChsZWFkLm5hbWUpIGlzIHNjaGVkdWxlZCBmb3IgXChzY2hlZHVsZWREYXRlLmZvcm1hdHRlZCgpKS4gU2tpcHBpbmcuIgogICAgICAgICAgICByZXR1cm4KICAgICAgICB9CgogICAgICAgIGlzTG9hZGluZyA9IHRydWU7IGVycm9yTWVzc2FnZSA9ICIiOyBjdXJyZW50U3RlcCA9ICJTZW5kaW5nIGVtYWlsIHRvIFwobGVhZC5uYW1lKS4uLiIKICAgICAgICBkbyB7CiAgICAgICAgICAgIF8gPSB0cnkgYXdhaXQgZ21haWxTZXJ2aWNlLnNlbmRFbWFpbCgKICAgICAgICAgICAgICAgIHRvOiBsZWFkLmVtYWlsLAogICAgICAgICAgICAgICAgZnJvbTogc2V0dGluZ3Muc2VuZGVyRW1haWwsICAgIC8vIFRhc2sgMTAKICAgICAgICAgICAgICAgIHN1YmplY3Q6IGRyYWZ0LnN1YmplY3QsCiAgICAgICAgICAgICAgICBib2R5OiBkcmFmdC5ib2R5CiAgICAgICAgICAgICkKICAgICAgICAgICAgaWYgbGV0IGluZGV4ID0gbGVhZHMuZmlyc3RJbmRleCh3aGVyZTogeyAkMC5pZCA9PSBsZWFkLmlkIH0pIHsKICAgICAgICAgICAgICAgIGxlYWRzW2luZGV4XS5zdGF0dXMgPSAuZW1haWxTZW50CiAgICAgICAgICAgICAgICBsZWFkc1tpbmRleF0uZGF0ZUVtYWlsU2VudCA9IERhdGUoKQogICAgICAgICAgICAgICAgbGVhZHNbaW5kZXhdLmRyYWZ0ZWRFbWFpbD8uc2VudERhdGUgPSBEYXRlKCkKICAgICAgICAgICAgICAgIGxlYWRzW2luZGV4XS5kZWxpdmVyeVN0YXR1cyA9IC5kZWxpdmVyZWQgIC8vIFRhc2sgNwogICAgICAgICAgICAgICAgc2F2ZUxlYWRzKCkKICAgICAgICAgICAgICAgIGlmICFzZXR0aW5ncy5zcHJlYWRzaGVldElELmlzRW1wdHkgewogICAgICAgICAgICAgICAgICAgIHRyeT8gYXdhaXQgc2hlZXRzU2VydmljZS5sb2dFbWFpbEV2ZW50KAogICAgICAgICAgICAgICAgICAgICAgICBzcHJlYWRzaGVldElEOiBzZXR0aW5ncy5zcHJlYWRzaGVldElELAogICAgICAgICAgICAgICAgICAgICAgICBsZWFkOiBsZWFkc1tpbmRleF0sCiAgICAgICAgICAgICAgICAgICAgICAgIGVtYWlsVHlwZTogIkluaXRpYWwiLAogICAgICAgICAgICAgICAgICAgICAgICBzdWJqZWN0OiBkcmFmdC5zdWJqZWN0LAogICAgICAgICAgICAgICAgICAgICAgICBib2R5OiBkcmFmdC5ib2R5LAogICAgICAgICAgICAgICAgICAgICAgICBzdW1tYXJ5OiAiT3V0cmVhY2ggdG8gXChsZWFkLm5hbWUpIChcKGxlYWQuY29tcGFueSkpIgogICAgICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQogICAgICAgICAgICBzdGF0dXNNZXNzYWdlID0gIkVtYWlsIHRvIFwobGVhZC5uYW1lKSBzZW50IgogICAgICAgIH0gY2F0Y2ggewogICAgICAgICAgICBpZiBsZXQgaW5kZXggPSBsZWFkcy5maXJzdEluZGV4KHdoZXJlOiB7ICQwLmlkID09IGxlYWQuaWQgfSkgewogICAgICAgICAgICAgICAgbGVhZHNbaW5kZXhdLmRlbGl2ZXJ5U3RhdHVzID0gLmZhaWxlZCAgLy8gVGFzayA3CiAgICAgICAgICAgICAgICBzYXZlTGVhZHMoKQogICAgICAgICAgICB9CiAgICAgICAgICAgIGVycm9yTWVzc2FnZSA9ICJTZW5kIGZhaWxlZDogXChlcnJvci5sb2NhbGl6ZWREZXNjcmlwdGlvbikiCiAgICAgICAgfQogICAgICAgIGlzTG9hZGluZyA9IGZhbHNlOyBjdXJyZW50U3RlcCA9ICIiCiAgICB9CgogICAgLy8gTUFSSzogLSA3KSBTZW5kIEFsbCBBcHByb3ZlZCAtIEJhdGNoIExpbWl0ZWQgKHRhc2sgOCkKICAgIGZ1bmMgc2VuZEFsbEFwcHJvdmVkKCkgYXN5bmMgewogICAgICAgIC8vIEZpbHRlcjogYXBwcm92ZWQsIG5vdCBzZW50LCBub3Qgb3B0ZWQgb3V0CiAgICAgICAgbGV0IGFwcHJvdmVkID0gbGVhZHMuZmlsdGVyIHsKICAgICAgICAgICAgJDAuZHJhZnRlZEVtYWlsPy5pc0FwcHJvdmVkID09IHRydWUKICAgICAgICAgICAgJiYgJDAuZGF0ZUVtYWlsU2VudCA9PSBuaWwKICAgICAgICAgICAgJiYgISQwLm9wdGVkT3V0CiAgICAgICAgfQogICAgICAgIGd1YXJkICFhcHByb3ZlZC5pc0VtcHR5IGVsc2UgeyBzdGF0dXNNZXNzYWdlID0gIk5vIGFwcHJvdmVkIGVtYWlscyB0byBzZW5kLiI7IHJldHVybiB9CiAgICAgICAgZ3VhcmQgYXV0aFNlcnZpY2UuaXNBdXRoZW50aWNhdGVkIGVsc2UgeyBlcnJvck1lc3NhZ2UgPSAiTm90IGF1dGhlbnRpY2F0ZWQgd2l0aCBHb29nbGUuIjsgcmV0dXJuIH0KCiAgICAgICAgLy8gVGFzayA4OiBDYXAgdG8gYmF0Y2hTaXplIChkZWZhdWx0IDEwKQogICAgICAgIGxldCBiYXRjaCA9IEFycmF5KGFwcHJvdmVkLnByZWZpeChzZXR0aW5ncy5iYXRjaFNpemUpKQogICAgICAgIGlzTG9hZGluZyA9IHRydWUKICAgICAgICB2YXIgc2VudENvdW50ID0gMAogICAgICAgIHZhciBmYWlsQ291bnQgPSAwCiAgICAgICAgdmFyIHNraXBwZWRPcHRPdXQgPSAwCiAgICAgICAgdmFyIHNraXBwZWRTY2hlZHVsZWQgPSAwCgogICAgICAgIGZvciAoaW5kZXgsIGxlYWQpIGluIGJhdGNoLmVudW1lcmF0ZWQoKSB7CiAgICAgICAgICAgIGN1cnJlbnRTdGVwID0gIlNlbmRpbmcgXChzZW50Q291bnQgKyAxKS9cKGJhdGNoLmNvdW50KSB0byBcKGxlYWQubmFtZSkuLi4iCgogICAgICAgICAgICAvLyBUYXNrIDk6IE9wdC1vdXQgLyBibG9ja2xpc3QgY2hlY2sKICAgICAgICAgICAgaWYgRGF0YWJhc2VTZXJ2aWNlLnNoYXJlZC5pc0Jsb2NrZWQoZW1haWw6IGxlYWQuZW1haWwpIHsKICAgICAgICAgICAgICAgIGlmIGxldCBpZHggPSBsZWFkcy5maXJzdEluZGV4KHdoZXJlOiB7ICQwLmlkID09IGxlYWQuaWQgfSkgewogICAgICAgICAgICAgICAgICAgIGxlYWRzW2lkeF0uc3RhdHVzID0gLmRvTm90Q29udGFjdAogICAgICAgICAgICAgICAgICAgIGxlYWRzW2lkeF0ub3B0ZWRPdXQgPSB0cnVlCiAgICAgICAgICAgICAgICAgICAgc2F2ZUxlYWRzKCkKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIHNraXBwZWRPcHRPdXQgKz0gMQogICAgICAgICAgICAgICAgY29udGludWUKICAgICAgICAgICAgfQoKICAgICAgICAgICAgLy8gVGFzayA1OiBTY2hlZHVsaW5nIGNoZWNrCiAgICAgICAgICAgIGlmIGxldCBzY2hlZHVsZWREYXRlID0gbGVhZC5zY2hlZHVsZWRTZW5kRGF0ZSwgc2NoZWR1bGVkRGF0ZSA+IERhdGUoKSB7CiAgICAgICAgICAgICAgICBza2lwcGVkU2NoZWR1bGVkICs9IDEKICAgICAgICAgICAgICAgIGNvbnRpbnVlCiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIGRvIHsKICAgICAgICAgICAgICAgIGd1YXJkIGxldCBkcmFmdCA9IGxlYWQuZHJhZnRlZEVtYWlsIGVsc2UgeyBjb250aW51ZSB9CiAgICAgICAgICAgICAgICBfID0gdHJ5IGF3YWl0IGdtYWlsU2VydmljZS5zZW5kRW1haWwoCiAgICAgICAgICAgICAgICAgICAgdG86IGxlYWQuZW1haWwsCiAgICAgICAgICAgICAgICAgICAgZnJvbTogc2V0dGluZ3Muc2VuZGVyRW1haWwsICAgIC8vIFRhc2sgMTAKICAgICAgICAgICAgICAgICAgICBzdWJqZWN0OiBkcmFmdC5zdWJqZWN0LAogICAgICAgICAgICAgICAgICAgIGJvZHk6IGRyYWZ0LmJvZHkKICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgICAgIGlmIGxldCBpZHggPSBsZWFkcy5maXJzdEluZGV4KHdoZXJlOiB7ICQwLmlkID09IGxlYWQuaWQgfSkgewogICAgICAgICAgICAgICAgICAgIGxlYWRzW2lkeF0uc3RhdHVzID0gLmVtYWlsU2VudAogICAgICAgICAgICAgICAgICAgIGxlYWRzW2lkeF0uZGF0ZUVtYWlsU2VudCA9IERhdGUoKQogICAgICAgICAgICAgICAgICAgIGxlYWRzW2lkeF0uZHJhZnRlZEVtYWlsPy5zZW50RGF0ZSA9IERhdGUoKQogICAgICAgICAgICAgICAgICAgIGxlYWRzW2lkeF0uZGVsaXZlcnlTdGF0dXMgPSAuZGVsaXZlcmVkICAvLyBUYXNrIDcKICAgICAgICAgICAgICAgICAgICBzYXZlTGVhZHMoKQogICAgICAgICAgICAgICAgICAgIGlmICFzZXR0aW5ncy5zcHJlYWRzaGVldElELmlzRW1wdHkgewogICAgICAgICAgICAgICAgICAgICAgICB0cnk/IGF3YWl0IHNoZWV0c1NlcnZpY2UubG9nRW1haWxFdmVudCgKICAgICAgICAgICAgICAgICAgICAgICAgICAgIHNwcmVhZHNoZWV0SUQ6IHNldHRpbmdzLnNwcmVhZHNoZWV0SUQsCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBsZWFkOiBsZWFkc1tpZHhdLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgZW1haWxUeXBlOiAiSW5pdGlhbCIsCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBzdWJqZWN0OiBkcmFmdC5zdWJqZWN0LAogICAgICAgICAgICAgICAgICAgICAgICAgICAgYm9keTogZHJhZnQuYm9keSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgIHN1bW1hcnk6ICJPdXRyZWFjaCB0byBcKGxlYWQubmFtZSkgKFwobGVhZC5jb21wYW55KSkiCiAgICAgICAgICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICBzZW50Q291bnQgKz0gMQoKICAgICAgICAgICAgICAgIC8vIFRhc2sgODogUmFuZG9tIGRlbGF5IDMwLTkwIHNlY29uZHMgYmV0d2VlbiBzZW5kcyAoZXhjZXB0IGFmdGVyIGxhc3QpCiAgICAgICAgICAgICAgICBpZiBpbmRleCA8IGJhdGNoLmNvdW50IC0gMSB7CiAgICAgICAgICAgICAgICAgICAgbGV0IGRlbGF5ID0gVUludDY0LnJhbmRvbShpbjogMzBfMDAwXzAwMF8wMDAuLi45MF8wMDBfMDAwXzAwMCkKICAgICAgICAgICAgICAgICAgICB0cnk/IGF3YWl0IFRhc2suc2xlZXAobmFub3NlY29uZHM6IGRlbGF5KQogICAgICAgICAgICAgICAgfQogICAgICAgICAgICB9IGNhdGNoIHsKICAgICAgICAgICAgICAgIGlmIGxldCBpZHggPSBsZWFkcy5maXJzdEluZGV4KHdoZXJlOiB7ICQwLmlkID09IGxlYWQuaWQgfSkgewogICAgICAgICAgICAgICAgICAgIGxlYWRzW2lkeF0uZGVsaXZlcnlTdGF0dXMgPSAuZmFpbGVkICAvLyBUYXNrIDcKICAgICAgICAgICAgICAgICAgICBzYXZlTGVhZHMoKQogICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgZmFpbENvdW50ICs9IDEKICAgICAgICAgICAgfQogICAgICAgIH0KCiAgICAgICAgaXNMb2FkaW5nID0gZmFsc2U7IGN1cnJlbnRTdGVwID0gIiIKICAgICAgICBsZXQgcmVtYWluaW5nID0gYXBwcm92ZWQuY291bnQgLSBiYXRjaC5jb3VudAogICAgICAgIHZhciBtc2cgPSAiQmF0Y2g6IFwoc2VudENvdW50KS9cKGJhdGNoLmNvdW50KSBlbWFpbHMgc2VudC4iCiAgICAgICAgaWYgcmVtYWluaW5nID4gMCB7IG1zZyArPSAiIFwocmVtYWluaW5nKSByZW1haW5pbmcgaW4gcXVldWUuIiB9CiAgICAgICAgaWYgZmFpbENvdW50ID4gMCB7IG1zZyArPSAiIFwoZmFpbENvdW50KSBmYWlsZWQuIiB9CiAgICAgICAgaWYgc2tpcHBlZE9wdE91dCA+IDAgeyBtc2cgKz0gIiBcKHNraXBwZWRPcHRPdXQpIHNraXBwZWQgKG9wdGVkIG91dCkuIiB9CiAgICAgICAgaWYgc2tpcHBlZFNjaGVkdWxlZCA+IDAgeyBtc2cgKz0gIiBcKHNraXBwZWRTY2hlZHVsZWQpIHNraXBwZWQgKHNjaGVkdWxlZCkuIiB9CiAgICAgICAgc3RhdHVzTWVzc2FnZSA9IG1zZwogICAgfQoKICAgIC8vIE1BUks6IC0gUXVpY2sgRHJhZnQgKyBBdXRvLUFwcHJvdmUgKHVzZWQgYnkgdmlld3MpCiAgICBmdW5jIHF1aWNrRHJhZnRBbmRTaG93SW5PdXRib3goZm9yIGxlYWRJRDogVVVJRCkgYXN5bmMgewogICAgICAgIGd1YXJkIGxldCBpZHggPSBsZWFkcy5maXJzdEluZGV4KHdoZXJlOiB7ICQwLmlkID09IGxlYWRJRCB9KSBlbHNlIHsgcmV0dXJuIH0KICAgICAgICBpZiBsZWFkc1tpZHhdLmRyYWZ0ZWRFbWFpbCA9PSBuaWwgeyBhd2FpdCBkcmFmdEVtYWlsKGZvcjogbGVhZElEKSB9CiAgICAgICAgaWYgbGVhZHNbaWR4XS5kcmFmdGVkRW1haWwgIT0gbmlsICYmIGxlYWRzW2lkeF0uZHJhZnRlZEVtYWlsPy5pc0FwcHJvdmVkID09IGZhbHNlIHsKICAgICAgICAgICAgbGVhZHNbaWR4XS5kcmFmdGVkRW1haWw/LmlzQXBwcm92ZWQgPSB0cnVlCiAgICAgICAgICAgIGxlYWRzW2lkeF0uc3RhdHVzID0gLmVtYWlsQXBwcm92ZWQKICAgICAgICAgICAgc2F2ZUxlYWRzKCkKICAgICAgICB9CiAgICB9Cn0KCi8vIE1BUks6IC0gUGVycGxleGl0eVNlcnZpY2U6IHJhdyBnZW5lcmF0ZSAoZm9yIHN1YmplY3QgZ2VuZXJhdGlvbikKZXh0ZW5zaW9uIFBlcnBsZXhpdHlTZXJ2aWNlIHsKICAgIC8vLyBNaW5pbWFsIHNpbmdsZS10dXJuIGdlbmVyYXRpb24gZm9yIHNob3J0IHByb21wdHMgKHRhc2sgMTMpCiAgICBmdW5jIHJhd0dlbmVyYXRlKHByb21wdDogU3RyaW5nLCBhcGlLZXk6IFN0cmluZykgYXN5bmMgdGhyb3dzIC0+IFN0cmluZyB7CiAgICAgICAgbGV0IHN5c3RlbSA9ICJZb3UgYXJlIGEgaGVscGZ1bCBhc3Npc3RhbnQuIEZvbGxvdyBpbnN0cnVjdGlvbnMgZXhhY3RseS4iCiAgICAgICAgcmV0dXJuIHRyeSBhd2FpdCBjYWxsQVBJUHVibGljKHN5c3RlbVByb21wdDogc3lzdGVtLCB1c2VyUHJvbXB0OiBwcm9tcHQsIGFwaUtleTogYXBpS2V5LCBtYXhUb2tlbnM6IDMwMCkKICAgIH0KCiAgICAvLyBFeHBvc2UgY2FsbEFQSSBwdWJsaWNseSBmb3IgZXh0ZW5zaW9ucwogICAgZnVuYyBjYWxsQVBJUHVibGljKHN5c3RlbVByb21wdDogU3RyaW5nLCB1c2VyUHJvbXB0OiBTdHJpbmcsIGFwaUtleTogU3RyaW5nLCBtYXhUb2tlbnM6IEludCA9IDQwMDApIGFzeW5jIHRocm93cyAtPiBTdHJpbmcgewogICAgICAgIGxldCByZXF1ZXN0Qm9keSA9IFBlcnBsZXhpdHlSZXF1ZXN0KAogICAgICAgICAgICBtb2RlbDogInNvbmFyLXBybyIsCiAgICAgICAgICAgIG1lc3NhZ2VzOiBbCiAgICAgICAgICAgICAgICAuaW5pdChyb2xlOiAic3lzdGVtIiwgY29udGVudDogc3lzdGVtUHJvbXB0KSwKICAgICAgICAgICAgICAgIC5pbml0KHJvbGU6ICJ1c2VyIiwgY29udGVudDogdXNlclByb21wdCkKICAgICAgICAgICAgXSwKICAgICAgICAgICAgbWF4X3Rva2VuczogbWF4VG9rZW5zLAogICAgICAgICAgICB3ZWJfc2VhcmNoX29wdGlvbnM6IC5pbml0KHNlYXJjaF9jb250ZXh0X3NpemU6ICJoaWdoIikKICAgICAgICApCiAgICAgICAgdmFyIHJlcXVlc3QgPSBVUkxSZXF1ZXN0KHVybDogVVJMKHN0cmluZzogImh0dHBzOi8vYXBpLnBlcnBsZXhpdHkuYWkvY2hhdC9jb21wbGV0aW9ucyIpISkKICAgICAgICByZXF1ZXN0Lmh0dHBNZXRob2QgPSAiUE9TVCIKICAgICAgICByZXF1ZXN0LnNldFZhbHVlKCJCZWFyZXIgXChhcGlLZXkpIiwgZm9ySFRUUEhlYWRlckZpZWxkOiAiQXV0aG9yaXphdGlvbiIpCiAgICAgICAgcmVxdWVzdC5zZXRWYWx1ZSgiYXBwbGljYXRpb24vanNvbiIsIGZvckhUVFBIZWFkZXJGaWVsZDogIkNvbnRlbnQtVHlwZSIpCiAgICAgICAgcmVxdWVzdC5odHRwQm9keSA9IHRyeSBKU09ORW5jb2RlcigpLmVuY29kZShyZXF1ZXN0Qm9keSkKICAgICAgICByZXF1ZXN0LnRpbWVvdXRJbnRlcnZhbCA9IDYwCgogICAgICAgIGxldCAoZGF0YSwgcmVzcG9uc2UpID0gdHJ5IGF3YWl0IFVSTFNlc3Npb24uc2hhcmVkLmRhdGEoZm9yOiByZXF1ZXN0KQogICAgICAgIGd1YXJkIGxldCBodHRwID0gcmVzcG9uc2UgYXM/IEhUVFBVUkxSZXNwb25zZSBlbHNlIHsgdGhyb3cgUHBseEVycm9yLmludmFsaWRSZXNwb25zZSB9CiAgICAgICAgZ3VhcmQgaHR0cC5zdGF0dXNDb2RlID09IDIwMCBlbHNlIHsKICAgICAgICAgICAgbGV0IGJvZHkgPSBTdHJpbmcoZGF0YTogZGF0YSwgZW5jb2Rpbmc6IC51dGY4KSA/PyAiIgogICAgICAgICAgICB0aHJvdyBQcGx4RXJyb3IuYXBpRXJyb3IoY29kZTogaHR0cC5zdGF0dXNDb2RlLCBtZXNzYWdlOiBTdHJpbmcoYm9keS5wcmVmaXgoMzAwKSkpCiAgICAgICAgfQogICAgICAgIGxldCBhcGlSZXNwID0gdHJ5IEpTT05EZWNvZGVyKCkuZGVjb2RlKFBlcnBsZXhpdHlSZXNwb25zZS5zZWxmLCBmcm9tOiBkYXRhKQogICAgICAgIGd1YXJkIGxldCBjb250ZW50ID0gYXBpUmVzcC5jaG9pY2VzP1swXS5tZXNzYWdlPy5jb250ZW50IGVsc2UgeyB0aHJvdyBQcGx4RXJyb3Iubm9Db250ZW50IH0KICAgICAgICByZXR1cm4gY29udGVudAogICAgfQp9Cg==
+import Foundation
+import SwiftUI
+
+// MARK: - AppViewModel+EmailPipeline
+// Handles: drafting, approving, sending emails (initial outreach)
+// Features:
+//   Task 5:  Scheduling - skip leads with scheduledSendDate in the future
+//   Task 7:  Delivery tracking - update deliveryStatus after send
+//   Task 8:  Batch limit - sendAllApproved() capped to settings.batchSize with random 30-90s delays
+//   Task 9:  Opt-out check - DatabaseService.shared.isBlocked() before every send
+//   Task 10: Configurable sender - settings.senderEmail instead of static constant
+//   Task 13: Dynamic subject alternatives - generate 3 subjects and pick best
+
+extension AppViewModel {
+
+    // MARK: - 4+5) Research + Draft Email (with dynamic subject generation - task 13)
+    func draftEmail(for leadID: UUID) async {
+        guard let idx = leads.firstIndex(where: { $0.id == leadID }) else { return }
+        guard leads[idx].emailVerified || leads[idx].isManuallyCreated else {
+            errorMessage = "Email must be verified first."; return
+        }
+        isLoading = true; currentStep = "Researching challenges for \(leads[idx].company)..."
+        do {
+            let companyForResearch = companies.first {
+                $0.name.lowercased() == leads[idx].company.lowercased()
+            } ?? Company(name: leads[idx].company, industry: "", region: "")
+
+            let challenges = try await pplxService.researchChallenges(
+                company: companyForResearch, apiKey: settings.perplexityAPIKey
+            )
+            currentStep = "Creating personalized email for \(leads[idx].name)..."
+            var email = try await pplxService.draftEmail(
+                lead: leads[idx],
+                challenges: challenges,
+                senderName: settings.senderName,
+                apiKey: settings.perplexityAPIKey
+            )
+
+            // Task 13: Generate dynamic subject alternatives and use the best one
+            currentStep = "Generating subject alternatives for \(leads[idx].company)..."
+            if let bestSubject = await generateBestSubject(
+                company: leads[idx].company,
+                industry: companyForResearch.industry,
+                emailBodyPreview: String(email.body.prefix(200))
+            ) {
+                email = OutboundEmail(
+                    id: email.id,
+                    subject: bestSubject,
+                    body: email.body,
+                    isApproved: email.isApproved,
+                    sentDate: email.sentDate
+                )
+            }
+
+            leads[idx].draftedEmail = email
+            leads[idx].status = .emailDrafted
+            saveLeads()
+            currentStep = "Email draft created for \(leads[idx].name)"
+        } catch {
+            errorMessage = "Error: \(error.localizedDescription)"
+        }
+        isLoading = false
+    }
+
+    /// Task 13: Ask Perplexity for 3 subject alternatives, return the first one.
+    private func generateBestSubject(company: String, industry: String, emailBodyPreview: String) async -> String? {
+        let prompt = """
+        Generate 3 different email subject lines for a cold outreach email to \(company) about compliance/RegTech.
+        The email body is about: \(emailBodyPreview)
+        Industry context: \(industry.isEmpty ? "regulated enterprise" : industry)
+        Return ONLY 3 subjects, one per line. No numbering, no explanation.
+        """
+        guard let raw = try? await pplxService.rawGenerate(prompt: prompt, apiKey: settings.perplexityAPIKey) else {
+            return nil
+        }
+        let lines = raw
+            .components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return lines.first
+    }
+
+    func draftAllEmails() async {
+        for lead in leads.filter({ ($0.emailVerified || $0.isManuallyCreated) && $0.draftedEmail == nil }) {
+            await draftEmail(for: lead.id)
+        }
+    }
+
+    // MARK: - 5) Approve Email
+    func approveEmail(for leadID: UUID) {
+        guard let idx = leads.firstIndex(where: { $0.id == leadID }) else { return }
+        leads[idx].draftedEmail?.isApproved = true
+        leads[idx].status = .emailApproved
+        saveLeads()
+    }
+
+    func approveAllEmails() {
+        var count = 0
+        for i in leads.indices {
+            if leads[i].draftedEmail != nil && leads[i].draftedEmail?.isApproved == false {
+                leads[i].draftedEmail?.isApproved = true
+                leads[i].status = .emailApproved
+                count += 1
+            }
+        }
+        saveLeads()
+        statusMessage = "\(count) emails approved"
+    }
+
+    // MARK: - Draft Management
+    func updateDraft(for lead: Lead, subject: String, body: String) {
+        if let index = leads.firstIndex(where: { $0.id == lead.id }) {
+            leads[index].draftedEmail = OutboundEmail(
+                id: lead.draftedEmail?.id ?? UUID(),
+                subject: subject,
+                body: body,
+                isApproved: true
+            )
+            saveLeads()
+            statusMessage = "Draft for \(lead.name) updated"
+        }
+    }
+
+    func deleteDraft(for lead: Lead) {
+        if let index = leads.firstIndex(where: { $0.id == lead.id }) {
+            leads[index].draftedEmail = nil
+            leads[index].status = .identified
+            saveLeads()
+            statusMessage = "Draft for \(lead.name) deleted"
+        }
+    }
+
+    // MARK: - 6) Send Email (by ID - task 9: opt-out check, task 10: configurable sender)
+    func sendEmail(for leadID: UUID) async {
+        guard let idx = leads.firstIndex(where: { $0.id == leadID }),
+              let email = leads[idx].draftedEmail, email.isApproved else {
+            errorMessage = "Email must be approved first."; return
+        }
+
+        // Task 9: Opt-out / blocklist check
+        if DatabaseService.shared.isBlocked(email: leads[idx].email) {
+            errorMessage = "\(leads[idx].email) is on the opt-out blocklist."
+            leads[idx].status = .doNotContact
+            leads[idx].optedOut = true
+            saveLeads()
+            return
+        }
+
+        // Task 5: Scheduling check
+        if let scheduledDate = leads[idx].scheduledSendDate, scheduledDate > Date() {
+            statusMessage = "Email to \(leads[idx].name) is scheduled for \(scheduledDate.formatted()). Skipping."
+            isLoading = false
+            return
+        }
+
+        isLoading = true; currentStep = "Sending email to \(leads[idx].email)..."
+        do {
+            // Task 10: use settings.senderEmail
+            _ = try await gmailService.sendEmail(
+                to: leads[idx].email,
+                from: settings.senderEmail,
+                subject: email.subject,
+                body: email.body
+            )
+            leads[idx].dateEmailSent = Date()
+            leads[idx].draftedEmail?.sentDate = Date()
+            leads[idx].status = .emailSent
+
+            // Task 7: Delivery tracking - mark as delivered (bounce detection happens in checkForReplies)
+            leads[idx].deliveryStatus = .delivered
+
+            saveLeads()
+
+            if !settings.spreadsheetID.isEmpty {
+                try? await sheetsService.logEmailEvent(
+                    spreadsheetID: settings.spreadsheetID,
+                    lead: leads[idx],
+                    emailType: "Initial",
+                    subject: email.subject,
+                    body: email.body,
+                    summary: "Outreach to \(leads[idx].name) (\(leads[idx].company))"
+                )
+            }
+            currentStep = "Email sent to \(leads[idx].email)"
+        } catch {
+            // Task 7: Mark delivery failed on error
+            leads[idx].deliveryStatus = .failed
+            saveLeads()
+            errorMessage = "Send failed: \(error.localizedDescription)"
+        }
+        isLoading = false
+    }
+
+    // MARK: - 6b) Send Email (to lead directly)
+    func sendEmail(to lead: Lead) async {
+        guard let draft = lead.draftedEmail else { errorMessage = "No draft for \(lead.name)"; return }
+        guard !lead.email.isEmpty else { errorMessage = "No email for \(lead.name)"; return }
+        guard authService.isAuthenticated else { errorMessage = "Not authenticated with Google."; return }
+
+        // Task 9: Opt-out check
+        if DatabaseService.shared.isBlocked(email: lead.email) {
+            errorMessage = "\(lead.email) is on the opt-out blocklist."
+            if let idx = leads.firstIndex(where: { $0.id == lead.id }) {
+                leads[idx].status = .doNotContact
+                leads[idx].optedOut = true
+                saveLeads()
+            }
+            return
+        }
+
+        // Task 5: Scheduling check
+        if let scheduledDate = lead.scheduledSendDate, scheduledDate > Date() {
+            statusMessage = "Email to \(lead.name) is scheduled for \(scheduledDate.formatted()). Skipping."
+            return
+        }
+
+        isLoading = true; errorMessage = ""; currentStep = "Sending email to \(lead.name)..."
+        do {
+            _ = try await gmailService.sendEmail(
+                to: lead.email,
+                from: settings.senderEmail,    // Task 10
+                subject: draft.subject,
+                body: draft.body
+            )
+            if let index = leads.firstIndex(where: { $0.id == lead.id }) {
+                leads[index].status = .emailSent
+                leads[index].dateEmailSent = Date()
+                leads[index].draftedEmail?.sentDate = Date()
+                leads[index].deliveryStatus = .delivered  // Task 7
+                saveLeads()
+                if !settings.spreadsheetID.isEmpty {
+                    try? await sheetsService.logEmailEvent(
+                        spreadsheetID: settings.spreadsheetID,
+                        lead: leads[index],
+                        emailType: "Initial",
+                        subject: draft.subject,
+                        body: draft.body,
+                        summary: "Outreach to \(lead.name) (\(lead.company))"
+                    )
+                }
+            }
+            statusMessage = "Email to \(lead.name) sent"
+        } catch {
+            if let index = leads.firstIndex(where: { $0.id == lead.id }) {
+                leads[index].deliveryStatus = .failed  // Task 7
+                saveLeads()
+            }
+            errorMessage = "Send failed: \(error.localizedDescription)"
+        }
+        isLoading = false; currentStep = ""
+    }
+
+    // MARK: - 7) Send All Approved - Batch Limited (task 8)
+    func sendAllApproved() async {
+        // Filter: approved, not sent, not opted out
+        let approved = leads.filter {
+            $0.draftedEmail?.isApproved == true
+            && $0.dateEmailSent == nil
+            && !$0.optedOut
+        }
+        guard !approved.isEmpty else { statusMessage = "No approved emails to send."; return }
+        guard authService.isAuthenticated else { errorMessage = "Not authenticated with Google."; return }
+
+        // Task 8: Cap to batchSize (default 10)
+        let batch = Array(approved.prefix(settings.batchSize))
+        isLoading = true
+        var sentCount = 0
+        var failCount = 0
+        var skippedOptOut = 0
+        var skippedScheduled = 0
+
+        for (index, lead) in batch.enumerated() {
+            currentStep = "Sending \(sentCount + 1)/\(batch.count) to \(lead.name)..."
+
+            // Task 9: Opt-out / blocklist check
+            if DatabaseService.shared.isBlocked(email: lead.email) {
+                if let idx = leads.firstIndex(where: { $0.id == lead.id }) {
+                    leads[idx].status = .doNotContact
+                    leads[idx].optedOut = true
+                    saveLeads()
+                }
+                skippedOptOut += 1
+                continue
+            }
+
+            // Task 5: Scheduling check
+            if let scheduledDate = lead.scheduledSendDate, scheduledDate > Date() {
+                skippedScheduled += 1
+                continue
+            }
+
+            do {
+                guard let draft = lead.draftedEmail else { continue }
+                _ = try await gmailService.sendEmail(
+                    to: lead.email,
+                    from: settings.senderEmail,    // Task 10
+                    subject: draft.subject,
+                    body: draft.body
+                )
+                if let idx = leads.firstIndex(where: { $0.id == lead.id }) {
+                    leads[idx].status = .emailSent
+                    leads[idx].dateEmailSent = Date()
+                    leads[idx].draftedEmail?.sentDate = Date()
+                    leads[idx].deliveryStatus = .delivered  // Task 7
+                    saveLeads()
+                    if !settings.spreadsheetID.isEmpty {
+                        try? await sheetsService.logEmailEvent(
+                            spreadsheetID: settings.spreadsheetID,
+                            lead: leads[idx],
+                            emailType: "Initial",
+                            subject: draft.subject,
+                            body: draft.body,
+                            summary: "Outreach to \(lead.name) (\(lead.company))"
+                        )
+                    }
+                }
+                sentCount += 1
+
+                // Task 8: Random delay 30-90 seconds between sends (except after last)
+                if index < batch.count - 1 {
+                    let delay = UInt64.random(in: 30_000_000_000...90_000_000_000)
+                    try? await Task.sleep(nanoseconds: delay)
+                }
+            } catch {
+                if let idx = leads.firstIndex(where: { $0.id == lead.id }) {
+                    leads[idx].deliveryStatus = .failed  // Task 7
+                    saveLeads()
+                }
+                failCount += 1
+            }
+        }
+
+        isLoading = false; currentStep = ""
+        let remaining = approved.count - batch.count
+        var msg = "Batch: \(sentCount)/\(batch.count) emails sent."
+        if remaining > 0 { msg += " \(remaining) remaining in queue." }
+        if failCount > 0 { msg += " \(failCount) failed." }
+        if skippedOptOut > 0 { msg += " \(skippedOptOut) skipped (opted out)." }
+        if skippedScheduled > 0 { msg += " \(skippedScheduled) skipped (scheduled)." }
+        statusMessage = msg
+    }
+
+    // MARK: - Quick Draft + Auto-Approve (used by views)
+    func quickDraftAndShowInOutbox(for leadID: UUID) async {
+        guard let idx = leads.firstIndex(where: { $0.id == leadID }) else { return }
+        if leads[idx].draftedEmail == nil { await draftEmail(for: leadID) }
+        if leads[idx].draftedEmail != nil && leads[idx].draftedEmail?.isApproved == false {
+            leads[idx].draftedEmail?.isApproved = true
+            leads[idx].status = .emailApproved
+            saveLeads()
+        }
+    }
+}
+
+// MARK: - PerplexityService: raw generate (for subject generation)
+extension PerplexityService {
+    /// Minimal single-turn generation for short prompts (task 13)
+    func rawGenerate(prompt: String, apiKey: String) async throws -> String {
+        let system = "You are a helpful assistant. Follow instructions exactly."
+        return try await callAPIPublic(systemPrompt: system, userPrompt: prompt, apiKey: apiKey, maxTokens: 300)
+    }
+
+    // Expose callAPI publicly for extensions
+    func callAPIPublic(systemPrompt: String, userPrompt: String, apiKey: String, maxTokens: Int = 4000) async throws -> String {
+        let requestBody = PerplexityRequest(
+            model: "sonar-pro",
+            messages: [
+                .init(role: "system", content: systemPrompt),
+                .init(role: "user", content: userPrompt)
+            ],
+            max_tokens: maxTokens,
+            web_search_options: .init(search_context_size: "high")
+        )
+        var request = URLRequest(url: URL(string: "https://api.perplexity.ai/chat/completions")!)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(requestBody)
+        request.timeoutInterval = 60
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw PplxError.invalidResponse }
+        guard http.statusCode == 200 else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw PplxError.apiError(code: http.statusCode, message: String(body.prefix(300)))
+        }
+        let apiResp = try JSONDecoder().decode(PerplexityResponse.self, from: data)
+        guard let content = apiResp.choices?[0].message?.content else { throw PplxError.noContent }
+        return content
+    }
+}
