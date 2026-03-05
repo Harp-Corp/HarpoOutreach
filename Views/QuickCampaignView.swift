@@ -514,13 +514,6 @@ struct QuickCampaignView: View {
                         Text("\(draftLeads.count) Drafts")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
-                        Button(action: { showAddContact.toggle() }) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.caption)
-                                .foregroundStyle(Color.accentColor)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Kontakt manuell hinzufügen")
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 6)
@@ -542,7 +535,7 @@ struct QuickCampaignView: View {
                                 .textFieldStyle(.roundedBorder)
                                 .font(.caption)
                             HStack(spacing: 6) {
-                                Button("Hinzufügen") {
+                                Button("Hinzuf\u00fcgen") {
                                     addManualContact()
                                 }
                                 .buttonStyle(.borderedProminent)
@@ -559,7 +552,7 @@ struct QuickCampaignView: View {
                             }
                         }
                         .padding(8)
-                        .background(Color.accentColor.opacity(0.05))
+                        .background(Color.blue.opacity(0.05))
 
                         Divider()
                     }
@@ -617,6 +610,18 @@ struct QuickCampaignView: View {
                         }
                     }
                     .listStyle(.plain)
+
+                    Divider()
+
+                    // Gut sichtbarer Button zum Hinzufuegen
+                    Button(action: { showAddContact.toggle() }) {
+                        Label(showAddContact ? "Formular schlie\u00dfen" : "Kontakt hinzuf\u00fcgen", systemImage: showAddContact ? "xmark" : "plus")
+                            .font(.caption)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
                 }
                 .frame(minWidth: 220, idealWidth: 260, maxWidth: 300)
                 .background(Color(nsColor: .controlBackgroundColor))
