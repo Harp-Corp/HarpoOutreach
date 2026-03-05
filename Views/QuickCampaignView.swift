@@ -433,6 +433,12 @@ struct QuickCampaignView: View {
     @State private var editBody: String = ""
     @State private var editEmail: String = ""
 
+    // Manuellen Kontakt hinzufuegen
+    @State private var showAddContact = false
+    @State private var newContactName: String = ""
+    @State private var newContactCompany: String = ""
+    @State private var newContactEmail: String = ""
+
     /// Unsubscribe-Footer der immer am Ende jeder Email stehen muss
     private static let unsubscribeFooter = "\n\n---\nWenn Sie keine weiteren Nachrichten erhalten möchten, antworten Sie mit 'Abbestellen' oder schreiben Sie an: unsubscribe@harpocrates-corp.com"
 
@@ -508,11 +514,55 @@ struct QuickCampaignView: View {
                         Text("\(draftLeads.count) Drafts")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
+                        Button(action: { showAddContact.toggle() }) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Kontakt manuell hinzufügen")
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 6)
 
                     Divider()
+
+                    // Inline-Formular fuer manuelles Hinzufuegen
+                    if showAddContact {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Neuer Kontakt")
+                                .font(.caption.bold())
+                            TextField("Name", text: $newContactName)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.caption)
+                            TextField("Firma", text: $newContactCompany)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.caption)
+                            TextField("Email", text: $newContactEmail)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.caption)
+                            HStack(spacing: 6) {
+                                Button("Hinzufügen") {
+                                    addManualContact()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .font(.caption)
+                                .disabled(newContactName.isEmpty || newContactEmail.isEmpty)
+                                Button("Abbrechen") {
+                                    showAddContact = false
+                                    newContactName = ""
+                                    newContactCompany = ""
+                                    newContactEmail = ""
+                                }
+                                .buttonStyle(.bordered)
+                                .font(.caption)
+                            }
+                        }
+                        .padding(8)
+                        .background(Color.accentColor.opacity(0.05))
+
+                        Divider()
+                    }
 
                     List(selection: Binding<UUID?>(get: { reviewEditingLeadId }, set: { newVal in
                         if let id = newVal { selectLeadForEditing(id) }
@@ -534,10 +584,21 @@ struct QuickCampaignView: View {
                                 .buttonStyle(.plain)
 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(lead.name)
-                                        .font(.callout)
-                                        .lineLimit(1)
-                                    Text(lead.company)
+                                    HStack(spacing: 4) {
+                                        Text(lead.name)
+                                            .font(.callout)
+                                            .lineLimit(1)
+                                        if lead.isManuallyCreated {
+                                            Text("Manuell")
+                                                .font(.system(size: 9))
+                                                .padding(.horizontal, 4)
+                                                .padding(.vertical, 1)
+                                                .background(Color.green.opacity(0.15))
+                                                .cornerRadius(3)
+                                                .foregroundStyle(.green)
+                                        }
+                                    }
+                                    Text(lead.company.isEmpty ? lead.email : lead.company)
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
@@ -693,6 +754,32 @@ struct QuickCampaignView: View {
                 selectLeadForEditing(first.id)
             }
         }
+    }
+
+    /// Fuegt einen manuellen Kontakt mit leerem Email-Draft hinzu
+    private func addManualContact() {
+        let lead = Lead(
+            name: newContactName,
+            company: newContactCompany,
+            email: newContactEmail,
+            emailVerified: false,
+            status: .identified,
+            source: "Quick Campaign - Manual",
+            draftedEmail: OutboundEmail(
+                subject: "",
+                body: ""
+            ),
+            isManuallyCreated: true
+        )
+        vm.addLeadManually(lead)
+        // Neuen Kontakt automatisch auswaehlen und zum Editieren oeffnen
+        reviewSelectedLeads.insert(lead.id)
+        selectLeadForEditing(lead.id)
+        // Formular zuruecksetzen
+        newContactName = ""
+        newContactCompany = ""
+        newContactEmail = ""
+        showAddContact = false
     }
 
     /// Speichert den aktuellen Draft inkl. Email-Adresse und sorgt fuer Unsubscribe-Footer
