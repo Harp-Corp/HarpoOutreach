@@ -470,8 +470,11 @@ struct QuickCampaignView: View {
                 .buttonStyle(.bordered)
 
                 Button(action: {
-                    for id in reviewSelectedLeads {
-                        vm.approveEmail(for: id)
+                    // Verzoegert um View-Update-Konflikte zu vermeiden
+                    DispatchQueue.main.async {
+                        for id in reviewSelectedLeads {
+                            vm.approveEmail(for: id)
+                        }
                     }
                 }) {
                     Label("Auswahl freigeben (\(reviewSelectedLeads.count))", systemImage: "checkmark.seal.fill")
@@ -558,7 +561,10 @@ struct QuickCampaignView: View {
                     }
 
                     List(selection: Binding<UUID?>(get: { reviewEditingLeadId }, set: { newVal in
-                        if let id = newVal { selectLeadForEditing(id) }
+                        if let id = newVal {
+                            // Verzoegertes Ausfuehren um "Publishing changes from within view updates" zu vermeiden
+                            DispatchQueue.main.async { selectLeadForEditing(id) }
+                        }
                     })) {
                         ForEach(draftLeads) { lead in
                             HStack(spacing: 8) {
@@ -699,7 +705,7 @@ struct QuickCampaignView: View {
                         // Draft action bar
                         HStack {
                             Button("Änderungen speichern") {
-                                saveCurrentDraft(lead: lead)
+                                DispatchQueue.main.async { saveCurrentDraft(lead: lead) }
                             }
                             .buttonStyle(.bordered)
                             .font(.caption)
@@ -712,8 +718,10 @@ struct QuickCampaignView: View {
                                     .foregroundStyle(.green)
                             } else {
                                 Button(action: {
-                                    saveCurrentDraft(lead: lead)
-                                    vm.approveEmail(for: lead.id)
+                                    DispatchQueue.main.async {
+                                        saveCurrentDraft(lead: lead)
+                                        vm.approveEmail(for: lead.id)
+                                    }
                                 }) {
                                     Label("Freigeben", systemImage: "checkmark.seal")
                                         .font(.caption)
@@ -754,9 +762,9 @@ struct QuickCampaignView: View {
         .onAppear {
             // Pre-select all leads with drafts
             reviewSelectedLeads = Set(draftLeads.map { $0.id })
-            // Auto-select first lead for editing
+            // Auto-select first lead for editing (verzoegert um View-Update-Konflikte zu vermeiden)
             if let first = draftLeads.first {
-                selectLeadForEditing(first.id)
+                DispatchQueue.main.async { selectLeadForEditing(first.id) }
             }
         }
     }
@@ -779,7 +787,7 @@ struct QuickCampaignView: View {
         vm.addLeadManually(lead)
         // Neuen Kontakt automatisch auswaehlen und zum Editieren oeffnen
         reviewSelectedLeads.insert(lead.id)
-        selectLeadForEditing(lead.id)
+        DispatchQueue.main.async { selectLeadForEditing(lead.id) }
         // Formular zuruecksetzen
         newContactName = ""
         newContactCompany = ""
