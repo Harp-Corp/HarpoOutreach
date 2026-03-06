@@ -114,6 +114,7 @@ extension AppViewModel {
         currentSearchContacts = []
         do {
             let found = try await pplxService.findContacts(company: company, apiKey: settings.perplexityAPIKey)
+            print("[Prospecting] \(company.name): \(found.count) contacts from Perplexity")
             currentSearchContacts = found
             // Auto-add to main leads - dedup via DatabaseService + in-memory check
             let newLeads = found.filter { newLead in
@@ -123,11 +124,15 @@ extension AppViewModel {
                 }
                 && !DatabaseService.shared.leadExists(name: newLead.name, company: newLead.company)
             }
+            if newLeads.count < found.count {
+                print("[Prospecting] \(company.name): \(found.count - newLeads.count) contacts already exist, adding \(newLeads.count) new")
+            }
             leads.append(contentsOf: newLeads)
             saveLeads()
             currentStep = "\(found.count) contacts found at \(company.name) (\(newLeads.count) new)"
         } catch {
             errorMessage = "Error: \(error.localizedDescription)"
+            print("[Prospecting] Error finding contacts at \(company.name): \(error.localizedDescription)")
         }
         isLoading = false
     }

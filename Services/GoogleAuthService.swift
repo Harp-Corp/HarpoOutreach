@@ -25,9 +25,11 @@ class GoogleAuthService: ObservableObject {
     ].joined(separator: " ")
 
     // MARK: - Configure
-    // Nur Tokens loeschen wenn sich Client-Credentials geaendert haben
+    // Nur Tokens loeschen wenn sich Client-Credentials WIRKLICH geaendert haben
+    // (nicht beim ersten Aufruf wenn die Felder noch leer sind)
     func configure(clientID: String, clientSecret: String) {
-        let credentialsChanged = self.clientID != clientID || self.clientSecret != clientSecret
+        let isFirstConfigure = self.clientID.isEmpty && self.clientSecret.isEmpty
+        let credentialsChanged = !isFirstConfigure && (self.clientID != clientID || self.clientSecret != clientSecret)
         self.clientID = clientID
         self.clientSecret = clientSecret
         if credentialsChanged && !clientID.isEmpty {
@@ -36,7 +38,7 @@ class GoogleAuthService: ObservableObject {
         } else {
             // Gespeicherte Tokens laden falls vorhanden
             loadSavedTokens()
-            print("[GoogleAuth] configure() - Credentials unveraendert, bestehende Session behalten")
+            print("[GoogleAuth] configure() - Bestehende Session geladen (firstConfigure=\(isFirstConfigure))")
         }
     }
 

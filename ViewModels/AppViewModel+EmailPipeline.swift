@@ -16,8 +16,10 @@ extension AppViewModel {
     // MARK: - 4+5) Research + Draft Email (with dynamic subject generation - task 13)
     func draftEmail(for leadID: UUID) async {
         guard let idx = leads.firstIndex(where: { $0.id == leadID }) else { return }
-        guard leads[idx].emailVerified || leads[idx].isManuallyCreated else {
-            errorMessage = "Email must be verified first."; return
+        // Kontakte mit leerer Email-Adresse ueberspringen (Draft waere nutzlos)
+        guard !leads[idx].email.isEmpty || leads[idx].isManuallyCreated else {
+            print("[EmailPipeline] Skipping draft for \(leads[idx].name) - no email address")
+            return
         }
         isLoading = true; currentStep = "Researching challenges for \(leads[idx].company)..."
         do {
@@ -81,7 +83,8 @@ extension AppViewModel {
     }
 
     func draftAllEmails() async {
-        for lead in leads.filter({ ($0.emailVerified || $0.isManuallyCreated) && $0.draftedEmail == nil }) {
+        // Drafts fuer alle Leads erstellen die eine Email-Adresse haben (oder manuell angelegt wurden)
+        for lead in leads.filter({ (!$0.email.isEmpty || $0.isManuallyCreated) && $0.draftedEmail == nil }) {
             await draftEmail(for: lead.id)
         }
     }
