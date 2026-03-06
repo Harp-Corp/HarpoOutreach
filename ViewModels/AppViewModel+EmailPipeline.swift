@@ -84,8 +84,24 @@ extension AppViewModel {
 
     func draftAllEmails() async {
         // Drafts fuer alle Leads erstellen die eine Email-Adresse haben (oder manuell angelegt wurden)
-        for lead in leads.filter({ (!$0.email.isEmpty || $0.isManuallyCreated) && $0.draftedEmail == nil }) {
-            await draftEmail(for: lead.id)
+        let toDraft = leads.filter({ (!$0.email.isEmpty || $0.isManuallyCreated) && $0.draftedEmail == nil })
+        var created = 0
+        var failed = 0
+        for lead in toDraft {
+            do {
+                await draftEmail(for: lead.id)
+                if leads.first(where: { $0.id == lead.id })?.draftedEmail != nil {
+                    created += 1
+                } else {
+                    failed += 1
+                }
+            } catch {
+                print("[EmailPipeline] Draft failed for \(lead.name): \(error.localizedDescription)")
+                failed += 1
+            }
+        }
+        if failed > 0 {
+            print("[EmailPipeline] Drafts: \(created) created, \(failed) failed of \(toDraft.count) total")
         }
     }
 

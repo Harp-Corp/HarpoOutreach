@@ -39,7 +39,7 @@ class PerplexityService {
         return result.joined(separator: "\n")
     }
 
-    // MARK: - Generic API Call
+    // MARK: - Generic API Call (mit Retry bei temporaeren Fehlern)
     private func callAPI(systemPrompt: String, userPrompt: String, apiKey: String, maxTokens: Int = 4000) async throws -> String {
         let requestBody = PerplexityRequest(
             model: model,
@@ -51,23 +51,60 @@ class PerplexityService {
             web_search_options: .init(search_context_size: "high")
         )
 
-        var request = URLRequest(url: URL(string: apiURL)!)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(requestBody)
-        request.timeoutInterval = 60
+        let maxRetries = 3
+        var lastError: Error = PplxError.invalidResponse
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw PplxError.invalidResponse }
-        guard http.statusCode == 200 else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw PplxError.apiError(code: http.statusCode, message: String(body.prefix(300)))
+        for attempt in 1...maxRetries {
+            var request = URLRequest(url: URL(string: apiURL)!)
+            request.httpMethod = "POST"
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONEncoder().encode(requestBody)
+            request.timeoutInterval = 60
+
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard let http = response as? HTTPURLResponse else { throw PplxError.invalidResponse }
+
+                if http.statusCode == 200 {
+                    let apiResp = try JSONDecoder().decode(PerplexityResponse.self, from: data)
+                    guard let content = apiResp.choices?[0].message?.content else { throw PplxError.noContent }
+                    return content
+                }
+
+                // Temporaere Fehler (502, 503, 429) -> retry mit Backoff
+                let retryableCodes = [429, 500, 502, 503, 504]
+                if retryableCodes.contains(http.statusCode) && attempt < maxRetries {
+                    let delay = UInt64(attempt) * 3_000_000_000 // 3s, 6s
+                    print("[PerplexityAPI] HTTP \(http.statusCode) - Retry \(attempt)/\(maxRetries) in \(attempt * 3)s...")
+                    try? await Task.sleep(nanoseconds: delay)
+                    lastError = PplxError.apiError(code: http.statusCode, message: "Server temporarily unavailable (HTTP \(http.statusCode))")
+                    continue
+                }
+
+                // Nicht-temporaerer Fehler oder letzter Retry -> saubere Fehlermeldung
+                let body = String(data: data, encoding: .utf8) ?? ""
+                // HTML-Antworten kuerzen (z.B. Cloudflare 502-Seiten)
+                let cleanMessage = body.contains("<!DOCTYPE") || body.contains("<html")
+                    ? "Server temporarily unavailable (HTTP \(http.statusCode))"
+                    : String(body.prefix(300))
+                throw PplxError.apiError(code: http.statusCode, message: cleanMessage)
+
+            } catch let error as PplxError {
+                throw error  // Eigene Fehler direkt werfen
+            } catch {
+                // Netzwerkfehler (Timeout etc.) -> retry
+                if attempt < maxRetries {
+                    let delay = UInt64(attempt) * 3_000_000_000
+                    print("[PerplexityAPI] Network error - Retry \(attempt)/\(maxRetries): \(error.localizedDescription)")
+                    try? await Task.sleep(nanoseconds: delay)
+                    lastError = error
+                    continue
+                }
+                throw error
+            }
         }
-
-        let apiResp = try JSONDecoder().decode(PerplexityResponse.self, from: data)
-        guard let content = apiResp.choices?[0].message?.content else { throw PplxError.noContent }
-        return content
+        throw lastError
     }
 
     // MARK: - 1) Unternehmen finden (25 Ergebnisse) mit Mitarbeiterzahl
