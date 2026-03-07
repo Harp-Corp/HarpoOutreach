@@ -21,7 +21,7 @@ extension AppViewModel {
                     let found = try await pplxService.findCompanies(industry: industry, region: region, apiKey: settings.perplexityAPIKey)
                     let newOnes = found.filter { new in
                         !companies.contains { $0.name.lowercased() == new.name.lowercased() }
-                        && !DatabaseService.shared.companyExists(name: new.name)
+                        && !db.companyExists(name: new.name)
                     }
                     companies.append(contentsOf: newOnes)
                 } catch {
@@ -75,7 +75,7 @@ extension AppViewModel {
                     let found = try await pplxService.findCompanies(industry: industry, region: region, apiKey: settings.perplexityAPIKey)
                     let newOnes = found.filter { new in
                         !companies.contains { $0.name.lowercased() == new.name.lowercased() }
-                        && !DatabaseService.shared.companyExists(name: new.name)
+                        && !db.companyExists(name: new.name)
                     }
                     companies.append(contentsOf: newOnes)
                     consecutiveFailures = 0
@@ -122,7 +122,7 @@ extension AppViewModel {
                     $0.name.lowercased() == newLead.name.lowercased()
                     && $0.company.lowercased() == newLead.company.lowercased()
                 }
-                && !DatabaseService.shared.leadExists(name: newLead.name, company: newLead.company)
+                && !db.leadExists(name: newLead.name, company: newLead.company)
             }
             if newLeads.count < found.count {
                 print("[Prospecting] \(company.name): \(found.count - newLeads.count) contacts already exist, adding \(newLeads.count) new")
@@ -167,7 +167,7 @@ extension AppViewModel {
     // MARK: - Manual Entry
     func addCompanyManually(_ company: Company) {
         let alreadyInMemory = companies.contains { $0.name.lowercased() == company.name.lowercased() }
-        let alreadyInDB = DatabaseService.shared.companyExists(name: company.name)
+        let alreadyInDB = db.companyExists(name: company.name)
         if !alreadyInMemory && !alreadyInDB {
             companies.append(company)
             saveCompanies()
@@ -182,7 +182,7 @@ extension AppViewModel {
             $0.name.lowercased() == lead.name.lowercased()
             && $0.company.lowercased() == lead.company.lowercased()
         }
-        let alreadyInDB = DatabaseService.shared.leadExists(name: lead.name, company: lead.company)
+        let alreadyInDB = db.leadExists(name: lead.name, company: lead.company)
         if !alreadyInMemory && !alreadyInDB {
             leads.append(lead)
             saveLeads()

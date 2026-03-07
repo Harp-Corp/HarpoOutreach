@@ -20,6 +20,9 @@ class AppViewModel: ObservableObject {
     lazy var gmailService = GmailService(authService: authService)
     lazy var sheetsService = GoogleSheetsService(authService: authService)
 
+    // MARK: - Convenience accessor for DatabaseService
+    var db: DatabaseService { DatabaseService.shared }
+
     // MARK: - Published State
     @Published var settings = AppSettings()
     @Published var companies: [Company] = []
@@ -27,12 +30,13 @@ class AppViewModel: ObservableObject {
     @Published var replies: [GmailService.GmailMessage] = []
     @Published var sheetData: [[String]] = []
     @Published var socialPosts: [SocialPost] = []
+    @Published var addressBook: [AddressBookEntry] = []
     @Published var isLoading = false
     @Published var statusMessage = ""
     @Published var errorMessage = ""
     @Published var currentStep = ""
 
-        // Industry / region / size filter for Prospecting search (multi-select via settings)
+    // Industry / region / size filter for Prospecting search (multi-select via settings)
     // NOTE: Removed legacy selectedIndustryFilter/selectedRegionFilter single-select.
     // All filtering now uses settings.selectedIndustries, settings.selectedRegions, settings.selectedCompanySizes
     // Per-search contact results (only current search)
@@ -41,7 +45,7 @@ class AppViewModel: ObservableObject {
     // Cancellable task handle
     var currentTask: Task<Void, Never>?
 
-    // MARK: - Computed: sender email (task 10 - configurable)
+    // MARK: - Computed: sender email (configurable)
     var senderEmail: String { settings.senderEmail }
 
     // MARK: - Legacy JSON URLs (used only for migration)
@@ -70,13 +74,8 @@ class AppViewModel: ObservableObject {
         // MARK: Migration: JSON to SQLite
         migrateFromJSONIfNeeded()
 
-        // Load from SQLite (DatabaseService)
-        leads = DatabaseService.shared.loadLeads()
-        companies = DatabaseService.shared.loadCompanies()
-
-        // Social posts: check for legacy JSON first, then use in-memory array
-        loadSocialPostsFromLegacy()
-        migrateSocialPostFooters()
+        // Load all data from SQLite (DatabaseService)
+        loadAll()
 
         configureAuth()
 
@@ -88,6 +87,25 @@ class AppViewModel: ObservableObject {
         authCancellable = authService.objectWillChange.sink { [weak self] _ in
             self?.objectWillChange.send()
         }
+    }
+
+    // MARK: - Load All Data
+    /// Loads all persisted data from SQLite. Called at startup and after destructive operations.
+    func loadAll() {
+        leads = db.loadLeads()
+        companies = db.loadCompanies()
+
+        // Social posts: check for legacy JSON first, then use in-memory array
+        loadSocialPostsFromLegacy()
+        migrateSocialPostFooters()
+
+        // Address book
+        loadAddressBook()
+    }
+
+    // MARK: - Address Book Loading
+    func loadAddressBook() {
+        addressBook = db.loadAddressBook()
     }
 
     // MARK: - Migration: JSON to SQLite
@@ -117,7 +135,7 @@ class AppViewModel: ObservableObject {
                let saved = try? JSONDecoder().decode([SocialPost].self, from: data) {
                 migratedSocialPosts = saved
             }
-            DatabaseService.shared.migrateFromJSON(
+            db.migrateFromJSON(
                 leads: migratedLeads,
                 companies: migratedCompanies,
                 socialPosts: migratedSocialPosts
@@ -170,11 +188,11 @@ class AppViewModel: ObservableObject {
     // MARK: - Persistence (via DatabaseService)
 
     func saveLeads() {
-        DatabaseService.shared.saveLeads(leads)
+        db.saveLeads(leads)
     }
 
     func saveCompanies() {
-        DatabaseService.shared.saveCompanies(companies)
+        db.saveCompanies(companies)
     }
 
     // Social posts still use in-memory + JSON (no DB schema for them)
@@ -210,6 +228,79 @@ class AppViewModel: ObservableObject {
             leads[idx] = lead
             saveLeads()
         }
+    }
+
+    // MARK: - Address Book Operations
+
+    /// Copy a verified lead into the address book (mirrors web /address-book/from-lead/{lead_id}).
+    func addLeadToAddressBook(leadId: UUID) {
+        guard let lead = leads.first(where: { $0.id == leadId }) else {
+            errorMessage = "Lead not found."
+            return
+        }
+        guard lead.emailVerified else {
+            errorMessage = "Only verified contacts can be added to the address book."
+            return
+        }
+        guard !db.addressBookEntryExists(email: lead.email) else {
+            errorMessage = "\(lead.email) is already in the address book."
+            return
+        }
+        let entry = db.addLeadToAddressBook(lead: lead)
+        addressBook.append(entry)
+        statusMessage = "\(lead.name) added to address book."
+    }
+
+    /// Batch: add all verified leads that are not yet in the address book.
+    func addAllVerifiedToAddressBook() {
+        let verifiedLeads = leads.filter {
+            $0.emailVerified && !$0.email.isEmpty && !db.addressBookEntryExists(email: $0.email)
+        }
+        guard !verifiedLeads.isEmpty else {
+            statusMessage = "No new verified contacts to add."
+            return
+        }
+        var added = 0
+        for lead in verifiedLeads {
+            let entry = db.addLeadToAddressBook(lead: lead)
+            addressBook.append(entry)
+            added += 1
+        }
+        statusMessage = "\(added) contacts added to address book."
+    }
+
+    /// Soft delete: mark contact as Blocked (mirrors web soft-delete / status change).
+    func removeFromAddressBook(entryId: UUID) {
+        guard let idx = addressBook.firstIndex(where: { $0.id == entryId }) else { return }
+        db.updateAddressBookStatus(id: entryId, contactStatus: "Blocked", optedOut: true)
+        db.addToBlocklist(email: addressBook[idx].email, reason: "Removed from address book")
+        addressBook[idx].contactStatus = "Blocked"
+        addressBook[idx].optedOut = true
+        statusMessage = "\(addressBook[idx].name) marked as blocked."
+    }
+
+    /// Hard delete: permanently remove the contact (mirrors web /address-book/{id}/permanent).
+    func permanentlyDeleteFromAddressBook(entryId: UUID) {
+        db.permanentlyDeleteAddressBookEntry(entryId)
+        addressBook.removeAll { $0.id == entryId }
+        statusMessage = "Contact permanently deleted."
+    }
+
+    /// Change the contact_status of an address book entry.
+    /// Valid values: "Active" | "Blocked" — mirrors web app contact_status field.
+    func updateAddressBookStatus(entryId: UUID, status: String) {
+        guard let idx = addressBook.firstIndex(where: { $0.id == entryId }) else { return }
+        let normalizedStatus = status == "active" ? "Active" : (status == "blocked" ? "Blocked" : status)
+        let optedOut = normalizedStatus == "Blocked"
+        db.updateAddressBookStatus(id: entryId, contactStatus: normalizedStatus, optedOut: optedOut)
+        // Sync blocklist
+        if optedOut {
+            db.addToBlocklist(email: addressBook[idx].email, reason: "Opt-out via address book")
+        } else {
+            db.removeFromBlocklist(email: addressBook[idx].email)
+        }
+        addressBook[idx].contactStatus = normalizedStatus
+        addressBook[idx].optedOut = optedOut
     }
 
     // MARK: - Purge
@@ -294,5 +385,7 @@ class AppViewModel: ObservableObject {
         }.count
     }
     var statsOptedOut: Int { leads.filter { $0.optedOut }.count }
-    var statsBlocked: Int { DatabaseService.shared.loadBlocklist().count }
+    var statsBlocked: Int { db.loadBlocklist().count }
+    var statsAddressBook: Int { addressBook.count }
+    var statsAddressBookActive: Int { addressBook.filter { $0.contactStatus == "Active" }.count }
 }

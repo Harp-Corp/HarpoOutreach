@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var vm: AppViewModel
     @State private var purgeConfirmation = false
+    @State private var clearBlocklistConfirmation = false
 
     var body: some View {
         ScrollView {
@@ -20,6 +21,7 @@ struct SettingsView: View {
                 industrySection
                 regionSection
                 companySizeSection
+                adminSection
                 dataManagementSection
 
                 Button("Einstellungen speichern") {
@@ -56,14 +58,12 @@ struct SettingsView: View {
 
                 HStack {
                     if vm.authService.isAuthenticated {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                         Text("Verbunden: \(vm.authService.userEmail)")
                         Spacer()
                         Button("Abmelden") { vm.authService.logout() }
                     } else {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.red)
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
                         Text("Nicht verbunden")
                         Spacer()
                         Button("Google Login") {
@@ -124,7 +124,7 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Batch Settings (NEW)
+    // MARK: - Batch Settings
     private var batchSection: some View {
         GroupBox("Email Versand") {
             VStack(alignment: .leading, spacing: 8) {
@@ -175,7 +175,6 @@ struct SettingsView: View {
         }
     }
 
-    // NEW: CompanySize filter section
     private var companySizeSection: some View {
         GroupBox("Unternehmensgroesse") {
             VStack(alignment: .leading, spacing: 6) {
@@ -191,50 +190,39 @@ struct SettingsView: View {
         }
     }
 
-    private func industryBinding(_ industry: Industry) -> Binding<Bool> {
-        Binding(
-            get: { vm.settings.selectedIndustries.contains(industry.rawValue) },
-            set: { isOn in
-                if isOn {
-                    if !vm.settings.selectedIndustries.contains(industry.rawValue) {
-                        vm.settings.selectedIndustries.append(industry.rawValue)
+    // MARK: - Admin Section (Blocklist management)
+    private var adminSection: some View {
+        GroupBox("Admin-Funktionen") {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Blocklist")
+                            .font(.callout.bold())
+                        Text("\(vm.statsBlocked) Einträge in der Blocklist (Opt-Outs, blockierte Adressen)")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text("Beim Leeren werden alle opted_out-Flags zurückgesetzt.")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
-                } else {
-                    vm.settings.selectedIndustries.removeAll { $0 == industry.rawValue }
+                    Spacer()
+                    Button(role: .destructive) {
+                        clearBlocklistConfirmation = true
+                    } label: {
+                        Label("Blocklist leeren", systemImage: "hand.raised.slash")
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(vm.statsBlocked == 0)
                 }
             }
-        )
-    }
-
-    private func regionBinding(_ region: Region) -> Binding<Bool> {
-        Binding(
-            get: { vm.settings.selectedRegions.contains(region.rawValue) },
-            set: { isOn in
-                if isOn {
-                    if !vm.settings.selectedRegions.contains(region.rawValue) {
-                        vm.settings.selectedRegions.append(region.rawValue)
-                    }
-                } else {
-                    vm.settings.selectedRegions.removeAll { $0 == region.rawValue }
-                }
+            .padding(8)
+        }
+        .alert("Blocklist leeren?", isPresented: $clearBlocklistConfirmation) {
+            Button("Abbrechen", role: .cancel) { }
+            Button("Leeren", role: .destructive) {
+                vm.clearAllBlocklist()
             }
-        )
-    }
-
-    // NEW: CompanySize binding
-    private func companySizeBinding(_ size: CompanySize) -> Binding<Bool> {
-        Binding(
-            get: { vm.settings.selectedCompanySizes.contains(size.rawValue) },
-            set: { isOn in
-                if isOn {
-                    if !vm.settings.selectedCompanySizes.contains(size.rawValue) {
-                        vm.settings.selectedCompanySizes.append(size.rawValue)
-                    }
-                } else {
-                    vm.settings.selectedCompanySizes.removeAll { $0 == size.rawValue }
-                }
-            }
-        )
+        } message: {
+            Text("Alle \(vm.statsBlocked) Einträge in der Blocklist werden unwiderruflich gelöscht und alle opted_out-Flags werden zurückgesetzt.")
+        }
     }
 
     // MARK: - Daten-Management
@@ -243,7 +231,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     VStack(alignment: .leading) {
-                        Text("Datenbasis: \(vm.leads.count) Kontakte, \(vm.companies.count) Unternehmen")
+                        Text("Datenbasis: \(vm.leads.count) Kontakte, \(vm.companies.count) Unternehmen, \(vm.statsAddressBook) Adressbuch-Einträge")
                             .font(.callout)
                         Text("Alle Daten ausser bestimmtes Unternehmen loeschen")
                             .font(.caption).foregroundStyle(.secondary)
@@ -283,5 +271,50 @@ struct SettingsView: View {
         } message: {
             Text("Alle Kontakte und Unternehmen ausser 'axlimits' werden geloescht. Diese Aktion kann nicht rueckgaengig gemacht werden.")
         }
+    }
+
+    private func industryBinding(_ industry: Industry) -> Binding<Bool> {
+        Binding(
+            get: { vm.settings.selectedIndustries.contains(industry.rawValue) },
+            set: { isOn in
+                if isOn {
+                    if !vm.settings.selectedIndustries.contains(industry.rawValue) {
+                        vm.settings.selectedIndustries.append(industry.rawValue)
+                    }
+                } else {
+                    vm.settings.selectedIndustries.removeAll { $0 == industry.rawValue }
+                }
+            }
+        )
+    }
+
+    private func regionBinding(_ region: Region) -> Binding<Bool> {
+        Binding(
+            get: { vm.settings.selectedRegions.contains(region.rawValue) },
+            set: { isOn in
+                if isOn {
+                    if !vm.settings.selectedRegions.contains(region.rawValue) {
+                        vm.settings.selectedRegions.append(region.rawValue)
+                    }
+                } else {
+                    vm.settings.selectedRegions.removeAll { $0 == region.rawValue }
+                }
+            }
+        )
+    }
+
+    private func companySizeBinding(_ size: CompanySize) -> Binding<Bool> {
+        Binding(
+            get: { vm.settings.selectedCompanySizes.contains(size.rawValue) },
+            set: { isOn in
+                if isOn {
+                    if !vm.settings.selectedCompanySizes.contains(size.rawValue) {
+                        vm.settings.selectedCompanySizes.append(size.rawValue)
+                    }
+                } else {
+                    vm.settings.selectedCompanySizes.removeAll { $0 == size.rawValue }
+                }
+            }
+        )
     }
 }

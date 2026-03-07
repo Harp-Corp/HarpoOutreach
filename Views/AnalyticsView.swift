@@ -46,6 +46,9 @@ struct OutreachLogContent: View {
   @Binding var outreachLog: [OutreachLogEntry]
   @Binding var filterAction: String
 
+  @State private var clearBlocklistConfirm = false
+  @State private var checkingReplies = false
+
   private let dateFormatter: DateFormatter = {
     let df = DateFormatter()
     df.dateStyle = .medium
@@ -64,6 +67,11 @@ struct OutreachLogContent: View {
   var optedOut: Int { outreachLog.filter { $0.action == "opted_out" }.count }
   var followUpsSent: Int { outreachLog.filter { $0.action == "follow_up_sent" }.count }
 
+  /// Sent leads with stored gmailThreadId
+  private var sentLeadsWithThreads: [Lead] {
+    vm.leads.filter { !$0.gmailThreadId.isEmpty && $0.dateEmailSent != nil }
+  }
+
   var body: some View {
     VStack(spacing: 0) {
       // KPI Cards
@@ -72,8 +80,70 @@ struct OutreachLogContent: View {
         kpiCard(title: "Follow-Ups", value: "\(followUpsSent)", icon: "arrow.uturn.forward", color: .orange)
         kpiCard(title: "Antworten", value: "\(repliesReceived)", icon: "envelope.open.fill", color: .green)
         kpiCard(title: "Opt-Outs", value: "\(optedOut)", icon: "exclamationmark.triangle.fill", color: .red)
+        kpiCard(title: "Blocklist", value: "\(vm.statsBlocked)", icon: "hand.raised.fill", color: .purple)
       }
       .padding()
+
+      // Action bar: reply check, blocklist management
+      HStack(spacing: 12) {
+        // Thread-based reply check
+        Button(action: {
+          checkingReplies = true
+          Task {
+            await vm.checkRepliesViaThreads()
+            outreachLog = DatabaseService.shared.loadOutreachLog()
+            checkingReplies = false
+          }
+        }) {
+          HStack(spacing: 4) {
+            if checkingReplies {
+              ProgressView().controlSize(.small)
+            } else {
+              Image(systemName: "arrow.triangle.branch")
+            }
+            Text(checkingReplies ? "Prüfe Threads..." : "Antworten prüfen (Thread)")
+          }
+          .font(.caption)
+        }
+        .buttonStyle(.bordered)
+        .disabled(checkingReplies || sentLeadsWithThreads.isEmpty)
+
+        // Thread tracking status
+        if !sentLeadsWithThreads.isEmpty {
+          HStack(spacing: 4) {
+            Image(systemName: "checkmark.circle.fill")
+              .font(.caption2).foregroundStyle(.green)
+            Text("\(sentLeadsWithThreads.count) Threads aktiv")
+              .font(.caption2).foregroundStyle(.secondary)
+          }
+        }
+
+        Spacer()
+
+        // Blocklist info + clear button
+        if vm.statsBlocked > 0 {
+          Text("\(vm.statsBlocked) in Blocklist")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+
+        Button(action: { clearBlocklistConfirm = true }) {
+          Label("Blocklist leeren", systemImage: "hand.raised.slash")
+            .font(.caption)
+        }
+        .buttonStyle(.bordered)
+        .foregroundStyle(.red)
+        .disabled(vm.statsBlocked == 0)
+
+        // Refresh log
+        Button("Aktualisieren") {
+          outreachLog = DatabaseService.shared.loadOutreachLog()
+        }
+        .buttonStyle(.bordered)
+        .font(.caption)
+      }
+      .padding(.horizontal)
+      .padding(.bottom, 4)
 
       // Filter bar
       HStack {
@@ -88,24 +158,191 @@ struct OutreachLogContent: View {
         .pickerStyle(.segmented)
         .frame(maxWidth: 600)
         Spacer()
-        Button("Aktualisieren") {
-          outreachLog = DatabaseService.shared.loadOutreachLog()
-        }
-        .buttonStyle(.bordered)
       }
       .padding(.horizontal)
       .padding(.bottom, 8)
 
       Divider()
 
-      // Log Table
-      if filteredLog.isEmpty {
+      // Sent leads list with Reset/Resend per lead
+      if vm.leads.filter({ $0.dateEmailSent != nil }).isEmpty && filteredLog.isEmpty {
         VStack {
           Spacer()
           Image(systemName: "doc.text.magnifyingglass")
             .font(.system(size: 48)).foregroundStyle(.secondary)
           Text("Keine Outreach-Eintraege gefunden.")
           Text("Sende Emails, um Aktivitaeten zu protokollieren.")
+            .font(.caption).foregroundStyle(.tertiary)
+          Spacer()
+        }
+      } else {
+        // Split: sent leads with actions (top) + outreach log table (bottom)
+        VSplitView {
+          // Sent leads with per-lead Reset/Resend
+          sentLeadsSection
+            .frame(minHeight: 120, idealHeight: 200)
+
+          // Outreach log table
+          outreachLogTable
+            .frame(minHeight: 200)
+        }
+      }
+    }
+    .alert("Blocklist leeren?", isPresented: $clearBlocklistConfirm) {
+      Button("Abbrechen", role: .cancel) { }
+      Button("Leeren", role: .destructive) {
+        vm.clearAllBlocklist()
+        outreachLog = DatabaseService.shared.loadOutreachLog()
+      }
+    } message: {
+      Text("Alle \(vm.statsBlocked) Einträge in der Blocklist werden gelöscht und alle opted_out-Flags werden zurückgesetzt. Diese Aktion kann nicht rückgängig gemacht werden.")
+    }
+  }
+
+  // MARK: - Sent Leads Section with Reset/Resend
+  private var sentLeadsSection: some View {
+    VStack(spacing: 0) {
+      HStack {
+        Text("Gesendete Emails")
+          .font(.caption.bold()).foregroundStyle(.secondary)
+        Spacer()
+        Text("\(vm.leads.filter { $0.dateEmailSent != nil }.count) Emails")
+          .font(.caption2).foregroundStyle(.secondary)
+      }
+      .padding(.horizontal)
+      .padding(.vertical, 6)
+
+      Divider()
+
+      if vm.leads.filter({ $0.dateEmailSent != nil }).isEmpty {
+        HStack {
+          Spacer()
+          Text("Noch keine Emails gesendet.")
+            .font(.caption).foregroundStyle(.tertiary)
+          Spacer()
+        }
+        .padding()
+      } else {
+        List {
+          ForEach(vm.leads.filter { $0.dateEmailSent != nil }.sorted(by: {
+            ($0.dateEmailSent ?? .distantPast) > ($1.dateEmailSent ?? .distantPast)
+          })) { lead in
+            sentLeadRow(lead: lead)
+          }
+        }
+        .listStyle(.plain)
+      }
+    }
+    .background(Color(nsColor: .controlBackgroundColor))
+  }
+
+  private func sentLeadRow(lead: Lead) -> some View {
+    HStack(spacing: 8) {
+      // Status dot
+      Circle()
+        .fill(lead.optedOut ? Color.red : (lead.replyReceived.isEmpty ? Color.blue : Color.green))
+        .frame(width: 8, height: 8)
+
+      VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 6) {
+          Text(lead.name)
+            .font(.callout)
+            .lineLimit(1)
+          Text("@ \(lead.company)")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+
+          // Thread ID indicator
+          if !lead.gmailThreadId.isEmpty {
+            Image(systemName: "arrow.triangle.branch")
+              .font(.caption2).foregroundStyle(.indigo)
+              .help("Thread ID: \(lead.gmailThreadId)")
+          }
+        }
+
+        // Reply text (if any)
+        if !lead.replyReceived.isEmpty {
+          HStack(spacing: 4) {
+            Image(systemName: "envelope.open.fill")
+              .font(.caption2).foregroundStyle(.green)
+            Text(lead.replyReceived)
+              .font(.caption2)
+              .foregroundStyle(.green)
+              .lineLimit(2)
+          }
+        }
+
+        if let sentDate = lead.dateEmailSent {
+          Text("Gesendet: \(sentDate.formatted(date: .abbreviated, time: .shortened))")
+            .font(.caption2).foregroundStyle(.secondary)
+        }
+      }
+
+      Spacer()
+
+      // Opt-out badge
+      if lead.optedOut {
+        Text("Opt-Out")
+          .font(.system(size: 9))
+          .padding(.horizontal, 5).padding(.vertical, 2)
+          .background(Color.red.opacity(0.12))
+          .cornerRadius(3)
+          .foregroundStyle(.red)
+      } else if !lead.replyReceived.isEmpty {
+        Text("Geantwortet")
+          .font(.system(size: 9))
+          .padding(.horizontal, 5).padding(.vertical, 2)
+          .background(Color.green.opacity(0.12))
+          .cornerRadius(3)
+          .foregroundStyle(.green)
+      }
+
+      // Erneut senden
+      Button(action: {
+        vm.resendLead(id: lead.id)
+      }) {
+        Label("Erneut senden", systemImage: "arrow.clockwise")
+          .font(.caption)
+      }
+      .buttonStyle(.bordered)
+      .controlSize(.small)
+
+      // Zurücksetzen
+      Button(action: {
+        vm.resetLead(id: lead.id)
+      }) {
+        Label("Zurücksetzen", systemImage: "trash")
+          .font(.caption)
+      }
+      .buttonStyle(.bordered)
+      .controlSize(.small)
+      .foregroundStyle(.red)
+    }
+    .padding(.vertical, 4)
+  }
+
+  // MARK: - Outreach Log Table
+  private var outreachLogTable: some View {
+    VStack(spacing: 0) {
+      HStack {
+        Text("Outreach Log")
+          .font(.caption.bold()).foregroundStyle(.secondary)
+        Spacer()
+        Text("\(filteredLog.count) Einträge")
+          .font(.caption2).foregroundStyle(.secondary)
+      }
+      .padding(.horizontal)
+      .padding(.vertical, 6)
+
+      Divider()
+
+      if filteredLog.isEmpty {
+        VStack {
+          Spacer()
+          Image(systemName: "doc.text.magnifyingglass")
+            .font(.system(size: 36)).foregroundStyle(.secondary)
+          Text("Keine Einträge für diesen Filter.")
             .font(.caption).foregroundStyle(.tertiary)
           Spacer()
         }

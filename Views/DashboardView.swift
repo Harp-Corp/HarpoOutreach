@@ -11,6 +11,7 @@ struct DashboardView: View {
                 DashboardHeaderView(vm: vm, showQuickCampaign: $showQuickCampaign)
                 DashboardStatusBanner(vm: vm)
                 DashboardKPIGrid(vm: vm)
+                DashboardAddressBookStats(vm: vm)
                 DashboardCampaignView(vm: vm)
                 DashboardSocialPostsView(vm: vm)
                 DashboardPipelineView(vm: vm)
@@ -39,8 +40,7 @@ struct DashboardHeaderView: View {
             }
             Spacer()
             if vm.isLoading {
-                ProgressView()
-                    .controlSize(.regular)
+                ProgressView().controlSize(.regular)
             }
             Button {
                 showQuickCampaign = true
@@ -62,10 +62,8 @@ struct DashboardStatusBanner: View {
         VStack(spacing: 12) {
             if !vm.currentStep.isEmpty {
                 HStack {
-                    Image(systemName: "info.circle.fill")
-                        .foregroundStyle(.blue)
-                    Text("\(vm.currentStep)")
-                        .font(.callout)
+                    Image(systemName: "info.circle.fill").foregroundStyle(.blue)
+                    Text("\(vm.currentStep)").font(.callout)
                     Spacer()
                 }
                 .padding(12)
@@ -74,16 +72,23 @@ struct DashboardStatusBanner: View {
             }
             if !vm.errorMessage.isEmpty {
                 HStack {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
-                    Text(vm.errorMessage)
-                        .font(.callout)
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
+                    Text(vm.errorMessage).font(.callout)
                     Spacer()
-                    Button("X") { vm.errorMessage = "" }
-                        .buttonStyle(.plain)
+                    Button("X") { vm.errorMessage = "" }.buttonStyle(.plain)
                 }
                 .padding(12)
                 .background(.red.opacity(0.1))
+                .cornerRadius(8)
+            }
+            if !vm.statusMessage.isEmpty {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                    Text(vm.statusMessage).font(.callout)
+                    Spacer()
+                }
+                .padding(12)
+                .background(.green.opacity(0.1))
                 .cornerRadius(8)
             }
         }
@@ -116,6 +121,72 @@ struct DashboardKPIGrid: View {
     }
 }
 
+// MARK: - Address Book & Blocklist Stats (NEW)
+struct DashboardAddressBookStats: View {
+    @ObservedObject var vm: AppViewModel
+
+    /// Leads with a stored gmailThreadId (thread tracking active)
+    private var leadsWithThreads: Int {
+        vm.leads.filter { !$0.gmailThreadId.isEmpty && $0.dateEmailSent != nil }.count
+    }
+
+    var body: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Image(systemName: "book.closed.fill").foregroundStyle(.teal)
+                    Text("Adressbuch & Tracking")
+                        .font(.headline)
+                    Spacer()
+                    if leadsWithThreads > 0 {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.triangle.branch")
+                                .font(.caption2).foregroundStyle(.indigo)
+                            Text("\(leadsWithThreads) Threads aktiv")
+                                .font(.caption).foregroundStyle(.indigo)
+                        }
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Color.indigo.opacity(0.1))
+                        .cornerRadius(6)
+                    }
+                }
+                LazyVGrid(columns: [
+                    GridItem(.flexible()),
+                    GridItem(.flexible()),
+                    GridItem(.flexible()),
+                    GridItem(.flexible())
+                ], spacing: 12) {
+                    StatCard(
+                        title: "Adressbuch",
+                        value: "\(vm.statsAddressBook)",
+                        icon: "book.closed.fill",
+                        color: .teal
+                    )
+                    StatCard(
+                        title: "Aktive Kontakte",
+                        value: "\(vm.statsAddressBookActive)",
+                        icon: "person.fill.checkmark",
+                        color: .green
+                    )
+                    StatCard(
+                        title: "Blocklist",
+                        value: "\(vm.statsBlocked)",
+                        icon: "hand.raised.fill",
+                        color: .red
+                    )
+                    StatCard(
+                        title: "Gmail Threads",
+                        value: "\(leadsWithThreads)",
+                        icon: "arrow.triangle.branch",
+                        color: .indigo
+                    )
+                }
+            }
+            .padding(4)
+        }
+    }
+}
+
 // MARK: - Campaign Stats
 struct DashboardCampaignView: View {
     @ObservedObject var vm: AppViewModel
@@ -124,17 +195,14 @@ struct DashboardCampaignView: View {
         GroupBox {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Image(systemName: "megaphone.fill")
-                        .foregroundStyle(.indigo)
-                    Text("Campaigns")
-                        .font(.headline)
+                    Image(systemName: "megaphone.fill").foregroundStyle(.indigo)
+                    Text("Campaigns").font(.headline)
                     Spacer()
                     let rate = vm.statsConversionRate
                     Text(String(format: "%.1f%% Conversion", rate))
                         .font(.caption.bold())
                         .foregroundStyle(rate > 10 ? .green : rate > 5 ? .orange : .secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
                         .background((rate > 10 ? Color.green : rate > 5 ? Color.orange : Color.gray).opacity(0.12))
                         .cornerRadius(6)
                 }
@@ -152,20 +220,17 @@ struct DashboardCampaignView: View {
                 if !vm.statsIndustryCounts.isEmpty {
                     Divider()
                     Text("Unternehmen nach Branche")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(.secondary)
                     let maxCount = vm.statsIndustryCounts.first?.count ?? 1
                     ForEach(vm.statsIndustryCounts.prefix(4), id: \.industry) { entry in
                         HStack(spacing: 8) {
                             Text(entry.industry)
-                                .font(.caption)
-                                .lineLimit(1)
+                                .font(.caption).lineLimit(1)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             ProgressView(value: Double(entry.count), total: Double(maxCount))
                                 .frame(width: 120)
                             Text("\(entry.count)")
-                                .font(.caption.bold())
-                                .frame(width: 28, alignment: .trailing)
+                                .font(.caption.bold()).frame(width: 28, alignment: .trailing)
                         }
                     }
                 }
@@ -183,19 +248,14 @@ struct DashboardSocialPostsView: View {
         GroupBox {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Image(systemName: "text.bubble.fill")
-                        .foregroundStyle(.blue)
-                    Text("LinkedIn Posts")
-                        .font(.headline)
+                    Image(systemName: "text.bubble.fill").foregroundStyle(.blue)
+                    Text("LinkedIn Posts").font(.headline)
                     Spacer()
                     if vm.statsSocialPostsThisWeek > 0 {
                         Text("\(vm.statsSocialPostsThisWeek) diese Woche")
-                            .font(.caption.bold())
-                            .foregroundStyle(.blue)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(6)
+                            .font(.caption.bold()).foregroundStyle(.blue)
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(Color.blue.opacity(0.1)).cornerRadius(6)
                     }
                 }
                 LazyVGrid(columns: [
@@ -211,29 +271,22 @@ struct DashboardSocialPostsView: View {
                 }
                 if !vm.socialPosts.isEmpty {
                     Divider()
-                    Text("Letzte Posts")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Text("Letzte Posts").font(.caption).foregroundStyle(.secondary)
                     ForEach(vm.socialPosts.prefix(3)) { post in
                         HStack(alignment: .top, spacing: 8) {
                             Image(systemName: post.platform == .linkedin ? "link" : "bird")
-                                .foregroundStyle(.blue)
-                                .frame(width: 16)
+                                .foregroundStyle(.blue).frame(width: 16)
                             Text(post.content.components(separatedBy: "\n").first ?? "")
-                                .font(.caption)
-                                .lineLimit(2)
+                                .font(.caption).lineLimit(2)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Text(post.createdDate, style: .date)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .font(.caption2).foregroundStyle(.secondary)
                         }
                         .padding(.vertical, 2)
                     }
                 } else {
                     Text("Noch keine Posts. Generiere deinen ersten LinkedIn Post.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 4)
+                        .font(.caption).foregroundStyle(.secondary).padding(.vertical, 4)
                 }
             }
             .padding(4)
@@ -272,12 +325,10 @@ struct DashboardIndustryRow: View {
         let total = max(leads.count, 1)
         HStack {
             Label(industry.shortName, systemImage: industry.icon)
-                .font(.caption)
-                .frame(width: 160, alignment: .leading)
+                .font(.caption).frame(width: 160, alignment: .leading)
             ProgressView(value: Double(matched.count), total: Double(total))
             Text("\(matched.count)")
-                .font(.caption.bold())
-                .frame(width: 28, alignment: .trailing)
+                .font(.caption.bold()).frame(width: 28, alignment: .trailing)
         }
     }
 }
@@ -290,8 +341,7 @@ struct DashboardRecentView: View {
         GroupBox("Letzte Kontakte") {
             if leads.isEmpty {
                 Text("Noch keine Kontakte. Starte mit Prospecting.")
-                    .foregroundStyle(.secondary)
-                    .padding()
+                    .foregroundStyle(.secondary).padding()
             } else {
                 VStack(spacing: 4) {
                     ForEach(leads.suffix(5).reversed()) { lead in
@@ -314,14 +364,17 @@ struct DashboardLeadRow: View {
                 .fill(DashboardLeadRow.colorForStatus(lead.status))
                 .frame(width: 8, height: 8)
             Text(lead.name).font(.callout).bold()
-            Text("- \(lead.company)")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+            Text("- \(lead.company)").font(.callout).foregroundStyle(.secondary)
             Spacer()
+            // Thread ID indicator
+            if !lead.gmailThreadId.isEmpty {
+                Image(systemName: "arrow.triangle.branch")
+                    .font(.caption2).foregroundStyle(.indigo)
+                    .help("Gmail Thread aktiv")
+            }
             Text(lead.status.rawValue)
                 .font(.caption)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 2)
+                .padding(.horizontal, 8).padding(.vertical, 2)
                 .background(DashboardLeadRow.colorForStatus(lead.status).opacity(0.2))
                 .cornerRadius(4)
         }
@@ -351,13 +404,10 @@ struct StatCard: View {
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(color)
-            Text(value)
-                .font(.title).bold()
+                .font(.title2).foregroundStyle(color)
+            Text(value).font(.title).bold()
             Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.caption).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)

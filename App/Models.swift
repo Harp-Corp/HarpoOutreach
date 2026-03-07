@@ -259,6 +259,9 @@ struct Lead: Identifiable, Codable, Hashable {
     // MARK: - Task 6: Delivery Status
     var deliveryStatus: DeliveryStatus
 
+    // MARK: - Gmail Thread ID (for reply tracking via Threads API)
+    var gmailThreadId: String
+
     init(id: UUID = UUID(), name: String, title: String = "", company: String,
          email: String, emailVerified: Bool = false, linkedInURL: String = "",
          phone: String = "", responsibility: String = "",
@@ -269,7 +272,8 @@ struct Lead: Identifiable, Codable, Hashable {
          replyReceived: String = "", isManuallyCreated: Bool = false,
          scheduledSendDate: Date? = nil,
          optedOut: Bool = false, optOutDate: Date? = nil,
-         deliveryStatus: DeliveryStatus = .pending) {
+         deliveryStatus: DeliveryStatus = .pending,
+         gmailThreadId: String = "") {
         self.id = id
         self.name = name
         self.title = title
@@ -293,6 +297,7 @@ struct Lead: Identifiable, Codable, Hashable {
         self.optedOut = optedOut
         self.optOutDate = optOutDate
         self.deliveryStatus = deliveryStatus
+        self.gmailThreadId = gmailThreadId
     }
 }
 
@@ -341,6 +346,52 @@ struct EmailDraft: Identifiable, Codable, Hashable {
         self.createdDate = createdDate
         self.lastModifiedDate = lastModifiedDate
         self.isFollowUp = isFollowUp
+    }
+}
+
+// MARK: - Address Book Entry
+// Persistent verified contacts — mirrors web app AddressBookDB
+struct AddressBookEntry: Identifiable, Codable, Hashable {
+    let id: UUID
+    var name: String
+    var title: String
+    var company: String
+    var email: String
+    var emailVerified: Bool
+    var linkedInURL: String
+    var phone: String
+    var notes: String
+    var source: String            // "verified" | "manual"
+    /// "Active" | "Blocked" — matches web app contact_status values
+    var contactStatus: String
+    var optedOut: Bool
+    var firstContacted: Date?
+    var lastContacted: Date?
+    var createdAt: Date
+    var updatedAt: Date
+
+    init(id: UUID = UUID(), name: String, title: String = "", company: String = "",
+         email: String, emailVerified: Bool = false, linkedInURL: String = "",
+         phone: String = "", notes: String = "", source: String = "manual",
+         contactStatus: String = "Active", optedOut: Bool = false,
+         firstContacted: Date? = nil, lastContacted: Date? = nil,
+         createdAt: Date = Date(), updatedAt: Date = Date()) {
+        self.id = id
+        self.name = name
+        self.title = title
+        self.company = company
+        self.email = email
+        self.emailVerified = emailVerified
+        self.linkedInURL = linkedInURL
+        self.phone = phone
+        self.notes = notes
+        self.source = source
+        self.contactStatus = contactStatus
+        self.optedOut = optedOut
+        self.firstContacted = firstContacted
+        self.lastContacted = lastContacted
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
     }
 }
 

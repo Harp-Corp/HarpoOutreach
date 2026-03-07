@@ -57,8 +57,7 @@ struct ContentCampaignView: View {
             // Header with segment picker
             HStack {
                 Text("Content & Campaigns")
-                    .font(.largeTitle)
-                    .bold()
+                    .font(.largeTitle).bold()
                 Spacer()
                 Picker("", selection: $selectedSegment) {
                     Text("Post generieren").tag(0)

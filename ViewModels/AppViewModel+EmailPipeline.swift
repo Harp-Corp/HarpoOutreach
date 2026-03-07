@@ -10,13 +10,15 @@ import SwiftUI
 //   Task 9:  Opt-out check - DatabaseService.shared.isBlocked() before every send
 //   Task 10: Configurable sender - settings.senderEmail instead of static constant
 //   Task 13: Dynamic subject alternatives - generate 3 subjects and pick best
+//   Reset/Resend: Full and soft reset matching web app /reset/{lead_id} and /resend/{lead_id}
+//   Thread ID: Store gmailThreadId returned from sendEmail
 
 extension AppViewModel {
 
-    // MARK: - 4+5) Research + Draft Email (with dynamic subject generation - task 13)
+    // MARK: - 4+5) Research + Draft Email (with dynamic subject generation and generic fallback)
     func draftEmail(for leadID: UUID) async {
         guard let idx = leads.firstIndex(where: { $0.id == leadID }) else { return }
-        // Kontakte mit leerer Email-Adresse ueberspringen (Draft waere nutzlos)
+        // Skip leads with no email address (unless manually created)
         guard !leads[idx].email.isEmpty || leads[idx].isManuallyCreated else {
             print("[EmailPipeline] Skipping draft for \(leads[idx].name) - no email address")
             return
@@ -27,9 +29,30 @@ extension AppViewModel {
                 $0.name.lowercased() == leads[idx].company.lowercased()
             } ?? Company(name: leads[idx].company, industry: "", region: "")
 
-            let challenges = try await pplxService.researchChallenges(
-                company: companyForResearch, apiKey: settings.perplexityAPIKey
-            )
+            // Step 1: Research challenges with generic fallback (mirrors web draft_email)
+            let challenges: String
+            do {
+                let rawChallenges = try await pplxService.researchChallenges(
+                    company: companyForResearch, apiKey: settings.perplexityAPIKey
+                )
+                // Use generic fallback if Perplexity returned a no-info response
+                if PerplexityService.isUnknownCompany(rawChallenges) {
+                    print("[EmailPipeline] Unknown company '\(leads[idx].company)', using generic fallback")
+                    challenges = PerplexityService.genericComplianceChallenges(
+                        companyName: leads[idx].company,
+                        industry: companyForResearch.industry
+                    )
+                } else {
+                    challenges = rawChallenges
+                }
+            } catch {
+                print("[EmailPipeline] Challenge research failed for \(leads[idx].company): \(error.localizedDescription), using generic fallback")
+                challenges = PerplexityService.genericComplianceChallenges(
+                    companyName: leads[idx].company,
+                    industry: companyForResearch.industry
+                )
+            }
+
             currentStep = "Creating personalized email for \(leads[idx].name)..."
             var email = try await pplxService.draftEmail(
                 lead: leads[idx],
@@ -38,7 +61,7 @@ extension AppViewModel {
                 apiKey: settings.perplexityAPIKey
             )
 
-            // Task 13: Generate dynamic subject alternatives and use the best one
+            // Step 2: Generate dynamic subject alternatives and use the best one
             currentStep = "Generating subject alternatives for \(leads[idx].company)..."
             if let bestSubject = await generateBestSubject(
                 company: leads[idx].company,
@@ -64,7 +87,7 @@ extension AppViewModel {
         isLoading = false
     }
 
-    /// Task 13: Ask Perplexity for 3 subject alternatives, return the first one.
+    /// Ask Perplexity for 3 subject alternatives, return the first one.
     private func generateBestSubject(company: String, industry: String, emailBodyPreview: String) async -> String? {
         let prompt = """
         Generate 3 different email subject lines for a cold outreach email to \(company) about compliance/RegTech.
@@ -83,7 +106,7 @@ extension AppViewModel {
     }
 
     func draftAllEmails() async {
-        // Drafts fuer alle Leads erstellen die eine Email-Adresse haben (oder manuell angelegt wurden)
+        // Draft for all leads that have an email address (or are manually created)
         let toDraft = leads.filter({ (!$0.email.isEmpty || $0.isManuallyCreated) && $0.draftedEmail == nil })
         var created = 0
         var failed = 0
@@ -149,15 +172,99 @@ extension AppViewModel {
         }
     }
 
-    // MARK: - 6) Send Email (by ID - task 9: opt-out check, task 10: configurable sender)
+    // MARK: - Campaign Reset (Full Reset — mirrors web /email/reset/{lead_id})
+    /// Full reset: clears draft, send date, thread ID, delivery status, blocklist entry, opted_out.
+    func resetLead(id: UUID) {
+        guard let idx = leads.firstIndex(where: { $0.id == id }) else { return }
+        leads[idx].draftedEmail = nil
+        leads[idx].dateEmailSent = nil
+        leads[idx].deliveryStatus = .pending
+        leads[idx].gmailThreadId = ""
+        leads[idx].replyReceived = ""
+        leads[idx].optedOut = false
+        leads[idx].optOutDate = nil
+        leads[idx].status = .identified
+        // Remove from blocklist if present
+        if !leads[idx].email.isEmpty {
+            db.removeFromBlocklist(email: leads[idx].email)
+        }
+        saveLeads()
+        print("[EmailPipeline] Lead \(id) (\(leads[idx].name)) full campaign reset (incl. blocklist)")
+        statusMessage = "\(leads[idx].name) has been fully reset."
+    }
+
+    // MARK: - Resend (Soft Reset — mirrors web /email/resend/{lead_id})
+    /// Soft reset for re-sending: keeps draft+approval, only clears send date/thread/reply/blocklist.
+    func resendLead(id: UUID) {
+        guard let idx = leads.firstIndex(where: { $0.id == id }) else { return }
+        guard leads[idx].draftedEmail != nil else {
+            errorMessage = "No email draft found. Please create a draft first."
+            return
+        }
+        leads[idx].dateEmailSent = nil
+        leads[idx].deliveryStatus = .pending
+        leads[idx].gmailThreadId = ""
+        leads[idx].replyReceived = ""
+        leads[idx].optedOut = false
+        leads[idx].optOutDate = nil
+        // Keep draft and approval — set status based on current approval state
+        if leads[idx].draftedEmail?.isApproved == true {
+            leads[idx].status = .emailApproved
+        } else {
+            leads[idx].status = .emailDrafted
+        }
+        // Remove from blocklist if present
+        if !leads[idx].email.isEmpty {
+            db.removeFromBlocklist(email: leads[idx].email)
+        }
+        saveLeads()
+        print("[EmailPipeline] Lead \(id) (\(leads[idx].name)) reset for resend (draft kept, blocklist cleared)")
+        statusMessage = "\(leads[idx].name) queued for resend."
+    }
+
+    // MARK: - Batch Reset (mirrors web /email/reset-batch)
+    /// Full reset for multiple leads.
+    func resetBatch(ids: [UUID]) {
+        var resetCount = 0
+        for id in ids {
+            guard let idx = leads.firstIndex(where: { $0.id == id }) else { continue }
+            leads[idx].draftedEmail = nil
+            leads[idx].dateEmailSent = nil
+            leads[idx].deliveryStatus = .pending
+            leads[idx].gmailThreadId = ""
+            leads[idx].replyReceived = ""
+            leads[idx].optedOut = false
+            leads[idx].optOutDate = nil
+            leads[idx].status = .identified
+            if !leads[idx].email.isEmpty {
+                db.removeFromBlocklist(email: leads[idx].email)
+            }
+            resetCount += 1
+        }
+        saveLeads()
+        print("[EmailPipeline] Batch reset: \(resetCount) leads (incl. blocklist)")
+        statusMessage = "\(resetCount) leads fully reset."
+    }
+
+    // MARK: - Clear All Blocklist (mirrors web DELETE /data/blocklist/all)
+    /// Removes ALL entries from the blocklist and resets opted_out on all leads.
+    func clearAllBlocklist() {
+        db.clearBlocklist()
+        // Reload leads to reflect the reset opted_out flags from DB
+        leads = db.loadLeads()
+        statusMessage = "Blocklist cleared. All opted-out flags reset."
+        print("[EmailPipeline] Entire blocklist cleared")
+    }
+
+    // MARK: - 6) Send Email (by ID)
     func sendEmail(for leadID: UUID) async {
         guard let idx = leads.firstIndex(where: { $0.id == leadID }),
               let email = leads[idx].draftedEmail, email.isApproved else {
             errorMessage = "Email must be approved first."; return
         }
 
-        // Task 9: Opt-out / blocklist check
-        if DatabaseService.shared.isBlocked(email: leads[idx].email) {
+        // Opt-out / blocklist check
+        if db.isBlocked(email: leads[idx].email) {
             errorMessage = "\(leads[idx].email) is on the opt-out blocklist."
             leads[idx].status = .doNotContact
             leads[idx].optedOut = true
@@ -165,7 +272,7 @@ extension AppViewModel {
             return
         }
 
-        // Task 5: Scheduling check
+        // Scheduling check
         if let scheduledDate = leads[idx].scheduledSendDate, scheduledDate > Date() {
             statusMessage = "Email to \(leads[idx].name) is scheduled for \(scheduledDate.formatted()). Skipping."
             isLoading = false
@@ -174,8 +281,7 @@ extension AppViewModel {
 
         isLoading = true; currentStep = "Sending email to \(leads[idx].email)..."
         do {
-            // Task 10: use settings.senderEmail
-            _ = try await gmailService.sendEmail(
+            let sendResult = try await gmailService.sendEmail(
                 to: leads[idx].email,
                 from: settings.senderEmail,
                 subject: email.subject,
@@ -184,9 +290,8 @@ extension AppViewModel {
             leads[idx].dateEmailSent = Date()
             leads[idx].draftedEmail?.sentDate = Date()
             leads[idx].status = .emailSent
-
-            // Task 7: Delivery tracking - mark as delivered (bounce detection happens in checkForReplies)
             leads[idx].deliveryStatus = .delivered
+            leads[idx].gmailThreadId = sendResult.threadId
 
             saveLeads()
 
@@ -202,7 +307,6 @@ extension AppViewModel {
             }
             currentStep = "Email sent to \(leads[idx].email)"
         } catch {
-            // Task 7: Mark delivery failed on error
             leads[idx].deliveryStatus = .failed
             saveLeads()
             errorMessage = "Send failed: \(error.localizedDescription)"
@@ -216,8 +320,8 @@ extension AppViewModel {
         guard !lead.email.isEmpty else { errorMessage = "No email for \(lead.name)"; return }
         guard authService.isAuthenticated else { errorMessage = "Not authenticated with Google."; return }
 
-        // Task 9: Opt-out check
-        if DatabaseService.shared.isBlocked(email: lead.email) {
+        // Opt-out check
+        if db.isBlocked(email: lead.email) {
             errorMessage = "\(lead.email) is on the opt-out blocklist."
             if let idx = leads.firstIndex(where: { $0.id == lead.id }) {
                 leads[idx].status = .doNotContact
@@ -227,7 +331,7 @@ extension AppViewModel {
             return
         }
 
-        // Task 5: Scheduling check
+        // Scheduling check
         if let scheduledDate = lead.scheduledSendDate, scheduledDate > Date() {
             statusMessage = "Email to \(lead.name) is scheduled for \(scheduledDate.formatted()). Skipping."
             return
@@ -235,9 +339,9 @@ extension AppViewModel {
 
         isLoading = true; errorMessage = ""; currentStep = "Sending email to \(lead.name)..."
         do {
-            _ = try await gmailService.sendEmail(
+            let sendResult = try await gmailService.sendEmail(
                 to: lead.email,
-                from: settings.senderEmail,    // Task 10
+                from: settings.senderEmail,
                 subject: draft.subject,
                 body: draft.body
             )
@@ -245,7 +349,8 @@ extension AppViewModel {
                 leads[index].status = .emailSent
                 leads[index].dateEmailSent = Date()
                 leads[index].draftedEmail?.sentDate = Date()
-                leads[index].deliveryStatus = .delivered  // Task 7
+                leads[index].deliveryStatus = .delivered
+                leads[index].gmailThreadId = sendResult.threadId
                 saveLeads()
                 if !settings.spreadsheetID.isEmpty {
                     try? await sheetsService.logEmailEvent(
@@ -261,7 +366,7 @@ extension AppViewModel {
             statusMessage = "Email to \(lead.name) sent"
         } catch {
             if let index = leads.firstIndex(where: { $0.id == lead.id }) {
-                leads[index].deliveryStatus = .failed  // Task 7
+                leads[index].deliveryStatus = .failed
                 saveLeads()
             }
             errorMessage = "Send failed: \(error.localizedDescription)"
@@ -269,7 +374,7 @@ extension AppViewModel {
         isLoading = false; currentStep = ""
     }
 
-    // MARK: - 7) Send All Approved - Batch Limited (task 8)
+    // MARK: - 7) Send All Approved - Batch Limited
     func sendAllApproved() async {
         // Filter: approved, not sent, not opted out
         let approved = leads.filter {
@@ -280,7 +385,7 @@ extension AppViewModel {
         guard !approved.isEmpty else { statusMessage = "No approved emails to send."; return }
         guard authService.isAuthenticated else { errorMessage = "Not authenticated with Google."; return }
 
-        // Task 8: Cap to batchSize (default 10)
+        // Cap to batchSize (default 10)
         let batch = Array(approved.prefix(settings.batchSize))
         isLoading = true
         var sentCount = 0
@@ -291,8 +396,8 @@ extension AppViewModel {
         for (index, lead) in batch.enumerated() {
             currentStep = "Sending \(sentCount + 1)/\(batch.count) to \(lead.name)..."
 
-            // Task 9: Opt-out / blocklist check
-            if DatabaseService.shared.isBlocked(email: lead.email) {
+            // Opt-out / blocklist check
+            if db.isBlocked(email: lead.email) {
                 if let idx = leads.firstIndex(where: { $0.id == lead.id }) {
                     leads[idx].status = .doNotContact
                     leads[idx].optedOut = true
@@ -302,7 +407,7 @@ extension AppViewModel {
                 continue
             }
 
-            // Task 5: Scheduling check
+            // Scheduling check
             if let scheduledDate = lead.scheduledSendDate, scheduledDate > Date() {
                 skippedScheduled += 1
                 continue
@@ -310,9 +415,9 @@ extension AppViewModel {
 
             do {
                 guard let draft = lead.draftedEmail else { continue }
-                _ = try await gmailService.sendEmail(
+                let sendResult = try await gmailService.sendEmail(
                     to: lead.email,
-                    from: settings.senderEmail,    // Task 10
+                    from: settings.senderEmail,
                     subject: draft.subject,
                     body: draft.body
                 )
@@ -320,7 +425,8 @@ extension AppViewModel {
                     leads[idx].status = .emailSent
                     leads[idx].dateEmailSent = Date()
                     leads[idx].draftedEmail?.sentDate = Date()
-                    leads[idx].deliveryStatus = .delivered  // Task 7
+                    leads[idx].deliveryStatus = .delivered
+                    leads[idx].gmailThreadId = sendResult.threadId
                     saveLeads()
                     if !settings.spreadsheetID.isEmpty {
                         try? await sheetsService.logEmailEvent(
@@ -335,14 +441,14 @@ extension AppViewModel {
                 }
                 sentCount += 1
 
-                // Task 8: Random delay 30-90 seconds between sends (except after last)
+                // Random delay 30-90 seconds between sends (except after last)
                 if index < batch.count - 1 {
                     let delay = UInt64.random(in: 30_000_000_000...90_000_000_000)
                     try? await Task.sleep(nanoseconds: delay)
                 }
             } catch {
                 if let idx = leads.firstIndex(where: { $0.id == lead.id }) {
-                    leads[idx].deliveryStatus = .failed  // Task 7
+                    leads[idx].deliveryStatus = .failed
                     saveLeads()
                 }
                 failCount += 1
@@ -373,7 +479,7 @@ extension AppViewModel {
 
 // MARK: - PerplexityService: raw generate (for subject generation)
 extension PerplexityService {
-    /// Minimal single-turn generation for short prompts (task 13)
+    /// Minimal single-turn generation for short prompts
     func rawGenerate(prompt: String, apiKey: String) async throws -> String {
         let system = "You are a helpful assistant. Follow instructions exactly."
         return try await callAPIPublic(systemPrompt: system, userPrompt: prompt, apiKey: apiKey, maxTokens: 300)

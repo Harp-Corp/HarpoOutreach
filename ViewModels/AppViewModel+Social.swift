@@ -6,6 +6,8 @@ import AppKit
 
 // MARK: - AppViewModel+Social
 // Handles: social post generation, editing, clipboard, persistence
+// Note: Posts are LinkedIn only — Twitter/X removed per web app (SocialPlatform.linkedin enforced
+// by PerplexityService.generateSocialPost). See web app data.py generate_social_post route.
 
 extension AppViewModel {
 

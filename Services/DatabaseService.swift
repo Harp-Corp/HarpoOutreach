@@ -51,7 +51,8 @@ final class DatabaseService: @unchecked Sendable {
 
     // MARK: - Schema Creation
 
-    /// Erstellt alle notwendigen Tabellen falls nicht vorhanden (idempotent)
+    /// Erstellt alle notwendigen Tabellen falls nicht vorhanden (idempotent).
+    /// Also runs migrations to add columns introduced after the initial schema.
     private func createTables() {
         // --- companies ---
         executeSQL("""
@@ -97,6 +98,7 @@ final class DatabaseService: @unchecked Sendable {
                 opted_out               INTEGER NOT NULL DEFAULT 0,
                 opt_out_date            REAL,
                 delivery_status         TEXT NOT NULL DEFAULT 'Pending',
+                gmail_thread_id         TEXT NOT NULL DEFAULT '',
                 updated_at              REAL NOT NULL DEFAULT 0
             );
         """)
@@ -123,6 +125,28 @@ final class DatabaseService: @unchecked Sendable {
             );
         """)
 
+        // --- address_book ---
+        executeSQL("""
+            CREATE TABLE IF NOT EXISTS address_book (
+                id              TEXT PRIMARY KEY NOT NULL,
+                name            TEXT NOT NULL DEFAULT '',
+                title           TEXT NOT NULL DEFAULT '',
+                company         TEXT NOT NULL DEFAULT '',
+                email           TEXT NOT NULL DEFAULT '',
+                email_verified  INTEGER NOT NULL DEFAULT 0,
+                linkedin_url    TEXT NOT NULL DEFAULT '',
+                phone           TEXT NOT NULL DEFAULT '',
+                notes           TEXT NOT NULL DEFAULT '',
+                source          TEXT NOT NULL DEFAULT '',
+                contact_status  TEXT NOT NULL DEFAULT 'Active',
+                opted_out       INTEGER NOT NULL DEFAULT 0,
+                first_contacted REAL,
+                last_contacted  REAL,
+                created_at      REAL NOT NULL DEFAULT 0,
+                updated_at      REAL NOT NULL DEFAULT 0
+            );
+        """)
+
         // --- settings (Key-Value Store) ---
         executeSQL("""
             CREATE TABLE IF NOT EXISTS settings (
@@ -136,8 +160,59 @@ final class DatabaseService: @unchecked Sendable {
         executeSQL("CREATE INDEX IF NOT EXISTS idx_leads_company ON leads(company);")
         executeSQL("CREATE INDEX IF NOT EXISTS idx_leads_status  ON leads(status);")
         executeSQL("CREATE INDEX IF NOT EXISTS idx_companies_name ON companies(name);")
+        executeSQL("CREATE INDEX IF NOT EXISTS idx_addressbook_email   ON address_book(email);")
+        executeSQL("CREATE INDEX IF NOT EXISTS idx_addressbook_company ON address_book(company);")
+        executeSQL("CREATE INDEX IF NOT EXISTS idx_addressbook_status  ON address_book(contact_status);")
+
+        // Run migrations for existing databases
+        runMigrations()
 
         print("[DB] Tables created / verified")
+    }
+
+    // MARK: - Migrations
+
+    /// Adds columns to existing tables that were introduced after the initial schema.
+    /// Safe to run repeatedly — uses ALTER TABLE only when the column is absent.
+    private func runMigrations() {
+        // Migration: add gmail_thread_id to leads (added for reply-tracking via Threads API)
+        if !columnExists(table: "leads", column: "gmail_thread_id") {
+            executeSQL("ALTER TABLE leads ADD COLUMN gmail_thread_id TEXT NOT NULL DEFAULT '';")
+            print("[DB] Migration: added gmail_thread_id to leads")
+        }
+
+        // Migration: add address_book table columns added after initial creation
+        // (contact_status, opted_out, first_contacted, last_contacted)
+        if columnExists(table: "address_book", column: "id") {
+            // Table exists — check for individual new columns
+            if !columnExists(table: "address_book", column: "contact_status") {
+                executeSQL("ALTER TABLE address_book ADD COLUMN contact_status TEXT NOT NULL DEFAULT 'Active';")
+                print("[DB] Migration: added contact_status to address_book")
+            }
+            if !columnExists(table: "address_book", column: "opted_out") {
+                executeSQL("ALTER TABLE address_book ADD COLUMN opted_out INTEGER NOT NULL DEFAULT 0;")
+                print("[DB] Migration: added opted_out to address_book")
+            }
+            if !columnExists(table: "address_book", column: "first_contacted") {
+                executeSQL("ALTER TABLE address_book ADD COLUMN first_contacted REAL;")
+                print("[DB] Migration: added first_contacted to address_book")
+            }
+            if !columnExists(table: "address_book", column: "last_contacted") {
+                executeSQL("ALTER TABLE address_book ADD COLUMN last_contacted REAL;")
+                print("[DB] Migration: added last_contacted to address_book")
+            }
+        }
+    }
+
+    /// Returns true if the given column exists in the given table.
+    private func columnExists(table: String, column: String) -> Bool {
+        guard let stmt = prepare("PRAGMA table_info(\(table));") else { return false }
+        defer { sqlite3_finalize(stmt) }
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let colName = columnString(stmt, 1)
+            if colName == column { return true }
+        }
+        return false
     }
 
     // MARK: - Low-Level Helpers
@@ -384,8 +459,8 @@ final class DatabaseService: @unchecked Sendable {
                  date_identified, date_email_sent, date_follow_up_sent,
                  reply_received, is_manually_created,
                  scheduled_send_date, opted_out, opt_out_date,
-                 delivery_status, updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+                 delivery_status, gmail_thread_id, updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
         """
         guard let stmt = prepare(sql) else { return }
         defer { sqlite3_finalize(stmt) }
@@ -413,7 +488,8 @@ final class DatabaseService: @unchecked Sendable {
         bindBool(stmt, 21, lead.optedOut)
         bindOptionalDouble(stmt, 22, dateToDouble(lead.optOutDate))
         bindText(stmt, 23, lead.deliveryStatus.rawValue)
-        bindDouble(stmt, 24, Date().timeIntervalSince1970)
+        bindText(stmt, 24, lead.gmailThreadId)
+        bindDouble(stmt, 25, Date().timeIntervalSince1970)
 
         if sqlite3_step(stmt) != SQLITE_DONE {
             print("[DB] saveLead error: \(String(cString: sqlite3_errmsg(db)))")
@@ -428,7 +504,7 @@ final class DatabaseService: @unchecked Sendable {
                    date_identified, date_email_sent, date_follow_up_sent,
                    reply_received, is_manually_created,
                    scheduled_send_date, opted_out, opt_out_date,
-                   delivery_status
+                   delivery_status, gmail_thread_id
             FROM leads ORDER BY date_identified DESC;
         """
         guard let stmt = prepare(sql) else { return [] }
@@ -489,7 +565,8 @@ final class DatabaseService: @unchecked Sendable {
                 scheduledSendDate: scheduledSendDate,
                 optedOut: columnBool(stmt, 20),
                 optOutDate: optOutDate,
-                deliveryStatus: deliveryStatus
+                deliveryStatus: deliveryStatus,
+                gmailThreadId: columnString(stmt, 23)
             )
             leads.append(lead)
         }
@@ -586,6 +663,174 @@ final class DatabaseService: @unchecked Sendable {
         return posts
     }
 
+    // MARK: - Address Book CRUD
+
+    /// Saves (insert or replace) an AddressBookEntry to the address_book table.
+    func saveAddressBookEntry(_ entry: AddressBookEntry) {
+        queue.sync { self._saveAddressBookEntry(entry) }
+    }
+
+    /// Loads all address book entries ordered by name ascending.
+    func loadAddressBook() -> [AddressBookEntry] {
+        return queue.sync { self._loadAddressBook() }
+    }
+
+    /// Deletes an address book entry by ID (soft context: sets contact_status = 'Blocked').
+    func deleteAddressBookEntry(_ id: UUID) {
+        queue.sync {
+            guard let stmt = self.prepare("DELETE FROM address_book WHERE id = ?;") else { return }
+            defer { sqlite3_finalize(stmt) }
+            self.bindText(stmt, 1, id.uuidString)
+            if sqlite3_step(stmt) != SQLITE_DONE {
+                print("[DB] deleteAddressBookEntry error: \(String(cString: sqlite3_errmsg(self.db)))")
+            }
+        }
+    }
+
+    /// Permanently deletes an address book entry by ID (hard delete).
+    func permanentlyDeleteAddressBookEntry(_ id: UUID) {
+        deleteAddressBookEntry(id)
+    }
+
+    /// Updates contact_status and optedOut flag for an address book entry.
+    func updateAddressBookStatus(id: UUID, contactStatus: String, optedOut: Bool) {
+        queue.sync {
+            let sql = """
+                UPDATE address_book
+                SET contact_status = ?, opted_out = ?, updated_at = ?
+                WHERE id = ?;
+            """
+            guard let stmt = self.prepare(sql) else { return }
+            defer { sqlite3_finalize(stmt) }
+            self.bindText(stmt, 1, contactStatus)
+            self.bindBool(stmt, 2, optedOut)
+            self.bindDouble(stmt, 3, Date().timeIntervalSince1970)
+            self.bindText(stmt, 4, id.uuidString)
+            if sqlite3_step(stmt) != SQLITE_DONE {
+                print("[DB] updateAddressBookStatus error: \(String(cString: sqlite3_errmsg(self.db)))")
+            }
+        }
+    }
+
+    /// Creates an AddressBookEntry from a Lead (e.g. after a successful send) and saves it.
+    @discardableResult
+    func addLeadToAddressBook(lead: Lead) -> AddressBookEntry {
+        let entry = AddressBookEntry(
+            id: UUID(),
+            name: lead.name,
+            title: lead.title,
+            company: lead.company,
+            email: lead.email,
+            emailVerified: lead.emailVerified,
+            linkedInURL: lead.linkedInURL,
+            phone: lead.phone,
+            notes: "",
+            source: "verified",
+            contactStatus: "Active",
+            optedOut: lead.optedOut,
+            firstContacted: lead.dateEmailSent,
+            lastContacted: lead.dateEmailSent,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        saveAddressBookEntry(entry)
+        return entry
+    }
+
+    /// Checks whether an address book entry already exists for the given email.
+    func addressBookEntryExists(email: String) -> Bool {
+        return queue.sync {
+            let normalized = email.lowercased().trimmingCharacters(in: .whitespaces)
+            guard let stmt = self.prepare("SELECT COUNT(*) FROM address_book WHERE LOWER(email) = ?;") else { return false }
+            defer { sqlite3_finalize(stmt) }
+            self.bindText(stmt, 1, normalized)
+            if sqlite3_step(stmt) == SQLITE_ROW {
+                return sqlite3_column_int(stmt, 0) > 0
+            }
+            return false
+        }
+    }
+
+    private func _saveAddressBookEntry(_ entry: AddressBookEntry) {
+        let sql = """
+            INSERT OR REPLACE INTO address_book
+                (id, name, title, company, email, email_verified,
+                 linkedin_url, phone, notes, source,
+                 contact_status, opted_out,
+                 first_contacted, last_contacted,
+                 created_at, updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+        """
+        guard let stmt = prepare(sql) else { return }
+        defer { sqlite3_finalize(stmt) }
+
+        bindText(stmt, 1, entry.id.uuidString)
+        bindText(stmt, 2, entry.name)
+        bindText(stmt, 3, entry.title)
+        bindText(stmt, 4, entry.company)
+        bindText(stmt, 5, entry.email)
+        bindBool(stmt, 6, entry.emailVerified)
+        bindText(stmt, 7, entry.linkedInURL)
+        bindText(stmt, 8, entry.phone)
+        bindText(stmt, 9, entry.notes)
+        bindText(stmt, 10, entry.source)
+        bindText(stmt, 11, entry.contactStatus)
+        bindBool(stmt, 12, entry.optedOut)
+        bindOptionalDouble(stmt, 13, dateToDouble(entry.firstContacted))
+        bindOptionalDouble(stmt, 14, dateToDouble(entry.lastContacted))
+        bindDouble(stmt, 15, entry.createdAt.timeIntervalSince1970)
+        bindDouble(stmt, 16, entry.updatedAt.timeIntervalSince1970)
+
+        if sqlite3_step(stmt) != SQLITE_DONE {
+            print("[DB] saveAddressBookEntry error: \(String(cString: sqlite3_errmsg(db)))")
+        }
+    }
+
+    private func _loadAddressBook() -> [AddressBookEntry] {
+        let sql = """
+            SELECT id, name, title, company, email, email_verified,
+                   linkedin_url, phone, notes, source,
+                   contact_status, opted_out,
+                   first_contacted, last_contacted,
+                   created_at, updated_at
+            FROM address_book ORDER BY name ASC;
+        """
+        guard let stmt = prepare(sql) else { return [] }
+        defer { sqlite3_finalize(stmt) }
+
+        var entries: [AddressBookEntry] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let idStr = columnString(stmt, 0)
+            guard let id = UUID(uuidString: idStr) else { continue }
+
+            let createdAtTS = columnDouble(stmt, 14)
+            let createdAt = createdAtTS > 0 ? Date(timeIntervalSince1970: createdAtTS) : Date()
+            let updatedAtTS = columnDouble(stmt, 15)
+            let updatedAt = updatedAtTS > 0 ? Date(timeIntervalSince1970: updatedAtTS) : Date()
+
+            let entry = AddressBookEntry(
+                id: id,
+                name: columnString(stmt, 1),
+                title: columnString(stmt, 2),
+                company: columnString(stmt, 3),
+                email: columnString(stmt, 4),
+                emailVerified: columnBool(stmt, 5),
+                linkedInURL: columnString(stmt, 6),
+                phone: columnString(stmt, 7),
+                notes: columnString(stmt, 8),
+                source: columnString(stmt, 9),
+                contactStatus: columnString(stmt, 10),
+                optedOut: columnBool(stmt, 11),
+                firstContacted: columnOptionalDouble(stmt, 12).flatMap { doubleToDate($0) },
+                lastContacted: columnOptionalDouble(stmt, 13).flatMap { doubleToDate($0) },
+                createdAt: createdAt,
+                updatedAt: updatedAt
+            )
+            entries.append(entry)
+        }
+        return entries
+    }
+
     // MARK: - Blocklist (Opt-Out)
 
     /// Fuegt eine E-Mail-Adresse zur Blockliste hinzu
@@ -652,6 +897,18 @@ final class DatabaseService: @unchecked Sendable {
         }
     }
 
+    /// Clears the entire blocklist (all rows deleted) AND resets opted_out on all leads.
+    /// Mirrors the web app's clearBlocklist behaviour.
+    func clearBlocklist() {
+        queue.sync {
+            self.executeSQL("BEGIN TRANSACTION;")
+            self.executeSQL("DELETE FROM blocklist;")
+            self.executeSQL("UPDATE leads SET opted_out = 0, opt_out_date = NULL WHERE opted_out = 1;")
+            self.executeSQL("COMMIT;")
+            print("[DB] Blocklist cleared and lead opted_out flags reset")
+        }
+    }
+
     // MARK: - Duplicate Checks
 
     /// Prueft ob ein Unternehmen mit diesem Namen bereits existiert
@@ -702,7 +959,7 @@ final class DatabaseService: @unchecked Sendable {
         let leads = loadLeads()
         var lines: [String] = []
         // Header
-        lines.append("id,name,title,company,email,emailVerified,linkedInURL,phone,responsibility,status,source,dateIdentified,dateEmailSent,dateFollowUpSent,replyReceived,scheduledSendDate,optedOut,deliveryStatus")
+        lines.append("id,name,title,company,email,emailVerified,linkedInURL,phone,responsibility,status,source,dateIdentified,dateEmailSent,dateFollowUpSent,replyReceived,scheduledSendDate,optedOut,deliveryStatus,gmailThreadId")
         // Data rows
         let df = ISO8601DateFormatter()
         for lead in leads {
@@ -724,7 +981,8 @@ final class DatabaseService: @unchecked Sendable {
                 csvEscape(lead.replyReceived),
                 lead.scheduledSendDate.map { csvEscape(df.string(from: $0)) } ?? "",
                 lead.optedOut ? "true" : "false",
-                csvEscape(lead.deliveryStatus.rawValue)
+                csvEscape(lead.deliveryStatus.rawValue),
+                csvEscape(lead.gmailThreadId)
             ]
             lines.append(fields.joined(separator: ","))
         }
@@ -1029,6 +1287,7 @@ final class DatabaseService: @unchecked Sendable {
             self.executeSQL("DELETE FROM companies;")
             self.executeSQL("DELETE FROM social_posts;")
             self.executeSQL("DELETE FROM blocklist;")
+            self.executeSQL("DELETE FROM address_book;")
             print("[DB] All data purged")
         }
     }
@@ -1043,7 +1302,7 @@ final class DatabaseService: @unchecked Sendable {
                        date_identified, date_email_sent, date_follow_up_sent,
                        reply_received, is_manually_created,
                        scheduled_send_date, opted_out, opt_out_date,
-                       delivery_status
+                       delivery_status, gmail_thread_id
                 FROM leads
                 WHERE scheduled_send_date IS NOT NULL
                   AND scheduled_send_date <= ?
@@ -1100,7 +1359,8 @@ final class DatabaseService: @unchecked Sendable {
                     scheduledSendDate: self.columnOptionalDouble(stmt, 19).flatMap { self.doubleToDate($0) },
                     optedOut: self.columnBool(stmt, 20),
                     optOutDate: self.columnOptionalDouble(stmt, 21).flatMap { self.doubleToDate($0) },
-                    deliveryStatus: deliveryStatus
+                    deliveryStatus: deliveryStatus,
+                    gmailThreadId: self.columnString(stmt, 23)
                 )
                 leads.append(lead)
             }

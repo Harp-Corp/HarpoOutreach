@@ -9,7 +9,8 @@ class GmailService {
     }
 
     // MARK: - Email senden
-    func sendEmail(to: String, from: String, subject: String, body: String) async throws -> String {
+    // Returns a tuple of (messageId, threadId) for reply tracking.
+    func sendEmail(to: String, from: String, subject: String, body: String) async throws -> (msgId: String, threadId: String) {
         let token = try await authService.getAccessToken()
         print("[Gmail] Sende Email an \(to) von \(from)")
         let rawEmail = buildMimeEmail(to: to, from: from, subject: subject, body: body)
@@ -25,14 +26,14 @@ class GmailService {
         let result = try await executeGmailSend(jsonData: jsonData, token: token)
         switch result {
         case .success(let data):
-            return parseMessageId(from: data)
+            return parseMessageIdAndThreadId(from: data)
         case .needsRetry:
             print("[Gmail] 401 - Token-Refresh...")
             let freshToken = try await authService.getAccessToken()
             let retryResult = try await executeGmailSend(jsonData: jsonData, token: freshToken)
             switch retryResult {
             case .success(let data):
-                return parseMessageId(from: data)
+                return parseMessageIdAndThreadId(from: data)
             case .needsRetry:
                 await MainActor.run { authService.logout() }
                 throw GmailError.authExpired
@@ -72,16 +73,92 @@ class GmailService {
         }
     }
 
-    private func parseMessageId(from data: Data) -> String {
-        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let messageId = json["id"] as? String {
-            print("[Gmail] Email gesendet, ID: \(messageId)")
-            return messageId
+    /// Parses both the message ID and thread ID from a Gmail send response.
+    private func parseMessageIdAndThreadId(from data: Data) -> (msgId: String, threadId: String) {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            let msgId = json["id"] as? String ?? "sent"
+            let threadId = json["threadId"] as? String ?? ""
+            print("[Gmail] Email gesendet, ID: \(msgId), threadId: \(threadId)")
+            return (msgId: msgId, threadId: threadId)
         }
-        return "sent"
+        return (msgId: "sent", threadId: "")
+    }
+
+    // MARK: - Antworten pruefen via Gmail Threads API (primary method)
+    // Uses the Gmail Threads API (GET /threads/{id}) to find replies.
+    // This is more reliable than subject-based search because it matches the exact conversation.
+    // threadIds: array of (leadId, threadId) pairs for leads that have a stored gmailThreadId.
+    func checkRepliesViaThreads(threadIds: [(leadId: UUID, threadId: String)]) async throws -> [ThreadReply] {
+        let token = try await authService.getAccessToken()
+        var results: [ThreadReply] = []
+        var seenMessageIds = Set<String>()
+
+        for (leadId, threadId) in threadIds {
+            guard !threadId.isEmpty else { continue }
+            do {
+                let replies = try await fetchThreadReplies(threadId: threadId, token: token)
+                for reply in replies {
+                    guard !seenMessageIds.contains(reply.id) else { continue }
+                    seenMessageIds.insert(reply.id)
+                    // Skip our own sent messages
+                    if reply.from.lowercased().contains("mf@harpocrates-corp.com") { continue }
+                    results.append(ThreadReply(leadId: leadId, message: reply))
+                    print("[Gmail] Thread reply for lead \(leadId): from \(reply.from)")
+                }
+            } catch {
+                print("[Gmail] Thread fetch failed for threadId \(threadId): \(error.localizedDescription)")
+            }
+        }
+
+        print("[Gmail] checkRepliesViaThreads: \(results.count) replies found")
+        return results
+    }
+
+    /// Fetches all messages in a Gmail thread and returns only the replies (messages after the first).
+    /// The first message is our outbound email — skip it and return all subsequent messages.
+    private func fetchThreadReplies(threadId: String, token: String) async throws -> [GmailMessage] {
+        var request = URLRequest(url: URL(string: "\(baseURL)/threads/\(threadId)?format=full")!)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+            let freshToken = try await authService.getAccessToken()
+            var retryRequest = URLRequest(url: URL(string: "\(baseURL)/threads/\(threadId)?format=full")!)
+            retryRequest.setValue("Bearer \(freshToken)", forHTTPHeaderField: "Authorization")
+            let (retryData, _) = try await URLSession.shared.data(for: retryRequest)
+            return try parseThreadMessages(data: retryData)
+        }
+
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            let errBody = String(data: data, encoding: .utf8) ?? ""
+            print("[Gmail] Thread fetch failed (\(threadId)): \(errBody.prefix(200))")
+            return []
+        }
+
+        return try parseThreadMessages(data: data)
+    }
+
+    /// Parses thread JSON and returns all messages except the first (skip our outbound).
+    private func parseThreadMessages(data: Data) throws -> [GmailMessage] {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let messages = json["messages"] as? [[String: Any]] else {
+            return []
+        }
+
+        // Skip the first message (our sent email), only return replies
+        guard messages.count > 1 else { return [] }
+
+        var results: [GmailMessage] = []
+        for msgData in messages.dropFirst() {
+            if let msg = parseMessageData(msgData) {
+                results.append(msg)
+            }
+        }
+        return results
     }
 
     // MARK: - Antworten pruefen (Subject + Lead-Email Fallback)
+    // Legacy fallback for leads that don't yet have a gmailThreadId stored.
     func checkReplies(sentSubjects: [String], leadEmails: [String] = []) async throws -> [GmailMessage] {
         let token = try await authService.getAccessToken()
         var allReplies: [GmailMessage] = []
@@ -134,6 +211,41 @@ class GmailService {
 
         print("[Gmail] Total: \(allReplies.count) Antworten")
         return allReplies
+    }
+
+    // MARK: - Unsubscribe Detection (reply-portion only)
+
+    /// Checks whether the reply text contains an unsubscribe request.
+    /// IMPORTANT: only inspects the actual reply portion (text before any quoted section)
+    /// to avoid false positives triggered by our own unsubscribe footer in the quoted original.
+    func detectsUnsubscribe(in fullBody: String) -> Bool {
+        let replyPortion = extractReplyPortion(from: fullBody)
+        let lower = replyPortion.lowercased()
+        let unsubKeywords = [
+            "unsubscribe", "abmelden", "opt out", "opt-out",
+            "remove me", "abbestellen", "please remove",
+            "nicht mehr kontaktieren", "kein interesse"
+        ]
+        return unsubKeywords.contains { lower.contains($0) }
+    }
+
+    /// Extracts only the actual reply text, stripping quoted original content.
+    /// Strips everything after common quote markers: "On ... wrote:", "Am ... schrieb:",
+    /// lines starting with ">", "------", "______".
+    func extractReplyPortion(from body: String) -> String {
+        let quoteMarkers = ["\nOn ", "\nAm ", "\n>", "\n------", "\n______", "\r\nOn ", "\r\nAm "]
+        var result = body
+        for marker in quoteMarkers {
+            if let range = result.range(of: marker) {
+                // Only strip if there is some content before the marker
+                let before = String(result[result.startIndex..<range.lowerBound])
+                if !before.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    result = before
+                    break
+                }
+            }
+        }
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     // MARK: - Gmail Suche (wiederverwendbar)
@@ -201,6 +313,15 @@ class GmailService {
             throw GmailError.parseFailed
         }
 
+        guard let msg = parseMessageData(json) else {
+            throw GmailError.parseFailed
+        }
+        return msg
+    }
+
+    /// Shared message-data parser used by both fetchMessage and parseThreadMessages.
+    private func parseMessageData(_ json: [String: Any]) -> GmailMessage? {
+        let msgId = json["id"] as? String ?? ""
         let payload = json["payload"] as? [String: Any] ?? [:]
         let headers = payload["headers"] as? [[String: String]] ?? []
 
@@ -238,7 +359,7 @@ class GmailService {
             }
         }
 
-        return GmailMessage(id: id, from: from, subject: subject, date: date, snippet: snippet, body: body)
+        return GmailMessage(id: msgId, from: from, subject: subject, date: date, snippet: snippet, body: body)
     }
 
     // MARK: - MIME Email mit professioneller Visitenkarte + Logo + List-Unsubscribe Headers
@@ -303,6 +424,7 @@ class GmailService {
         var mime = "From: Martin Foerster <\(from)>\r\n"
         mime += "To: \(to)\r\n"
         mime += "Subject: \(encodedSubject)\r\n"
+        mime += "X-Harpo-Campaign: outreach-v1\r\n"
         mime += "List-Unsubscribe: <mailto:unsubscribe@harpocrates-corp.com?subject=Unsubscribe>\r\n"
         mime += "List-Unsubscribe-Post: List-Unsubscribe=One-Click\r\n"
         mime += "MIME-Version: 1.0\r\n"
@@ -376,9 +498,8 @@ class GmailService {
                     }
                 }
 
-                // If we found a bounce but couldn't match a sent address, record with raw snippet
+                // If we found a bounce but couldn't match a sent address, try extracting from body
                 if matchedEmail.isEmpty {
-                    // Try to extract email from body using a simple pattern
                     let emailPattern = "[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}"
                     if let regex = try? NSRegularExpression(pattern: emailPattern),
                        let match = regex.firstMatch(in: msg.body, range: NSRange(msg.body.startIndex..., in: msg.body)),
@@ -406,6 +527,7 @@ class GmailService {
     }
 
     // MARK: - Types
+
     struct GmailMessage: Identifiable, Codable {
         let id: String
         let from: String
@@ -413,6 +535,12 @@ class GmailService {
         let date: String
         let snippet: String
         let body: String
+    }
+
+    /// Result of a thread-based reply check — pairs a message with the lead it belongs to.
+    struct ThreadReply {
+        let leadId: UUID
+        let message: GmailMessage
     }
 
     enum GmailError: LocalizedError {

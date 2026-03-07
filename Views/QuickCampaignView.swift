@@ -337,6 +337,7 @@ struct QuickCampaignView: View {
     @State private var editEmail: String = ""
     @State private var sendResult: SendResult? = nil
     @State private var isSending = false
+    @State private var batchResetConfirm = false
 
     // Manuellen Kontakt hinzufuegen
     @State private var showAddContact = false
@@ -371,7 +372,7 @@ struct QuickCampaignView: View {
 
     private var stepReviewSend: some View {
         VStack(spacing: 0) {
-            // Top bar: simplified actions
+            // Top bar: actions
             HStack(spacing: 12) {
                 // Status-Zusammenfassung
                 HStack(spacing: 4) {
@@ -400,6 +401,15 @@ struct QuickCampaignView: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(draftLeads.isEmpty)
+
+                // Alle zurücksetzen (Batch Reset)
+                Button(action: { batchResetConfirm = true }) {
+                    Label("Alle zurücksetzen", systemImage: "arrow.counterclockwise")
+                        .font(.caption)
+                }
+                .buttonStyle(.bordered)
+                .disabled(allCampaignLeads.isEmpty)
+                .foregroundStyle(.orange)
 
                 // Hauptaktion: Ausgewaehlte senden (freigeben + senden in einem Schritt)
                 Button(action: { sendSelectedEmails() }) {
@@ -618,6 +628,18 @@ struct QuickCampaignView: View {
                 DispatchQueue.main.async { selectLeadForEditing(first.id) }
             }
         }
+        .alert("Alle zurücksetzen?", isPresented: $batchResetConfirm) {
+            Button("Abbrechen", role: .cancel) { }
+            Button("Zurücksetzen", role: .destructive) {
+                let ids = allCampaignLeads.map { $0.id }
+                vm.resetBatch(ids: ids)
+                reviewSelectedLeads.removeAll()
+                reviewEditingLeadId = nil
+                sendResult = nil
+            }
+        } message: {
+            Text("Alle \(allCampaignLeads.count) Kampagnen-Leads werden komplett zurückgesetzt (Drafts, Senddaten und Blocklist-Einträge werden gelöscht). Diese Aktion kann nicht rückgängig gemacht werden.")
+        }
     }
 
     // MARK: - Contact Row in List
@@ -667,6 +689,52 @@ struct QuickCampaignView: View {
             }
             Spacer()
 
+            // Reset / Resend buttons for sent leads
+            if isSent {
+                HStack(spacing: 4) {
+                    // Erneut senden (soft reset, keeps draft)
+                    Button(action: {
+                        vm.resendLead(id: lead.id)
+                    }) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.caption2)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                    .help("Erneut senden")
+
+                    // Zurücksetzen (full reset)
+                    Button(action: {
+                        vm.resetLead(id: lead.id)
+                        if reviewEditingLeadId == lead.id {
+                            reviewEditingLeadId = nil
+                        }
+                    }) {
+                        Image(systemName: "trash")
+                            .font(.caption2)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                    .foregroundStyle(.red)
+                    .help("Zurücksetzen")
+                }
+            } else {
+                // Reset button for draft (non-sent) leads
+                Button(action: {
+                    vm.resetLead(id: lead.id)
+                    reviewSelectedLeads.remove(lead.id)
+                    if reviewEditingLeadId == lead.id {
+                        reviewEditingLeadId = nil
+                    }
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.caption2)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.red)
+                .help("Zurücksetzen")
+            }
+
             if isSent {
                 Text("Gesendet")
                     .font(.system(size: 9))
@@ -692,7 +760,7 @@ struct QuickCampaignView: View {
     // MARK: - Sent Email (read-only)
     private func sentEmailView(lead: Lead) -> some View {
         VStack(spacing: 0) {
-            // Erfolgs-Banner
+            // Erfolgs-Banner mit Reset/Resend
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.title3).foregroundStyle(.green)
@@ -703,8 +771,35 @@ struct QuickCampaignView: View {
                         Text("Gesendet am \(sentDate.formatted(date: .abbreviated, time: .shortened))")
                             .font(.caption2).foregroundStyle(.secondary)
                     }
+                    // Thread ID indicator
+                    if !lead.gmailThreadId.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.triangle.branch")
+                                .font(.caption2).foregroundStyle(.indigo)
+                            Text("Thread: \(String(lead.gmailThreadId.prefix(16)))...")
+                                .font(.caption2).foregroundStyle(.indigo)
+                        }
+                    }
                 }
                 Spacer()
+                // Erneut senden
+                Button(action: {
+                    vm.resendLead(id: lead.id)
+                }) {
+                    Label("Erneut senden", systemImage: "arrow.clockwise")
+                        .font(.caption)
+                }
+                .buttonStyle(.bordered)
+                // Zurücksetzen
+                Button(action: {
+                    vm.resetLead(id: lead.id)
+                    reviewEditingLeadId = nil
+                }) {
+                    Label("Zurücksetzen", systemImage: "trash")
+                        .font(.caption)
+                }
+                .buttonStyle(.bordered)
+                .foregroundStyle(.red)
             }
             .padding(12)
             .background(Color.green.opacity(0.08))
@@ -783,6 +878,18 @@ struct QuickCampaignView: View {
                         .padding(.vertical, 3)
                         .background(Color.indigo.opacity(0.1))
                         .cornerRadius(4)
+
+                    // Zurücksetzen im Draft-Editor
+                    Button(action: {
+                        vm.resetLead(id: lead.id)
+                        reviewSelectedLeads.remove(lead.id)
+                        reviewEditingLeadId = nil
+                    }) {
+                        Label("Zurücksetzen", systemImage: "trash")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.bordered)
+                    .foregroundStyle(.red)
                 }
             }
             .padding(12)
